@@ -19,32 +19,7 @@ class OwnerRequiredMixin(LoginRequiredMixin):
 
 class ScheduleListView(LoginRequiredMixin, View):
     def get(self, request):
-        schedules = Schedule.objects.filter(user=request.user)
-        if not schedules.exists():
-            # Create a default schedule
-            s = Schedule.objects.create(
-                user=request.user,
-                name="Working Hours",
-                timezone=request.user.timezone or "UTC"
-            )
-            # Add default Mon-Fri 09:00-17:00
-            for i in range(5):
-                AvailabilityRule.objects.create(
-                    schedule=s,
-                    weekday=i,
-                    start_time="09:00",
-                    end_time="17:00"
-                )
-            request.user.default_schedule = s
-            request.user.save(update_fields=['default_schedule'])
-            schedules = [s]
-            
-        default_schedule = request.user.default_schedule
-        if not default_schedule and schedules:
-            default_schedule = schedules.first()
-            request.user.default_schedule = default_schedule
-            request.user.save(update_fields=['default_schedule'])
-            
+        default_schedule = request.user.get_default_schedule()
         return redirect('scheduling:schedule_detail', pk=default_schedule.id)
 
 
@@ -126,10 +101,11 @@ class ScheduleDeleteView(LoginRequiredMixin, View):
             messages.error(request, "You cannot delete your only schedule.")
             return redirect('scheduling:schedule_detail', pk=pk)
             
-        if request.user.default_schedule == schedule:
+        if schedule.is_default:
             other = Schedule.objects.filter(user=request.user).exclude(pk=pk).first()
-            request.user.default_schedule = other
-            request.user.save(update_fields=['default_schedule'])
+            if other:
+                other.is_default = True
+                other.save(update_fields=['is_default'])
             
         try:
             schedule.delete()
@@ -148,8 +124,8 @@ class ScheduleDeleteView(LoginRequiredMixin, View):
 class ScheduleSetDefaultView(LoginRequiredMixin, View):
     def post(self, request, pk):
         schedule = get_object_or_404(Schedule, user=request.user, pk=pk)
-        request.user.default_schedule = schedule
-        request.user.save(update_fields=['default_schedule'])
+        schedule.is_default = True
+        schedule.save()
         messages.success(request, "Default schedule updated.")
         return redirect('scheduling:schedule_detail', pk=pk)
 

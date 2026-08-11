@@ -25,7 +25,7 @@
                         <p class="text-sm font-medium {% if s.id == schedule.id %}text-primary-700{% else %}text-gray-900{% endif %} truncate">
                             {{ s.name }}
                         </p>
-                        {% if s.id == request.user.default_schedule_id %}
+                        {% if s.is_default %}
                         <p class="text-xs text-gray-500 mt-1">Default</p>
                         {% endif %}
                     </div>
@@ -36,7 +36,7 @@
         
         <div class="mt-4 flex flex-col space-y-2">
             <!-- Actions for current schedule -->
-            {% if schedule.id != request.user.default_schedule_id %}
+            {% if not schedule.is_default %}
             <form method="POST" action="{% url 'scheduling:schedule_set_default' pk=schedule.id %}">
                 {% csrf_token %}
                 <button type="submit" class="w-full text-left text-sm text-gray-600 hover:text-gray-900 py-1">Set as Default</button>
