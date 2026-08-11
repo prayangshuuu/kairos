@@ -1,0 +1,130 @@
+{% extends "layouts/public.html" %}
+{% load static %}
+
+{% block title %}{{ event.title }} with {{ host.display_name|default:host.email }} | Kairos{% endblock %}
+
+{% block public_content %}
+<div class="container mx-auto px-4 py-8 md:py-16">
+  <div class="max-w-5xl mx-auto bg-surface-50 md:bg-white md:shadow-sm md:border border-surface-200 rounded-xl overflow-hidden flex flex-col md:flex-row relative">
+    
+    <!-- HTMX Loading Indicator overlay for the whole card (optional) -->
+    <div class="htmx-indicator absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-50 rounded-xl transition-opacity duration-200 pointer-events-none">
+      <svg class="animate-spin h-10 w-10 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    </div>
+
+    <!-- Left Panel: Event Info -->
+    <div class="w-full md:w-[35%] lg:w-1/3 p-6 md:p-8 bg-surface-50 border-b md:border-b-0 md:border-r border-surface-200">
+      <div class="mb-6 text-center md:text-left">
+        {% if host.avatar %}
+          <img src="{{ host.avatar.url }}" alt="{{ host.display_name|default:host.email }}" class="w-20 h-20 rounded-full mx-auto md:mx-0 mb-4 object-cover border-4 border-white shadow-sm">
+        {% else %}
+          <img src="{% static 'img/default-avatar.png' %}" alt="{{ host.display_name|default:host.email }}" class="w-20 h-20 rounded-full mx-auto md:mx-0 mb-4 object-cover border-4 border-white shadow-sm">
+        {% endif %}
+        <p class="text-sm font-semibold tracking-wide text-surface-500 uppercase mb-1">{{ host.display_name|default:host.email }}</p>
+        <h1 class="text-3xl font-bold text-surface-900 leading-tight">{{ event.title }}</h1>
+      </div>
+      
+      <div class="space-y-4 mb-8">
+        <div class="flex items-start text-surface-600 font-medium">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 mt-0.5 text-surface-400"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          {{ event.duration_minutes }} min
+        </div>
+        <div class="flex items-start text-surface-600 font-medium">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 mt-0.5 text-surface-400"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
+          {{ event.get_location_type_display }}
+        </div>
+        {% if event.is_paid %}
+          <div class="flex items-start text-surface-600 font-medium">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 mt-0.5 text-surface-400"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            {{ event.price_cents|divisibleby:100|yesno:"0," }}{{ event.price_cents }} {{ event.currency }}
+          </div>
+        {% endif %}
+      </div>
+      
+      {% if event.description %}
+        <p class="text-surface-600 text-sm leading-relaxed whitespace-pre-wrap">{{ event.description }}</p>
+      {% endif %}
+    </div>
+    
+    <!-- Right Panel: Calendar & Slots -->
+    <div class="w-full md:w-[65%] lg:w-2/3 p-6 md:p-8 flex flex-col relative bg-white">
+      <!-- Timezone Selector -->
+      <div class="mb-8 pb-6 border-b border-surface-200">
+        <label for="timezone-selector" class="block text-sm font-semibold text-surface-700 mb-2">Time zone</label>
+        <select id="timezone-selector" name="tz" 
+                hx-get="?partial=tz_change" 
+                hx-target="#booking-body" 
+                hx-swap="outerHTML"
+                hx-indicator=".htmx-indicator"
+                class="block w-full max-w-sm rounded-lg border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm text-surface-900 bg-surface-50 border p-2.5 transition-colors">
+          {% for tz in all_timezones %}
+            <option value="{{ tz }}" {% if tz == visitor_tz %}selected{% endif %}>{{ tz }}</option>
+          {% endfor %}
+        </select>
+        <p class="text-xs text-surface-500 mt-2 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Times are displayed in your local time zone.
+        </p>
+      </div>
+
+      <!-- Booking Body (Calendar + Slots) -->
+      {% include "bookings/partials/booking_body.html" %}
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const tzSelect = document.getElementById("timezone-selector");
+    
+    // Check localStorage first
+    let savedTz = localStorage.getItem("kairos_visitor_tz");
+    
+    if (!savedTz) {
+      // Auto-detect if no saved timezone
+      try {
+        savedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        localStorage.setItem("kairos_visitor_tz", savedTz);
+      } catch (e) {
+        console.error("Could not detect timezone", e);
+      }
+    }
+    
+    // If the detected/saved timezone differs from the current selector (which defaults to UTC or what the server guessed), trigger a reload of the calendar
+    if (savedTz && tzSelect.value !== savedTz) {
+      let optionExists = Array.from(tzSelect.options).some(opt => opt.value === savedTz);
+      if (optionExists) {
+        tzSelect.value = savedTz;
+        htmx.trigger(tzSelect, "change");
+      }
+    }
+    
+    // Listen to changes to save to localStorage
+    tzSelect.addEventListener("change", function(e) {
+      localStorage.setItem("kairos_visitor_tz", e.target.value);
+    });
+  });
+</script>
+<style>
+  .htmx-indicator {
+    opacity: 0;
+  }
+  .htmx-request .htmx-indicator {
+    opacity: 1;
+  }
+  .htmx-request.htmx-indicator {
+    opacity: 1;
+  }
+  /* Transitions */
+  #booking-body {
+    transition: opacity 0.2s ease-in-out;
+  }
+  #booking-body.htmx-request {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+</style>
+{% endblock %}

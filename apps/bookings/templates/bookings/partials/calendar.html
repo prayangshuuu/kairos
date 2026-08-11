@@ -1,0 +1,73 @@
+<div id="calendar-partial" class="w-full">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-medium text-surface-900" aria-live="polite">{{ month_name }} {{ year }}</h2>
+    <div class="flex space-x-2">
+      {% if is_prev_disabled %}
+        <button disabled class="p-2 rounded-full text-surface-300 cursor-not-allowed">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+      {% else %}
+        <button hx-get="?partial=calendar&tz={{ visitor_tz|urlencode }}&year={{ prev_year }}&month={{ prev_month }}&day={{ selected_date.day|default:'' }}" 
+                hx-target="#calendar-partial" 
+                hx-swap="outerHTML" 
+                hx-include="[name='tz']"
+                class="p-2 rounded-full text-surface-600 hover:bg-surface-100 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+      {% endif %}
+      
+      <button hx-get="?partial=calendar&tz={{ visitor_tz|urlencode }}&year={{ next_year }}&month={{ next_month }}&day={{ selected_date.day|default:'' }}" 
+              hx-target="#calendar-partial" 
+              hx-swap="outerHTML" 
+              hx-include="[name='tz']"
+              class="p-2 rounded-full text-surface-600 hover:bg-surface-100 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+  </div>
+
+  <table class="w-full text-center table-fixed" role="grid" aria-label="Calendar">
+    <thead>
+      <tr>
+        <th scope="col" class="py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">Mon</th>
+        <th scope="col" class="py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">Tue</th>
+        <th scope="col" class="py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">Wed</th>
+        <th scope="col" class="py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">Thu</th>
+        <th scope="col" class="py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">Fri</th>
+        <th scope="col" class="py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">Sat</th>
+        <th scope="col" class="py-2 text-xs font-medium text-surface-500 uppercase tracking-wider">Sun</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for week in month_weeks %}
+        <tr>
+          {% for day in week %}
+            <td class="py-1">
+              {% if day.month == month %}
+                {% if day in available_dates and day >= today_visitor %}
+                  <button 
+                    hx-get="?partial=slots&tz={{ visitor_tz|urlencode }}&year={{ day.year }}&month={{ day.month }}&day={{ day.day }}"
+                    hx-target="#slots-partial"
+                    hx-swap="outerHTML"
+                    hx-include="[name='tz']"
+                    class="w-10 h-10 rounded-full flex items-center justify-center mx-auto text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+                           {% if day == selected_date %}bg-primary-600 text-white{% else %}bg-primary-50 text-primary-700 hover:bg-primary-100{% endif %}"
+                    {% if day == selected_date %}aria-selected="true" aria-current="date"{% else %}aria-selected="false"{% endif %}
+                  >
+                    {{ day.day }}
+                  </button>
+                {% else %}
+                  <span class="w-10 h-10 rounded-full flex items-center justify-center mx-auto text-sm text-surface-300">
+                    {{ day.day }}
+                  </span>
+                {% endif %}
+              {% else %}
+                <span class="w-10 h-10 flex mx-auto"></span>
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
