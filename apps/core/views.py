@@ -35,3 +35,9 @@ def custom_page_not_found(request, exception=None):
 
 def custom_server_error(request, exception=None):
     return render(request, "errors/500.html", status=500)
+
+def custom_404(request, exception=None):
+    return render(request, '404.html', status=404)
+
+def custom_500(request):
+    return render(request, '500.html', status=500)

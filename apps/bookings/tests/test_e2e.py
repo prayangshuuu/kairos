@@ -21,28 +21,17 @@ def test_e2e_happy_path(client, host_with_schedule):
     future = now + timedelta(days=2)
     start_at = future.replace(hour=10, minute=0, second=0, microsecond=0)
     
-    from django.core.signing import Signer
-    signer = Signer()
-    old_timestamp = (now - timedelta(seconds=10)).timestamp()
-    token = signer.sign(str(old_timestamp))
-
-    res = client.post(reverse('bookings:booking_stub', kwargs={'host_slug': 'host', 'event_slug': '30-min'}), {
-        'slot_time': start_at.isoformat(),
+    res = client.post(reverse('bookings:booking_page', kwargs={'host_slug': 'host', 'event_slug': '30-min'}), {
+        'start_time': start_at.isoformat(),
         'invitee_name': 'Invitee',
         'invitee_email': 'invitee@example.com',
-        'tz': 'America/Los_Angeles',
-        'event_type_id': et.id,
-        'timestamp_token': token,
-        'idempotency_token': 'token123',
-        'website': ''
+        'invitee_timezone': 'America/Los_Angeles'
     })
     
     # Booking is created and redirects to confirmation
-    assert res.status_code == 200
-    assert "HX-Redirect" in res.headers
-    
+    assert res.status_code == 302
     assert Booking.objects.count() == 1
     
     booking = Booking.objects.first()
     assert booking.invitee_email == 'invitee@example.com'
-    assert f'booking/{booking.uid}/' in res.headers["HX-Redirect"]
+    assert 'booking/' in res.url

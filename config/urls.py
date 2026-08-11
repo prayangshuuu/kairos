@@ -38,13 +38,13 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
     path('', include('apps.accounts.urls')),
-    path('demo/', include('apps.demo.urls')),
+
     path('', include('apps.scheduling.urls')),
     path('', include('apps.bookings.urls')),
 ]
 
-handler404 = 'apps.demo.views.custom_404'
-handler500 = 'apps.demo.views.custom_500'
+handler404 = 'apps.core.views.custom_404'
+handler500 = 'apps.core.views.custom_500'
 
 if settings.DEBUG:
     import debug_toolbar

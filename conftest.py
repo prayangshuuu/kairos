@@ -48,7 +48,7 @@ def host_with_schedule(db):
     )
     
     schedule = Schedule.objects.create(
-        user=user,
+        owner=user,
         name="Working Hours",
         timezone="Asia/Dhaka",
         is_default=True
@@ -67,6 +67,7 @@ def host_with_schedule(db):
         title="30 Minute Free",
         slug="30-min",
         duration_minutes=30,
+        price=0,
         schedule=schedule
     )
     
@@ -75,6 +76,7 @@ def host_with_schedule(db):
         title="60 Minute Paid",
         slug="60-min",
         duration_minutes=60,
+        price=50.00,
         schedule=schedule
     )
     
