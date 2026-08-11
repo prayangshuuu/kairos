@@ -1,0 +1,611 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}{% if object %}Edit {{ object.title }}{% else %}New Event Type{% endif %} - Kairos{% endblock %}
+
+{% block extra_head %}
+<!-- Sortable for drag-and-drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+{% endblock %}
+
+{% block app_content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+     x-data="eventForm()"
+     x-init="initForm()">
+     
+    <div id="toast-container"></div>
+    
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-2xl font-semibold text-gray-900">
+            {% if object %}Edit Event Type{% else %}New Event Type{% endif %}
+        </h1>
+        <div class="flex space-x-3">
+            {% if object %}
+            <a href="{{ object.public_url }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Preview
+            </a>
+            {% endif %}
+            <button type="submit" form="event-type-form" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    :disabled="isSubmitting"
+                    x-text="isSubmitting ? 'Saving...' : 'Save'">
+                Save
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="hidden sm:block mb-8">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <template x-for="tab in tabs" :key="tab.id">
+                    <a href="#" 
+                       @click.prevent="setTab(tab.id)"
+                       :class="activeTab === tab.id ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                       class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative">
+                        <span x-text="tab.name"></span>
+                        <!-- Error indicator -->
+                        <span x-show="tabHasErrors(tab.id)" class="absolute top-2 right-0 block h-2 w-2 rounded-full bg-red-500"></span>
+                    </a>
+                </template>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Mobile tabs dropdown -->
+    <div class="sm:hidden mb-8">
+        <label for="tabs" class="sr-only">Select a tab</label>
+        <select id="tabs" name="tabs" class="block w-full focus:ring-primary-500 focus:border-primary-500 border-gray-300 rounded-md" @change="setTab($event.target.value)" x-model="activeTab">
+            <template x-for="tab in tabs" :key="tab.id">
+                <option :value="tab.id" x-text="tab.name + (tabHasErrors(tab.id) ? ' (!)' : '')"></option>
+            </template>
+        </select>
+    </div>
+
+    <!-- Form -->
+    <form id="event-type-form" 
+          method="POST" 
+          hx-post="{% if object %}{% url 'scheduling:eventtype_edit' object.slug %}{% else %}{% url 'scheduling:eventtype_create' %}{% endif %}"
+          hx-swap="outerHTML" 
+          @htmx:before-request="isSubmitting = true" 
+          @htmx:after-request="isSubmitting = false; isDirty = false"
+          @htmx:response-error="handleError($event)"
+          @change="isDirty = true"
+          @input="isDirty = true"
+          class="bg-white shadow rounded-lg border border-surface-200 p-6 sm:p-8">
+          
+        {% csrf_token %}
+        <input type="hidden" name="questions_json" :value="JSON.stringify(questions)">
+
+        <!-- Form Errors (Global) -->
+        {% if form.non_field_errors %}
+        <div class="rounded-md bg-red-50 p-4 mb-6">
+            <div class="flex">
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Errors</h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        {{ form.non_field_errors }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tab: Basics -->
+        <div x-show="activeTab === 'basics'">
+            <div class="space-y-6">
+                <!-- Title -->
+                <div>
+                    <label for="id_title" class="block text-sm font-medium text-gray-700">Event Title <span class="text-red-500">*</span></label>
+                    <input type="text" name="title" id="id_title" value="{{ form.title.value|default:'' }}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" @input="updateSlug($event.target.value)">
+                    {% if form.title.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="basics">{{ form.title.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Slug -->
+                <div>
+                    <label for="id_slug" class="block text-sm font-medium text-gray-700">URL Slug <span class="text-red-500">*</span></label>
+                    <div class="mt-1 flex rounded-md shadow-sm">
+                        <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+                            joinkairos.me/{{ request.user.slug|default:'u/'|add:request.user.id|stringformat:'s' }}/
+                        </span>
+                        <input type="text" name="slug" id="id_slug" x-model="slug" required class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                               hx-get="{% url 'scheduling:eventtype_check_slug' %}{% if object %}?exclude_id={{ object.id }}{% endif %}"
+                               hx-target="#slug-feedback"
+                               hx-trigger="keyup changed delay:500ms">
+                    </div>
+                    <div id="slug-feedback" class="mt-1 text-sm"></div>
+                    {% if form.slug.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="basics">{{ form.slug.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="id_description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea name="description" id="id_description" rows="4" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">{{ form.description.value|default:'' }}</textarea>
+                    {% if form.description.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="basics">{{ form.description.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Duration -->
+                <div>
+                    <label for="id_duration_minutes" class="block text-sm font-medium text-gray-700">Duration <span class="text-red-500">*</span></label>
+                    <div class="mt-2 flex items-center space-x-4">
+                        <template x-for="preset in [15, 30, 45, 60]" :key="preset">
+                            <button type="button" @click="duration = preset" :class="duration == preset ? 'bg-primary-100 text-primary-700 border-primary-500' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'" class="px-4 py-2 border rounded-md shadow-sm text-sm font-medium">
+                                <span x-text="preset + ' min'"></span>
+                            </button>
+                        </template>
+                        <div class="flex items-center">
+                            <input type="number" name="duration_minutes" id="id_duration_minutes" x-model="duration" required min="5" max="1440" class="w-20 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                            <span class="ml-2 text-gray-500 text-sm">min</span>
+                        </div>
+                    </div>
+                    {% if form.duration_minutes.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="basics">{{ form.duration_minutes.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Location -->
+                <div>
+                    <label for="id_location_type" class="block text-sm font-medium text-gray-700">Location</label>
+                    <div class="mt-1 sm:flex sm:space-x-4">
+                        <select name="location_type" id="id_location_type" x-model="locationType" class="block w-full sm:w-auto pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+                            <option value="google_meet">Google Meet</option>
+                            <option value="in_person">In Person</option>
+                            <option value="phone">Phone Call</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <div x-show="locationType !== 'google_meet'" class="mt-2 sm:mt-0 flex-1">
+                            <input type="text" name="location_value" id="id_location_value" :placeholder="locationPlaceholder" value="{{ form.location_value.value|default:'' }}" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                        </div>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500" x-show="locationType === 'google_meet'">A Google Meet link will be automatically added to the calendar invitation.</p>
+                    {% if form.location_type.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="basics">{{ form.location_type.errors.0 }}</p>{% endif %}
+                    {% if form.location_value.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="basics">{{ form.location_value.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Availability -->
+        <div x-show="activeTab === 'availability'" style="display: none;">
+            <div class="space-y-6">
+                <!-- Schedule -->
+                <div>
+                    <label for="id_schedule" class="block text-sm font-medium text-gray-700">Schedule</label>
+                    <select name="schedule" id="id_schedule" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+                        <option value="">Use my default schedule</option>
+                        {% for schedule in request.user.schedules.all %}
+                        <option value="{{ schedule.id }}" {% if form.schedule.value == schedule.id %}selected{% endif %}>{{ schedule.name }} ({{ schedule.timezone }})</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.schedule.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="availability">{{ form.schedule.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Window -->
+                <div>
+                    <fieldset>
+                        <legend class="text-sm font-medium text-gray-700">Booking Window</legend>
+                        <div class="mt-4 space-y-4">
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    <input id="window_rolling" name="window_type" type="radio" value="rolling" x-model="windowType" class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300">
+                                </div>
+                                <div class="ml-3 text-sm flex items-center space-x-2">
+                                    <label for="window_rolling" class="font-medium text-gray-700">Rolling days</label>
+                                    <input type="number" name="rolling_days" x-show="windowType === 'rolling'" value="{{ form.rolling_days.value|default:60 }}" min="1" class="w-16 border border-gray-300 rounded-md shadow-sm py-1 px-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                                    <span x-show="windowType === 'rolling'" class="text-gray-500">days into the future</span>
+                                </div>
+                            </div>
+                            <div x-show="windowType === 'rolling'" class="ml-7 flex items-center">
+                                <input type="checkbox" name="rolling_business_days_only" id="id_rolling_business_days_only" {% if form.rolling_business_days_only.value %}checked{% endif %} class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                                <label for="id_rolling_business_days_only" class="ml-2 block text-sm text-gray-900">
+                                    Count business days only
+                                </label>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    <input id="window_fixed" name="window_type" type="radio" value="fixed_range" x-model="windowType" class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300">
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="window_fixed" class="font-medium text-gray-700">Fixed date range</label>
+                                    <div x-show="windowType === 'fixed_range'" class="mt-2 flex space-x-2">
+                                        <input type="date" name="range_start" value="{{ form.range_start.value|date:'Y-m-d'|default:'' }}" class="border border-gray-300 rounded-md shadow-sm py-1 px-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                                        <span class="text-gray-500 self-center">to</span>
+                                        <input type="date" name="range_end" value="{{ form.range_end.value|date:'Y-m-d'|default:'' }}" class="border border-gray-300 rounded-md shadow-sm py-1 px-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    <input id="window_indefinite" name="window_type" type="radio" value="indefinite" x-model="windowType" class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300">
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="window_indefinite" class="font-medium text-gray-700">Indefinite (into the future)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                    {% if form.window_type.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="availability">{{ form.window_type.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Notice & Buffers -->
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-3">
+                    <div>
+                        <label for="id_minimum_notice_minutes" class="block text-sm font-medium text-gray-700">Minimum Notice</label>
+                        <select name="minimum_notice_minutes" id="id_minimum_notice_minutes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+                            <option value="0" {% if form.minimum_notice_minutes.value == 0 %}selected{% endif %}>None</option>
+                            <option value="60" {% if form.minimum_notice_minutes.value == 60 %}selected{% endif %}>1 hour</option>
+                            <option value="240" {% if form.minimum_notice_minutes.value == 240 %}selected{% endif %}>4 hours</option>
+                            <option value="1440" {% if form.minimum_notice_minutes.value == 1440 %}selected{% endif %}>1 day</option>
+                            <option value="2880" {% if form.minimum_notice_minutes.value == 2880 %}selected{% endif %}>2 days</option>
+                        </select>
+                        {% if form.minimum_notice_minutes.errors %}<p class="mt-1 text-sm text-red-600" data-tab-error="availability">{{ form.minimum_notice_minutes.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="id_buffer_before_minutes" class="block text-sm font-medium text-gray-700">Buffer Before</label>
+                        <select name="buffer_before_minutes" id="id_buffer_before_minutes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+                            <option value="0" {% if form.buffer_before_minutes.value == 0 %}selected{% endif %}>0 min</option>
+                            <option value="5" {% if form.buffer_before_minutes.value == 5 %}selected{% endif %}>5 min</option>
+                            <option value="10" {% if form.buffer_before_minutes.value == 10 %}selected{% endif %}>10 min</option>
+                            <option value="15" {% if form.buffer_before_minutes.value == 15 %}selected{% endif %}>15 min</option>
+                            <option value="30" {% if form.buffer_before_minutes.value == 30 %}selected{% endif %}>30 min</option>
+                            <option value="60" {% if form.buffer_before_minutes.value == 60 %}selected{% endif %}>1 hour</option>
+                        </select>
+                        {% if form.buffer_before_minutes.errors %}<p class="mt-1 text-sm text-red-600" data-tab-error="availability">{{ form.buffer_before_minutes.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="id_buffer_after_minutes" class="block text-sm font-medium text-gray-700">Buffer After</label>
+                        <select name="buffer_after_minutes" id="id_buffer_after_minutes" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+                            <option value="0" {% if form.buffer_after_minutes.value == 0 %}selected{% endif %}>0 min</option>
+                            <option value="5" {% if form.buffer_after_minutes.value == 5 %}selected{% endif %}>5 min</option>
+                            <option value="10" {% if form.buffer_after_minutes.value == 10 %}selected{% endif %}>10 min</option>
+                            <option value="15" {% if form.buffer_after_minutes.value == 15 %}selected{% endif %}>15 min</option>
+                            <option value="30" {% if form.buffer_after_minutes.value == 30 %}selected{% endif %}>30 min</option>
+                            <option value="60" {% if form.buffer_after_minutes.value == 60 %}selected{% endif %}>1 hour</option>
+                        </select>
+                        {% if form.buffer_after_minutes.errors %}<p class="mt-1 text-sm text-red-600" data-tab-error="availability">{{ form.buffer_after_minutes.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Slot Interval -->
+                <div>
+                    <label for="id_slot_interval_minutes" class="block text-sm font-medium text-gray-700">Start Time Increments</label>
+                    <div class="mt-1 flex items-center">
+                        <input type="number" name="slot_interval_minutes" id="id_slot_interval_minutes" value="{{ form.slot_interval_minutes.value|default:'' }}" min="5" class="block w-24 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                        <span class="ml-2 text-sm text-gray-500">minutes</span>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500">Leaving this blank means slots step by the meeting duration (<span x-text="duration"></span> min).</p>
+                    {% if form.slot_interval_minutes.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="availability">{{ form.slot_interval_minutes.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Questions -->
+        <div x-show="activeTab === 'questions'" style="display: none;">
+            <p class="text-sm text-gray-500 mb-4">Name and Email are always required. Add extra questions here.</p>
+            
+            <div class="space-y-4" id="questions-list">
+                <template x-for="(q, index) in questions.filter(x => !x.deleted)" :key="q.temp_id || q.id">
+                    <div class="border border-gray-200 rounded-md p-4 bg-gray-50 flex flex-col gap-4 relative group" :data-id="q.temp_id || q.id">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700">Question</label>
+                                    <input type="text" x-model="q.label" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700">Type</label>
+                                    <select x-model="q.field_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                                        <option value="text">Single Line Text</option>
+                                        <option value="textarea">Multiple Lines</option>
+                                        <option value="radio">Radio Buttons</option>
+                                        <option value="checkbox">Checkboxes</option>
+                                        <option value="select">Dropdown</option>
+                                        <option value="phone">Phone Number</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex items-center space-x-2">
+                                <label class="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer">
+                                    <input type="checkbox" x-model="q.is_required" class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                                    <span>Required</span>
+                                </label>
+                                <button type="button" @click="q.deleted = true" class="text-red-500 hover:text-red-700 p-1">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                                <!-- Drag handle -->
+                                <div class="cursor-move text-gray-400 hover:text-gray-600 p-1 drag-handle">
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Options editor -->
+                        <div x-show="['select', 'multiselect', 'radio', 'checkbox'].includes(q.field_type)" class="mt-2 pl-4 border-l-2 border-primary-200">
+                            <label class="block text-xs font-medium text-gray-700 mb-2">Options (one per line)</label>
+                            <textarea :value="q.options.join('\n')" @input="q.options = $event.target.value.split('\n').filter(x=>x.trim()!=='')" rows="3" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"></textarea>
+                            <p class="text-xs text-red-500 mt-1" x-show="q.options.length < 2">At least 2 options required.</p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+            <div class="mt-4">
+                <button type="button" @click="addQuestion()" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                    <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                    Add Question
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Limits -->
+        <div x-show="activeTab === 'limits'" style="display: none;">
+            <div class="space-y-6">
+                <!-- Max Bookings -->
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-3">
+                    <div>
+                        <label for="id_max_bookings_per_day" class="block text-sm font-medium text-gray-700">Max / Day</label>
+                        <input type="number" name="max_bookings_per_day" id="id_max_bookings_per_day" value="{{ form.max_bookings_per_day.value|default:'' }}" min="1" placeholder="Unlimited" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                        {% if form.max_bookings_per_day.errors %}<p class="mt-1 text-sm text-red-600" data-tab-error="limits">{{ form.max_bookings_per_day.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="id_max_bookings_per_week" class="block text-sm font-medium text-gray-700">Max / Week</label>
+                        <input type="number" name="max_bookings_per_week" id="id_max_bookings_per_week" value="{{ form.max_bookings_per_week.value|default:'' }}" min="1" placeholder="Unlimited" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                        {% if form.max_bookings_per_week.errors %}<p class="mt-1 text-sm text-red-600" data-tab-error="limits">{{ form.max_bookings_per_week.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="id_max_bookings_per_month" class="block text-sm font-medium text-gray-700">Max / Month</label>
+                        <input type="number" name="max_bookings_per_month" id="id_max_bookings_per_month" value="{{ form.max_bookings_per_month.value|default:'' }}" min="1" placeholder="Unlimited" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                        {% if form.max_bookings_per_month.errors %}<p class="mt-1 text-sm text-red-600" data-tab-error="limits">{{ form.max_bookings_per_month.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Group Event / Seats -->
+                <div>
+                    <label for="id_seats_per_slot" class="block text-sm font-medium text-gray-700">Seats per Slot</label>
+                    <input type="number" name="seats_per_slot" id="id_seats_per_slot" value="{{ form.seats_per_slot.value|default:1 }}" min="1" class="mt-1 block w-32 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                    <p class="mt-2 text-sm text-gray-500">Values above 1 create a group event where multiple people can book the same time.</p>
+                    {% if form.seats_per_slot.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="limits">{{ form.seats_per_slot.errors.0 }}</p>{% endif %}
+                </div>
+                
+                <hr class="border-gray-200">
+                
+                <!-- Cutoffs -->
+                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
+                    <div>
+                        <label for="id_cancellation_cutoff_hours" class="block text-sm font-medium text-gray-700">Cancellation Cutoff</label>
+                        <div class="mt-1 flex items-center">
+                            <input type="number" name="cancellation_cutoff_hours" id="id_cancellation_cutoff_hours" value="{{ form.cancellation_cutoff_hours.value|default:'' }}" min="1" placeholder="None" class="block w-24 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                            <span class="ml-2 text-sm text-gray-500">hours before</span>
+                        </div>
+                        {% if form.cancellation_cutoff_hours.errors %}<p class="mt-1 text-sm text-red-600" data-tab-error="limits">{{ form.cancellation_cutoff_hours.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="id_reschedule_cutoff_hours" class="block text-sm font-medium text-gray-700">Reschedule Cutoff</label>
+                        <div class="mt-1 flex items-center">
+                            <input type="number" name="reschedule_cutoff_hours" id="id_reschedule_cutoff_hours" value="{{ form.reschedule_cutoff_hours.value|default:'' }}" min="1" placeholder="None" class="block w-24 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                            <span class="ml-2 text-sm text-gray-500">hours before</span>
+                        </div>
+                        {% if form.reschedule_cutoff_hours.errors %}<p class="mt-1 text-sm text-red-600" data-tab-error="limits">{{ form.reschedule_cutoff_hours.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="id_confirmation_deadline_hours" class="block text-sm font-medium text-gray-700">Auto-reject Pending After</label>
+                        <div class="mt-1 flex items-center">
+                            <input type="number" name="confirmation_deadline_hours" id="id_confirmation_deadline_hours" value="{{ form.confirmation_deadline_hours.value|default:'' }}" min="1" placeholder="None" class="block w-24 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                            <span class="ml-2 text-sm text-gray-500">hours</span>
+                        </div>
+                        {% if form.confirmation_deadline_hours.errors %}<p class="mt-1 text-sm text-red-600" data-tab-error="limits">{{ form.confirmation_deadline_hours.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Advanced -->
+        <div x-show="activeTab === 'advanced'" style="display: none;">
+            <div class="space-y-6">
+                <!-- Toggles -->
+                <div class="space-y-4">
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <input type="checkbox" name="requires_confirmation" id="id_requires_confirmation" {% if form.requires_confirmation.value %}checked{% endif %} class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded">
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_requires_confirmation" class="font-medium text-gray-700">Requires Confirmation</label>
+                            <p class="text-gray-500">You must manually approve requests before they are confirmed.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <input type="checkbox" name="is_hidden" id="id_is_hidden" {% if form.is_hidden.value %}checked{% endif %} class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded">
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_is_hidden" class="font-medium text-gray-700">Hidden</label>
+                            <p class="text-gray-500">Hide from your public profile. Can only be booked via direct link.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <input type="checkbox" name="is_active" id="id_is_active" {% if form.is_active.value != False %}checked{% endif %} class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded">
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_is_active" class="font-medium text-gray-700">Active</label>
+                            <p class="text-gray-500">Turn off to disable booking entirely.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <input type="checkbox" name="allow_guests" id="id_allow_guests" {% if form.allow_guests.value != False %}checked{% endif %} class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded">
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_allow_guests" class="font-medium text-gray-700">Allow adding guests</label>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <input type="checkbox" name="allow_rescheduling" id="id_allow_rescheduling" {% if form.allow_rescheduling.value != False %}checked{% endif %} class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded">
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_allow_rescheduling" class="font-medium text-gray-700">Allow invitee to reschedule</label>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <input type="checkbox" name="allow_cancellation" id="id_allow_cancellation" {% if form.allow_cancellation.value != False %}checked{% endif %} class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded">
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="id_allow_cancellation" class="font-medium text-gray-700">Allow invitee to cancel</label>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="border-gray-200">
+
+                <!-- Payments -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Payments</h3>
+                    <div class="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
+                        <p class="text-sm text-gray-600">Payments require connecting a Stripe account. This feature will be enabled in a later task.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 opacity-50">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Price</label>
+                            <div class="mt-1 relative rounded-md shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">$</span>
+                                </div>
+                                <input type="number" disabled class="focus:ring-primary-500 focus:border-primary-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md bg-gray-100" placeholder="0.00">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm" id="price-currency">USD</span>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="price_cents" value="0">
+                        <input type="hidden" name="currency" value="USD">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('eventForm', () => ({
+        activeTab: window.location.hash ? window.location.hash.substring(1) : 'basics',
+        tabs: [
+            { id: 'basics', name: 'Basics' },
+            { id: 'availability', name: 'Availability' },
+            { id: 'questions', name: 'Questions' },
+            { id: 'limits', name: 'Limits' },
+            { id: 'advanced', name: 'Advanced' }
+        ],
+        isSubmitting: false,
+        isDirty: false,
+        slug: '{{ form.slug.value|default:"" }}',
+        duration: {{ form.duration_minutes.value|default:30 }},
+        locationType: '{{ form.location_type.value|default:"google_meet" }}',
+        windowType: '{{ form.window_type.value|default:"rolling" }}',
+        
+        // Initial questions data from server if edit
+        questions: [
+            {% if object %}
+                {% for q in object.questions.all %}
+                {
+                    id: {{ q.id }},
+                    label: '{{ q.label|escapejs }}',
+                    help_text: '{{ q.help_text|escapejs }}',
+                    field_type: '{{ q.field_type }}',
+                    is_required: {% if q.is_required %}true{% else %}false{% endif %},
+                    options: {{ q.options|safe }},
+                    deleted: false
+                },
+                {% endfor %}
+            {% endif %}
+        ],
+        
+        get locationPlaceholder() {
+            if (this.locationType === 'in_person') return 'e.g. 123 Main St or Starbucks';
+            if (this.locationType === 'phone') return 'We will call the invitee';
+            return 'Details';
+        },
+        
+        initForm() {
+            window.addEventListener('beforeunload', (e) => {
+                if (this.isDirty) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+            
+            // Check for server-side errors on init and switch to first errored tab
+            setTimeout(() => {
+                const errorEls = document.querySelectorAll('[data-tab-error]');
+                if (errorEls.length > 0) {
+                    const errorTab = errorEls[0].getAttribute('data-tab-error');
+                    if (errorTab) {
+                        this.setTab(errorTab);
+                    }
+                }
+            }, 100);
+
+            // Initialize Sortable
+            this.$nextTick(() => {
+                if (document.getElementById('questions-list')) {
+                    new Sortable(document.getElementById('questions-list'), {
+                        handle: '.drag-handle',
+                        animation: 150,
+                        onEnd: (evt) => {
+                            // Sortable DOM changes are manual. 
+                            // With Alpine, we need to reorder the underlying array.
+                            const item = this.questions.splice(evt.oldIndex, 1)[0];
+                            this.questions.splice(evt.newIndex, 0, item);
+                        }
+                    });
+                }
+            });
+        },
+        
+        setTab(id) {
+            this.activeTab = id;
+            window.history.replaceState(null, null, `#${id}`);
+        },
+        
+        tabHasErrors(id) {
+            return document.querySelectorAll(`[data-tab-error="${id}"]`).length > 0;
+        },
+        
+        updateSlug(title) {
+            if (!this.slug || this.slug === this.generateSlug(this.lastTitle || '')) {
+                this.slug = this.generateSlug(title);
+            }
+            this.lastTitle = title;
+        },
+        
+        generateSlug(str) {
+            return str.toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+        },
+        
+        addQuestion() {
+            this.questions.push({
+                temp_id: Date.now(),
+                label: 'New Question',
+                help_text: '',
+                field_type: 'text',
+                is_required: false,
+                options: [],
+                deleted: false
+            });
+            this.isDirty = true;
+        },
+        
+        handleError(e) {
+            // Wait for HTMX to swap in the new form
+            setTimeout(() => {
+                const errorEls = document.querySelectorAll('[data-tab-error]');
+                if (errorEls.length > 0) {
+                    const errorTab = errorEls[0].getAttribute('data-tab-error');
+                    if (errorTab) {
+                        this.setTab(errorTab);
+                    }
+                }
+            }, 100);
+        }
+    }));
+});
+</script>
+{% endblock %}
