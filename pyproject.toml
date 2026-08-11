@@ -12,6 +12,7 @@ dependencies = [
     "redis",
     "django-allauth",
     "icalendar",
+    "pillow>=12.3.0",
 ]
 
 [dependency-groups]
