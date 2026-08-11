@@ -109,6 +109,7 @@ def get_slots(
     to_date: date,
     now: datetime,
     external_busy: list[Interval] | None = None,
+    exclude_booking_id: int | None = None,
 ) -> list[datetime]:
     """
     Produces bookable start times. 
@@ -168,10 +169,12 @@ def get_slots(
         host=event_type.owner,
         status__in=BLOCKING_STATUSES,
         buffered_period__overlap=(window_start, window_end)
-    ).values_list('buffered_period', flat=True)
-    
+    )
+    if exclude_booking_id:
+        limit_qs = limit_qs.exclude(id=exclude_booking_id)
+        
     busy_intervals = []
-    for bp in limit_qs:
+    for bp in limit_qs.values_list('buffered_period', flat=True):
         if bp.lower and bp.upper:
             busy_intervals.append((bp.lower, bp.upper))
             
@@ -253,12 +256,16 @@ def get_slots(
         q_start = month_start.astimezone(timezone.utc)
         q_end = month_end.astimezone(timezone.utc)
         
-        limit_bookings = Booking.objects.filter(
+        limit_bookings_qs = Booking.objects.filter(
             host=event_type.owner,
             status__in=BLOCKING_STATUSES,
             start_at__gte=q_start,
             start_at__lte=q_end
-        ).values_list('start_at', flat=True)
+        )
+        if exclude_booking_id:
+            limit_bookings_qs = limit_bookings_qs.exclude(id=exclude_booking_id)
+            
+        limit_bookings = list(limit_bookings_qs.values_list('start_at', flat=True))
         
         bookings_by_day = defaultdict(int)
         bookings_by_week = defaultdict(int)
@@ -304,12 +311,13 @@ def is_slot_available(
     event_type: EventType,
     start_at: datetime,
     now: datetime,
-    external_busy: list[Interval] | None = None
+    external_busy: list[Interval] | None = None,
+    exclude_booking_id: int | None = None,
 ) -> bool:
     """
     Validates one specific start time by reusing get_slots for that single day.
     """
     tz = event_type.effective_schedule.zoneinfo
     d = start_at.astimezone(tz).date()
-    slots = get_slots(event_type, d, d, now, external_busy)
+    slots = get_slots(event_type, d, d, now, external_busy, exclude_booking_id)
     return start_at in slots

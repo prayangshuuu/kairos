@@ -84,6 +84,17 @@
                 </div>
               {% endtimezone %}
             {% endif %}
+            
+            {% if booking.rescheduled_from %}
+              <div class="mt-2 text-xs text-gray-500">
+                Rescheduled from:
+                {% for old_booking in booking.reschedule_chain %}
+                  {% timezone booking.invitee_timezone %}
+                    <div class="mt-1 line-through">{{ old_booking.start_at|date:"l, F j, Y" }} at {{ old_booking.start_at|time:"g:i A" }}</div>
+                  {% endtimezone %}
+                {% endfor %}
+              </div>
+            {% endif %}
           </dd>
         </div>
 

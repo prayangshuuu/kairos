@@ -16,6 +16,91 @@ class AlreadyCancelled(Exception):
 class CancellationNotAllowed(Exception):
     pass
 
+class ReschedulingNotAllowed(Exception):
+    pass
+
+def reschedule_booking(
+    *,
+    booking: Booking,
+    new_start_at: datetime,
+    rescheduled_by: str,
+    reason: str = "",
+    now: datetime,
+) -> Booking:
+    if booking.status in [Booking.StatusChoices.CANCELLED, Booking.StatusChoices.REJECTED]:
+        raise AlreadyCancelled("Booking is already cancelled or rejected.")
+        
+    if rescheduled_by == "invitee":
+        if not booking.event_type.allow_rescheduling:
+            raise ReschedulingNotAllowed("This event type does not allow rescheduling by invitees.")
+        
+        if booking.event_type.reschedule_cutoff_hours is not None:
+            cutoff = booking.start_at - timedelta(hours=booking.event_type.reschedule_cutoff_hours)
+            if now > cutoff:
+                raise ReschedulingNotAllowed("It is too late to reschedule this booking.")
+                
+    with transaction.atomic():
+        # Validate the new slot, EXCLUDING the current booking
+        if not is_slot_available(
+            event_type=booking.event_type,
+            start_at=new_start_at,
+            now=now,
+            exclude_booking_id=booking.id
+        ):
+            raise SlotUnavailable("The selected slot is no longer available.")
+            
+        original_status = booking.status
+            
+        # Cancel old booking BEFORE inserting new one
+        cancel_booking(
+            booking=booking, 
+            cancelled_by="system", 
+            reason=f"Rescheduled by {rescheduled_by}" + (f": {reason}" if reason else ""), 
+            now=now
+        )
+        
+        # Create new booking
+        end_at = new_start_at + timedelta(minutes=booking.event_type.duration_minutes)
+        new_booking = Booking(
+            event_type=booking.event_type,
+            host=booking.host,
+            team=booking.team,
+            start_at=new_start_at,
+            end_at=end_at,
+            invitee_timezone=booking.invitee_timezone,
+            status=original_status,
+            invitee_name=booking.invitee_name,
+            invitee_email=booking.invitee_email,
+            invitee_notes=booking.invitee_notes,
+            answers=booking.answers,
+            location_type=booking.location_type,
+            location_value=booking.location_value,
+            rescheduled_from=booking
+        )
+        
+        try:
+            new_booking.save()
+        except IntegrityError:
+            # If the exclusion constraint still catches us (e.g. race condition),
+            # this will bubble up. Actually, we should catch it to raise SlotUnavailable
+            raise SlotUnavailable("The selected slot is no longer available.")
+            
+        # Copy Attendees
+        from apps.bookings.models import Attendee
+        for attendee in booking.attendees.all():
+            Attendee.objects.create(
+                booking=new_booking,
+                name=attendee.name,
+                email=attendee.email,
+                is_organizer=attendee.is_organizer,
+                response_status=attendee.response_status
+            )
+            
+        # [HOOK: Notifications for both parties]
+        logger.info(f"Booking {booking.uid} rescheduled to {new_booking.uid} by {rescheduled_by}")
+        
+    return new_booking
+
 def cancel_booking(
     *,
     booking: Booking,

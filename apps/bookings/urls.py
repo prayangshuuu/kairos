@@ -1,13 +1,15 @@
 from django.urls import path
-from .views import PublicProfileView, BookingPageView, BookingStubView, BookingConfirmationView, BookingICSView
+from .views import PublicProfileView, BookingPageView, BookingStubView, BookingConfirmationView, BookingICSView, BookingCancelView, DashboardBookingCancelView, BookingRescheduleView, DashboardBookingRescheduleView
 
 app_name = "bookings"
 
 urlpatterns = [
     path("booking/<uuid:uid>/", BookingConfirmationView.as_view(), name="booking_confirmation"),
     path("booking/<uuid:uid>/ics/", BookingICSView.as_view(), name="booking_ics"),
-    path("booking/<uuid:uid>/cancel/", views.BookingCancelView.as_view(), name="booking_cancel"),
-    path("dashboard/bookings/<uuid:uid>/cancel/", views.DashboardBookingCancelView.as_view(), name="dashboard_booking_cancel"),
+    path("booking/<uuid:uid>/cancel/", BookingCancelView.as_view(), name="booking_cancel"),
+    path("booking/<uuid:uid>/reschedule/", BookingRescheduleView.as_view(), name="booking_reschedule"),
+    path("dashboard/bookings/<uuid:uid>/cancel/", DashboardBookingCancelView.as_view(), name="dashboard_booking_cancel"),
+    path("dashboard/bookings/<uuid:uid>/reschedule/", DashboardBookingRescheduleView.as_view(), name="dashboard_booking_reschedule"),
     path('<slug:host_slug>/<slug:event_slug>/', BookingPageView.as_view(), name='booking_page'),
     path('<slug:host_slug>/<slug:event_slug>/stub/', BookingStubView.as_view(), name='booking_stub'),
     

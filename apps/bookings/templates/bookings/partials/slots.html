@@ -15,8 +15,14 @@
         {% timezone visitor_tz %}
           {% for slot in day_slots %}
             <button 
+              {% if booking %}
+              hx-post="{% url 'bookings:booking_reschedule' uid=booking.uid %}?t={{ token }}"
+              hx-include="#reason"
+              hx-vals='{"slot_time": "{{ slot.isoformat }}", "tz": "{{ visitor_tz }}"}'
+              {% else %}
               hx-post="{% url 'bookings:booking_stub' host_slug=host.slug event_slug=event.slug %}"
               hx-vals='{"slot": "{{ slot.isoformat }}", "tz": "{{ visitor_tz }}"}'
+              {% endif %}
               hx-target="#slots-partial"
               hx-swap="outerHTML"
               class="w-full py-3.5 px-4 border border-primary-600 text-primary-700 rounded-lg text-sm font-semibold hover:border-primary-700 hover:bg-primary-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 flex justify-center items-center bg-white"

@@ -39,6 +39,8 @@ class Booking(models.Model):
 
     uid = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
     event_type = models.ForeignKey(EventType, on_delete=models.PROTECT, related_name="bookings")
+    
+    # 2. People & Identity
     host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="hosted_bookings")
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True)
     resource_id = models.UUIDField(null=True, blank=True)
@@ -113,6 +115,18 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.invitee_name} with {self.host.email} on {self.start_at.strftime('%Y-%m-%d %H:%M')}"
+
+    @property
+    def reschedule_chain(self):
+        """Returns the full reschedule chain, walking rescheduled_from backwards. Depth capped at 10 to guard against loops."""
+        chain = []
+        current = self.rescheduled_from
+        depth = 0
+        while current and depth < 10:
+            chain.append(current)
+            current = current.rescheduled_from
+            depth += 1
+        return chain
 
 
 class Attendee(models.Model):

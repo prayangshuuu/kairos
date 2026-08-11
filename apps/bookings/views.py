@@ -252,6 +252,15 @@ class BookingStubView(View):
                         # Re-render slot picker with fresh slots
                         d = form.cleaned_data['slot_time'].astimezone(ZoneInfo(form.cleaned_data['tz'])).date()
                         day_slots = get_slots(event, d, d, django_timezone.now())
+                        context = {
+                            'host': host,
+                            'event': event,
+                            'visitor_tz': form.cleaned_data['tz'],
+                            'day_slots': day_slots,
+                            'selected_day': d.isoformat(),
+                            'error_message': "Sorry, that time was just booked by someone else. Here are the remaining times for that day."
+                        }
+                        return render(request, "bookings/partials/slots.html", context, status=409)
                         
                 # Return HX-Redirect header
                 response = HttpResponse()
@@ -447,5 +456,204 @@ class DashboardBookingCancelView(LoginRequiredMixin, View):
             pass
             
         # Redirect back to referring page, or dashboard
+        next_url = request.META.get('HTTP_REFERER', '/dashboard/')
+        return redirect(next_url)
+
+class BookingRescheduleView(View):
+    def get(self, request, uid):
+        from apps.bookings.tokens import verify_manage_token
+        token = request.GET.get('t', '')
+        if not verify_manage_token(uid, token):
+            raise Http404("Not found")
+            
+        booking = get_object_or_404(Booking.objects.select_related('event_type', 'host'), uid=uid)
+        
+        # Check live status
+        if booking.status in [Booking.StatusChoices.CANCELLED, Booking.StatusChoices.REJECTED]:
+            return redirect(f"/booking/{booking.uid}/?t={token}")
+            
+        event = booking.event_type
+        host = booking.host
+        
+        tz_str = request.GET.get('tz') or booking.invitee_timezone
+        if tz_str not in zoneinfo.available_timezones():
+            tz_str = 'UTC'
+        visitor_tz = zoneinfo.ZoneInfo(tz_str)
+        
+        now_utc = django_timezone.now()
+        now_visitor = now_utc.astimezone(visitor_tz)
+        
+        try:
+            year = int(request.GET.get('year', now_visitor.year))
+            month = int(request.GET.get('month', now_visitor.month))
+            if not (1 <= month <= 12):
+                raise ValueError
+        except (ValueError, TypeError):
+            year = now_visitor.year
+            month = now_visitor.month
+            
+        try:
+            day = int(request.GET.get('day'))
+            selected_date = date(year, month, day)
+        except (ValueError, TypeError):
+            selected_date = None
+            
+        first_day_of_month = date(year, month, 1)
+        if month == 12:
+            last_day_of_month = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            last_day_of_month = date(year, month + 1, 1) - timedelta(days=1)
+            
+        # No caching for reschedule since it's user-specific exclusion
+        fetch_start = first_day_of_month - timedelta(days=2)
+        fetch_end = last_day_of_month + timedelta(days=2)
+        month_slots = get_slots(event, fetch_start, fetch_end, now_utc, exclude_booking_id=booking.id)
+        
+        available_dates = set()
+        for slot in month_slots:
+            local_slot = slot.astimezone(visitor_tz)
+            if local_slot.year == year and local_slot.month == month:
+                available_dates.add(local_slot.date())
+                
+        today_visitor = now_visitor.date()
+        
+        if not selected_date:
+            future_avail = [d for d in available_dates if d >= today_visitor]
+            if future_avail:
+                selected_date = min(future_avail)
+            else:
+                selected_date = today_visitor
+                
+        if selected_date:
+            day_start = selected_date - timedelta(days=2)
+            day_end = selected_date + timedelta(days=2)
+            raw_slots = get_slots(event, day_start, day_end, now_utc, exclude_booking_id=booking.id)
+            
+            day_slots = []
+            for slot in raw_slots:
+                if slot.astimezone(visitor_tz).date() == selected_date:
+                    day_slots.append(slot)
+        else:
+            day_slots = []
+            
+        cal = calendar.Calendar(firstweekday=calendar.MONDAY)
+        month_weeks = cal.monthdatescalendar(year, month)
+        
+        prev_month = month - 1 if month > 1 else 12
+        prev_year = year if month > 1 else year - 1
+        next_month = month + 1 if month < 12 else 1
+        next_year = year if month < 12 else year + 1
+        
+        is_prev_disabled = (prev_year < now_visitor.year) or (prev_year == now_visitor.year and prev_month < now_visitor.month)
+        
+        context = {
+            'booking': booking,
+            'token': token,
+            'host': host,
+            'event': event,
+            'visitor_tz': tz_str,
+            'year': year,
+            'month': month,
+            'month_name': calendar.month_name[month],
+            'month_weeks': month_weeks,
+            'available_dates': available_dates,
+            'selected_date': selected_date,
+            'day_slots': day_slots,
+            'now_visitor': now_visitor,
+            'today_visitor': today_visitor,
+            'prev_year': prev_year,
+            'prev_month': prev_month,
+            'next_year': next_year,
+            'next_month': next_month,
+            'is_prev_disabled': is_prev_disabled,
+            'all_timezones': zoneinfo.available_timezones()
+        }
+        
+        partial = request.GET.get('partial')
+        if request.headers.get('HX-Request'):
+            if partial == 'calendar':
+                return render(request, "bookings/partials/calendar.html", context)
+            elif partial == 'slots':
+                return render(request, "bookings/partials/slots.html", context)
+            elif partial == 'tz_change':
+                return render(request, "bookings/partials/booking_body.html", context)
+                
+        return render(request, "bookings/reschedule.html", context)
+
+    def post(self, request, uid):
+        from apps.bookings.tokens import verify_manage_token
+        token = request.GET.get('t', '')
+        if not verify_manage_token(uid, token):
+            raise Http404("Not found")
+            
+        booking = get_object_or_404(Booking.objects.select_related('event_type', 'host'), uid=uid)
+        
+        reason = request.POST.get('reason', '')
+        tz_str = request.POST.get('tz') or booking.invitee_timezone
+        slot_time_str = request.POST.get('slot_time')
+        
+        try:
+            slot_time = datetime.fromisoformat(slot_time_str.replace('Z', '+00:00'))
+        except (ValueError, TypeError):
+            return HttpResponse("Invalid slot time.", status=400)
+            
+        from apps.bookings.services import reschedule_booking, SlotUnavailable, ReschedulingNotAllowed, AlreadyCancelled
+        try:
+            new_booking = reschedule_booking(
+                booking=booking,
+                new_start_at=slot_time,
+                rescheduled_by="invitee",
+                reason=reason,
+                now=django_timezone.now()
+            )
+        except AlreadyCancelled:
+            return redirect(f"/booking/{booking.uid}/?t={token}")
+        except ReschedulingNotAllowed as e:
+            return HttpResponse(str(e), status=403)
+        except SlotUnavailable as e:
+            # Need to re-render the slots partial
+            event = booking.event_type
+            d = slot_time.astimezone(ZoneInfo(tz_str)).date()
+            day_slots = get_slots(event, d, d, django_timezone.now(), exclude_booking_id=booking.id)
+            context = {
+                'host': booking.host,
+                'event': event,
+                'visitor_tz': tz_str,
+                'day_slots': day_slots,
+                'selected_day': d.isoformat(),
+                'error_message': str(e)
+            }
+            return render(request, "bookings/partials/slots.html", context, status=409)
+            
+        # Success: redirect to new booking
+        from apps.bookings.tokens import make_manage_token
+        new_token = make_manage_token(new_booking)
+        response = HttpResponse()
+        response['HX-Redirect'] = f"/booking/{new_booking.uid}/?t={new_token}"
+        return response
+
+class DashboardBookingRescheduleView(LoginRequiredMixin, View):
+    def post(self, request, uid):
+        booking = get_object_or_404(Booking, uid=uid, host=request.user)
+        reason = request.POST.get('reason', '')
+        slot_time_str = request.POST.get('slot_time')
+        
+        try:
+            slot_time = datetime.fromisoformat(slot_time_str.replace('Z', '+00:00'))
+        except (ValueError, TypeError):
+            return HttpResponse("Invalid slot time.", status=400)
+        
+        from apps.bookings.services import reschedule_booking, AlreadyCancelled
+        try:
+            new_booking = reschedule_booking(
+                booking=booking,
+                new_start_at=slot_time,
+                rescheduled_by="host",
+                reason=reason,
+                now=django_timezone.now()
+            )
+        except AlreadyCancelled:
+            pass
+            
         next_url = request.META.get('HTTP_REFERER', '/dashboard/')
         return redirect(next_url)

@@ -1,0 +1,123 @@
+{% extends "layouts/public.html" %}
+{% load tz %}
+
+{% block extra_head %}
+  <meta name="robots" content="noindex">
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8" x-data="{
+    tz: '{{ visitor_tz }}',
+    updateTimezone() {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tz', this.tz);
+        htmx.ajax('GET', url.toString(), {target: 'body', select: 'body'});
+    }
+}">
+
+  <!-- Header with Original Booking Context -->
+  <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8">
+    <div class="flex">
+      <div class="flex-shrink-0">
+        <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+        </svg>
+      </div>
+      <div class="ml-3">
+        <h3 class="text-sm font-medium text-blue-800">Rescheduling meeting with {{ host.get_full_name|default:host.email }}</h3>
+        <div class="mt-2 text-sm text-blue-700">
+          <p>Original time:</p>
+          {% timezone visitor_tz %}
+            <p class="font-bold">{{ booking.start_at|date:"l, F j, Y" }} at {{ booking.start_at|time:"g:i A" }} ({{ visitor_tz }})</p>
+          {% endtimezone %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-surface-200" id="booking-container">
+    <div class="flex flex-col md:flex-row h-full min-h-[600px]">
+      
+      <!-- Left Panel: Host & Event Info -->
+      <div class="w-full md:w-1/3 p-8 border-b md:border-b-0 md:border-r border-surface-200 bg-surface-50">
+        <a href="{% url 'bookings:booking_confirmation' uid=booking.uid %}?t={{ token }}" class="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 mb-6">
+          &larr; Cancel and return
+        </a>
+        
+        <div class="mb-6">
+          {% if host.avatar %}
+            <img src="{{ host.avatar.url }}" alt="{{ host.email }}" class="w-16 h-16 rounded-full border border-surface-300">
+          {% endif %}
+          <div class="mt-4 text-sm font-medium text-gray-500">{{ host.get_full_name|default:host.email }}</div>
+          <h1 class="text-2xl font-bold text-gray-900 mt-1">{{ event.title }}</h1>
+        </div>
+        
+        <div class="space-y-4 mb-6">
+          <div class="flex items-center text-gray-600 font-medium">
+            <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            {{ event.duration_minutes }} min
+          </div>
+        </div>
+        
+        <!-- Optional Reason Field -->
+        <div class="mt-8 border-t border-gray-200 pt-6">
+          <label for="reason" class="block text-sm font-medium text-gray-700">Reason for rescheduling (optional)</label>
+          <div class="mt-2">
+            <textarea id="reason" name="reason" rows="3" form="reschedule-form" class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md placeholder-gray-400" placeholder="Let the host know why..."></textarea>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Middle Panel: Calendar -->
+      <div class="w-full md:w-1/3 p-8 border-b md:border-b-0 md:border-r border-surface-200 relative" id="calendar-panel">
+        <div class="absolute inset-0 bg-white/50 backdrop-blur-[2px] z-10 hidden items-center justify-center transition-all duration-200" id="calendar-loader">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+        {% include "bookings/partials/calendar.html" %}
+      </div>
+      
+      <!-- Right Panel: Slots -->
+      <div class="w-full md:w-1/3 p-8 bg-surface-50 relative" id="slots-panel">
+        <div class="absolute inset-0 bg-white/50 backdrop-blur-[2px] z-10 hidden items-center justify-center transition-all duration-200" id="slots-loader">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+        
+        {% if selected_date %}
+          {% include "bookings/partials/slots.html" %}
+        {% else %}
+          <div class="flex items-center justify-center h-full text-gray-500">
+            Select a date to see available times
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  document.body.addEventListener('htmx:beforeRequest', function(evt) {
+    if (evt.detail.target.id === 'calendar-panel') {
+      document.getElementById('calendar-loader')?.classList.remove('hidden');
+      document.getElementById('calendar-loader')?.classList.add('flex');
+    }
+    if (evt.detail.target.id === 'slots-panel') {
+      document.getElementById('slots-loader')?.classList.remove('hidden');
+      document.getElementById('slots-loader')?.classList.add('flex');
+    }
+  });
+
+  document.body.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.target.id === 'calendar-panel') {
+      document.getElementById('calendar-loader')?.classList.add('hidden');
+      document.getElementById('calendar-loader')?.classList.remove('flex');
+    }
+    if (evt.detail.target.id === 'slots-panel') {
+      document.getElementById('slots-loader')?.classList.add('hidden');
+      document.getElementById('slots-loader')?.classList.remove('flex');
+    }
+  });
+</script>
+{% endblock %}
