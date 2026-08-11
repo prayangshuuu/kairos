@@ -2,9 +2,7 @@ import zoneinfo
 from django.core.exceptions import ValidationError
 
 def validate_timezone(value):
-    try:
-        zoneinfo.ZoneInfo(value)
-    except zoneinfo.ZoneInfoNotFoundError:
+    if value not in zoneinfo.available_timezones():
         raise ValidationError(f"'{value}' is not a valid IANA timezone name.")
 
 RESERVED_SLUGS = frozenset([
