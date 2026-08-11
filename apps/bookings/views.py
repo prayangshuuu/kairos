@@ -253,19 +253,12 @@ class BookingStubView(View):
                         d = form.cleaned_data['slot_time'].astimezone(ZoneInfo(form.cleaned_data['tz'])).date()
                         day_slots = get_slots(event, d, d, django_timezone.now())
                         
-                        context = {
-                            'host': host,
-                            'event': event,
-                            'visitor_tz': form.cleaned_data['tz'],
-                            'day_slots': day_slots,
-                            'selected_day': d.isoformat(),
-                            'error_message': "Sorry, that time was just booked by someone else. Here are the remaining times for that day."
-                        }
-                        return render(request, "bookings/partials/slots.html", context, status=409)
-
                 # Return HX-Redirect header
                 response = HttpResponse()
-                response['HX-Redirect'] = f"/{host.slug}/{event.slug}/confirmation/{booking.uid}/"
+                
+                from apps.bookings.tokens import make_manage_token
+                token = make_manage_token(booking)
+                response['HX-Redirect'] = f"/booking/{booking.uid}/?t={token}"
                 return response
             else:
                 # Re-render form with errors
@@ -310,3 +303,75 @@ class BookingStubView(View):
                 'slot_time': slot_time,
             }
             return render(request, "bookings/partials/booking_form.html", context)
+
+from django.shortcuts import get_object_or_404
+
+class BookingConfirmationView(View):
+    def get(self, request, uid):
+        from apps.bookings.tokens import verify_manage_token
+        token = request.GET.get('t', '')
+        if not verify_manage_token(uid, token):
+            raise Http404("Not found")
+            
+        from apps.bookings.models import Booking
+        booking = get_object_or_404(Booking.objects.select_related('event_type', 'host'), uid=uid)
+        
+        # Calculate outlook/google calendar urls
+        dtformat = "%Y%m%dT%H%M%SZ"
+        start_utc = booking.start_at.strftime(dtformat)
+        end_utc = booking.end_at.strftime(dtformat)
+        title = f"Meeting with {booking.host.get_full_name() or booking.host.email}"
+        details = f"Event: {booking.event_type.title}"
+        location = booking.location_value or ""
+        
+        from urllib.parse import urlencode
+        gcal_params = {
+            'action': 'TEMPLATE',
+            'text': title,
+            'dates': f"{start_utc}/{end_utc}",
+            'details': details,
+            'location': location,
+        }
+        google_url = f"https://calendar.google.com/calendar/render?{urlencode(gcal_params)}"
+        
+        outlook_params = {
+            'path': '/calendar/action/compose',
+            'rru': 'addevent',
+            'startdt': start_utc,
+            'enddt': end_utc,
+            'subject': title,
+            'body': details,
+            'location': location,
+        }
+        outlook_url = f"https://outlook.live.com/calendar/0/deeplink/compose?{urlencode(outlook_params)}"
+        
+        # Determine host timezone for display
+        host_tz = booking.event_type.schedule.timezone if booking.event_type.schedule else booking.host.timezone
+        
+        context = {
+            'booking': booking,
+            'token': token,
+            'google_url': google_url,
+            'outlook_url': outlook_url,
+            'host_tz': host_tz,
+            'is_past': booking.start_at < django_timezone.now(),
+        }
+        return render(request, "bookings/confirmation.html", context)
+
+class BookingICSView(View):
+    def get(self, request, uid):
+        from apps.bookings.tokens import verify_manage_token
+        token = request.GET.get('t', '')
+        if not verify_manage_token(uid, token):
+            raise Http404("Not found")
+            
+        from apps.bookings.models import Booking
+        booking = get_object_or_404(Booking.objects.select_related('event_type', 'host'), uid=uid)
+        
+        from apps.bookings.ics import generate_ics_for_booking
+        ics_content = generate_ics_for_booking(booking)
+        
+        from django.http import HttpResponse
+        response = HttpResponse(ics_content, content_type='text/calendar')
+        response['Content-Disposition'] = f'attachment; filename="booking_{booking.uid}.ics"'
+        return response

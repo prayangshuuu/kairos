@@ -1,0 +1,165 @@
+{% extends "layouts/public.html" %}
+{% load tz %}
+
+{% block extra_head %}
+  <meta name="robots" content="noindex">
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white rounded-2xl shadow-sm border border-surface-200 overflow-hidden">
+    <!-- Header Status -->
+    <div class="p-8 text-center border-b border-surface-200 
+      {% if booking.status == 'confirmed' %}bg-green-50
+      {% elif booking.status == 'pending' %}bg-yellow-50
+      {% elif booking.status == 'pending_payment' %}bg-blue-50
+      {% elif booking.status == 'cancelled' %}bg-red-50
+      {% else %}bg-surface-50{% endif %}">
+      
+      {% if booking.status == 'confirmed' %}
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+          <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900">Booking Confirmed!</h2>
+        <p class="mt-2 text-sm text-gray-600">You are scheduled with {{ booking.host.get_full_name|default:booking.host.email }}.</p>
+      {% elif booking.status == 'pending' %}
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
+          <svg class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900">Pending Host Approval</h2>
+        <p class="mt-2 text-sm text-gray-600">Your request has been sent to {{ booking.host.get_full_name|default:booking.host.email }}.</p>
+      {% elif booking.status == 'pending_payment' %}
+        <h2 class="text-2xl font-bold text-gray-900">Awaiting Payment</h2>
+      {% elif booking.status == 'cancelled' %}
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900">Booking Cancelled</h2>
+        <p class="mt-2 text-sm text-gray-600">This meeting has been cancelled.</p>
+        <div class="mt-6">
+          <a href="{% url 'bookings:booking_page' host_slug=booking.host.slug event_slug=booking.event_type.slug %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700">
+            Book Again
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Details -->
+    <div class="px-8 py-6">
+      <h3 class="text-lg leading-6 font-medium text-gray-900 mb-6">Meeting Details</h3>
+      
+      <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Event</dt>
+          <dd class="mt-1 text-sm text-gray-900">{{ booking.event_type.title }} ({{ booking.event_type.duration_minutes }} min)</dd>
+        </div>
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Host</dt>
+          <dd class="mt-1 text-sm text-gray-900 flex items-center">
+            {% if booking.host.avatar %}
+              <img src="{{ booking.host.avatar.url }}" alt="{{ booking.host.email }}" class="w-6 h-6 rounded-full mr-2">
+            {% endif %}
+            {{ booking.host.get_full_name|default:booking.host.email }}
+          </dd>
+        </div>
+        
+        <div class="sm:col-span-2">
+          <dt class="text-sm font-medium text-gray-500">When</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            {% timezone booking.invitee_timezone %}
+              <div class="font-semibold">{{ booking.start_at|date:"l, F j, Y" }}</div>
+              <div>{{ booking.start_at|time:"g:i A" }} - {{ booking.end_at|time:"g:i A" }} ({{ booking.invitee_timezone }})</div>
+            {% endtimezone %}
+            
+            {% if booking.invitee_timezone != host_tz %}
+              {% timezone host_tz %}
+                <div class="text-xs text-gray-500 mt-1">
+                  Host time: {{ booking.start_at|time:"g:i A" }} - {{ booking.end_at|time:"g:i A" }} ({{ host_tz }})
+                </div>
+              {% endtimezone %}
+            {% endif %}
+          </dd>
+        </div>
+
+        <div class="sm:col-span-2">
+          <dt class="text-sm font-medium text-gray-500">Location</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            {% if booking.location_type == 'google_meet' %}
+              Google Meet (Link will be sent in calendar invitation)
+            {% elif booking.location_type == 'in_person' %}
+              {{ booking.location_value }}
+            {% elif booking.location_type == 'phone' %}
+              We will call you.
+            {% else %}
+              To be determined
+            {% endif %}
+          </dd>
+        </div>
+        
+        {% if booking.invitee_notes %}
+        <div class="sm:col-span-2">
+          <dt class="text-sm font-medium text-gray-500">Notes</dt>
+          <dd class="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{{ booking.invitee_notes }}</dd>
+        </div>
+        {% endif %}
+        
+        {% if booking.answers %}
+        <div class="sm:col-span-2">
+          <dt class="text-sm font-medium text-gray-500 mb-2">Additional Information</dt>
+          <dd class="text-sm text-gray-900 space-y-2">
+            {% for key, val in booking.answers.items %}
+              <div>
+                <span class="font-medium">{{ val.label|default:key }}:</span> 
+                {% if val.value|length > 0 and val.value|stringformat:"s"|slice:":1" == "[" %}
+                  {{ val.value|join:", " }}
+                {% else %}
+                  {{ val.value }}
+                {% endif %}
+              </div>
+            {% endfor %}
+          </dd>
+        </div>
+        {% endif %}
+      </dl>
+    </div>
+
+    <!-- Actions -->
+    {% if booking.status != 'cancelled' %}
+      <div class="bg-gray-50 px-8 py-6 border-t border-surface-200 flex flex-col sm:flex-row sm:justify-between items-center space-y-4 sm:space-y-0">
+        
+        <div class="flex space-x-3">
+          <a href="{% url 'bookings:booking_ics' uid=booking.uid %}?t={{ token }}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Download .ics
+          </a>
+          <a href="{{ google_url }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Google Calendar
+          </a>
+          <a href="{{ outlook_url }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Outlook
+          </a>
+        </div>
+        
+        {% if not is_past %}
+          <div class="flex space-x-4 text-sm">
+            {% if booking.event_type.allow_rescheduling %}
+            <a href="#" class="text-primary-600 hover:text-primary-900 font-medium">Reschedule</a>
+            {% endif %}
+            
+            {% if booking.event_type.allow_cancellation %}
+            <a href="#" class="text-red-600 hover:text-red-900 font-medium">Cancel</a>
+            {% endif %}
+          </div>
+        {% endif %}
+        
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
