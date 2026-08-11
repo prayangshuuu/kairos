@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div x-data="{ sidebarOpen: false }" class="flex h-screen overflow-hidden bg-surface-50">
+    
+    <!-- Mobile sidebar backdrop -->
+    <div x-show="sidebarOpen" 
+         x-transition.opacity
+         @click="sidebarOpen = false"
+         class="fixed inset-0 z-20 bg-surface-900/50 lg:hidden"></div>
+
+    <!-- Sidebar -->
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" 
+           class="fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-300 transform bg-white border-r border-surface-200 lg:translate-x-0 lg:static lg:inset-0">
+        
+        <div class="flex items-center justify-center h-16 border-b border-surface-200">
+            <span class="text-xl font-bold text-brand-600">Kairos</span>
+        </div>
+        
+        <nav class="p-4 space-y-1">
+            <a href="#" class="flex items-center px-4 py-2 text-sm font-medium rounded-md text-surface-900 bg-surface-100">
+                Event Types
+            </a>
+            <a href="#" class="flex items-center px-4 py-2 text-sm font-medium rounded-md text-surface-600 hover:bg-surface-50 hover:text-surface-900">
+                Bookings
+            </a>
+            <a href="#" class="flex items-center px-4 py-2 text-sm font-medium rounded-md text-surface-600 hover:bg-surface-50 hover:text-surface-900">
+                Availability
+            </a>
+            <a href="#" class="flex items-center px-4 py-2 text-sm font-medium rounded-md text-surface-600 hover:bg-surface-50 hover:text-surface-900">
+                Integrations
+            </a>
+            <a href="#" class="flex items-center px-4 py-2 text-sm font-medium rounded-md text-surface-600 hover:bg-surface-50 hover:text-surface-900">
+                Settings
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex flex-col flex-1 overflow-hidden">
+        
+        <!-- Top bar -->
+        <header class="flex items-center justify-between h-16 px-6 bg-white border-b border-surface-200 lg:justify-end">
+            <!-- Mobile hamburger -->
+            <button @click="sidebarOpen = true" class="text-surface-500 hover:text-surface-700 focus:outline-none lg:hidden">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            
+            <!-- User Menu -->
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-medium text-surface-700">{{ request.user.display_name|default:request.user.email|default:"Demo User" }}</span>
+                <div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold overflow-hidden">
+                    {% if request.user.avatar %}
+                        <img src="{{ request.user.avatar.url }}" alt="Avatar" class="w-full h-full object-cover">
+                    {% else %}
+                        K
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        <!-- Main content area -->
+        <main class="flex-1 overflow-y-auto p-6 bg-surface-50">
+            {% block app_content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% endblock %}

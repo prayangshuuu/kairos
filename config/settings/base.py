@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'apps.integrations.apps.IntegrationsConfig',
     'apps.payments.apps.PaymentsConfig',
     'apps.teams.apps.TeamsConfig',
+    'apps.demo.apps.DemoConfig',
 ]
 
 MIDDLEWARE = [
