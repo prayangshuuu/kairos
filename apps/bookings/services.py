@@ -39,8 +39,8 @@ def approve_booking(
         booking.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
         
         # [HOOK: Create Google Calendar event]
-        from apps.integrations.tasks import create_calendar_event
-        transaction.on_commit(lambda: create_calendar_event.delay(booking.id))
+        from apps.bookings.tasks import process_booking_confirmation
+        transaction.on_commit(lambda: process_booking_confirmation.delay(booking.id))
         
         # [HOOK: Send confirmation notifications]
         logger.info(f"Booking {booking.uid} approved by {approved_by.email}")
@@ -282,8 +282,8 @@ def create_booking(
                 )
                 
             if status == Booking.StatusChoices.CONFIRMED:
-                from apps.integrations.tasks import create_calendar_event
-                transaction.on_commit(lambda: create_calendar_event.delay(booking.id))
+                from apps.bookings.tasks import process_booking_confirmation
+                transaction.on_commit(lambda: process_booking_confirmation.delay(booking.id))
     except (IntegrityError, OperationalError) as e:
         if "no_overlapping_bookings_per_host" in str(e) or "deadlock detected" in str(e):
             logger.info(f"Slot {start_at} unavailable due to constraint or deadlock for host {event_type.owner_id}")

@@ -71,6 +71,9 @@ def test_create_event_idempotent(MockClient, booking, selected_calendar):
     mock_events = MagicMock()
     mock_service.events.return_value = mock_events
     MockClient.return_value.service = mock_service
+    mock_resp = MagicMock()
+    mock_resp.status = 404
+    mock_events.get.return_value.execute.side_effect = HttpError(resp=mock_resp, content=b'Not Found')
     mock_events.insert.return_value.execute.return_value = {'id': f"kairos{booking.uid.hex}"}
     
     # Run twice
@@ -154,8 +157,12 @@ def test_create_event_permanently_failed(mock_retry, MockClient, booking, select
     MockClient.return_value.service = mock_service
     
     mock_resp = MagicMock()
-    mock_resp.status = 500
-    mock_events.insert.return_value.execute.side_effect = HttpError(resp=mock_resp, content=b'Internal Server Error')
+    mock_resp.status = 404
+    mock_events.get.return_value.execute.side_effect = HttpError(resp=mock_resp, content=b'Not Found')
+    
+    mock_resp_500 = MagicMock()
+    mock_resp_500.status = 500
+    mock_events.insert.return_value.execute.side_effect = HttpError(resp=mock_resp_500, content=b'Internal Server Error')
     
     create_calendar_event(booking.id)
     

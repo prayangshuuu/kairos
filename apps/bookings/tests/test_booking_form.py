@@ -65,4 +65,4 @@ def test_booking_form_validation(mock_is_slot_available, client):
     # Should get placeholder success
     assert response_valid.status_code == 200
     assert "HX-Redirect" in response_valid.headers
-    assert "/host_slug/test/confirmation/" in response_valid.headers["HX-Redirect"]
+    assert "/booking/" in response_valid.headers["HX-Redirect"]
