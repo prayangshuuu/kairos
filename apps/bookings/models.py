@@ -22,6 +22,12 @@ class Booking(models.Model):
         REJECTED = "rejected", "Rejected"
         NO_SHOW = "no_show", "No Show"
 
+    class SyncStatusChoices(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SYNCED = "synced", "Synced"
+        FAILED = "failed", "Failed"
+        NOT_APPLICABLE = "not_applicable", "Not Applicable"
+
     class CancelledByChoices(models.TextChoices):
         HOST = "host", "Host"
         INVITEE = "invitee", "Invitee"
@@ -74,6 +80,7 @@ class Booking(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    sync_status = models.CharField(max_length=20, choices=SyncStatusChoices.choices, default=SyncStatusChoices.NOT_APPLICABLE)
 
     class Meta:
         indexes = [
@@ -158,3 +165,22 @@ class NotificationLog(models.Model):
 
     def __str__(self):
         return f"{self.kind} for {self.booking_id}"
+
+class BookingReference(models.Model):
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="references")
+    connection = models.ForeignKey("integrations.CalendarConnection", on_delete=models.SET_NULL, null=True, blank=True)
+    external_event_id = models.CharField(max_length=255)
+    external_calendar_id = models.CharField(max_length=255)
+    meeting_url = models.URLField(blank=True)
+    kind = models.CharField(max_length=50, choices=(("calendar_event", "Calendar Event"), ("video_conference", "Video Conference")))
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["booking", "kind"], name="unique_booking_reference_kind")
+        ]
+
+    def __str__(self):
+        return f"{self.kind} for booking {self.booking.uid}"

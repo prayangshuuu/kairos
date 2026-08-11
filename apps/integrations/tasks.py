@@ -229,3 +229,158 @@ def scheduled_sync_all():
         # Jitter up to 60 seconds
         delay = random.randint(0, 60)
         sync_busy_time.apply_async(args=[conn.id], countdown=delay)
+
+@shared_task(bind=True, max_retries=5)
+def create_calendar_event(self, booking_id: int):
+    from apps.bookings.models import Booking, BookingReference
+    from apps.integrations.models import CalendarConnection, SelectedCalendar
+    from apps.integrations.google.client import GoogleCalendarClient
+    from googleapiclient.errors import HttpError
+    from django.db import IntegrityError
+    
+    try:
+        booking = Booking.objects.get(id=booking_id)
+    except Booking.DoesNotExist:
+        return
+        
+    if BookingReference.objects.filter(booking=booking, kind="calendar_event").exists():
+        return
+        
+    write_target = SelectedCalendar.objects.filter(
+        connection__user=booking.host,
+        connection__is_active=True,
+        connection__provider='google',
+        is_write_target=True
+    ).select_related('connection').first()
+    
+    if not write_target:
+        booking.sync_status = Booking.SyncStatusChoices.NOT_APPLICABLE
+        booking.save(update_fields=['sync_status'])
+        return
+        
+    try:
+        client = GoogleCalendarClient(write_target.connection)
+        
+        # Generate idempotent deterministic ID based on booking UUID
+        # Google accepts base32hex for IDs, we can just remove hyphens from UUID
+        import uuid
+        event_id = "kairos" + booking.uid.hex
+        
+        description = ""
+        if booking.invitee_notes:
+            description += f"Notes:\n{booking.invitee_notes}\n\n"
+        if booking.answers:
+            description += "Questions:\n"
+            for q, a in booking.answers.items():
+                description += f"- {q}: {a}\n"
+                
+        attendees = [
+            {'email': booking.host.email, 'responseStatus': 'accepted'},
+            {'email': booking.invitee_email, 'responseStatus': 'needsAction'}
+        ]
+        
+        for attendee in booking.attendees.filter(is_organizer=False).exclude(email=booking.invitee_email):
+            attendees.append({'email': attendee.email, 'responseStatus': 'needsAction'})
+            
+        event_body = {
+            'id': event_id,
+            'summary': f"{booking.event_type.title} with {booking.invitee_name}",
+            'description': description,
+            'start': {
+                'dateTime': booking.start_at.isoformat(),
+                'timeZone': booking.invitee_timezone,
+            },
+            'end': {
+                'dateTime': booking.end_at.isoformat(),
+                'timeZone': booking.invitee_timezone,
+            },
+            'attendees': attendees,
+            'extendedProperties': {
+                'private': {
+                    'kairos_booking_uid': str(booking.uid)
+                }
+            },
+            'source': {
+                'title': 'Kairos Booking',
+                'url': f"https://joinkairos.me/booking/{booking.uid}/" # Example URL
+            }
+        }
+        
+        if booking.location_value:
+            event_body['location'] = booking.location_value
+            
+        try:
+            created_event = client.service.events().insert(
+                calendarId=write_target.external_calendar_id,
+                body=event_body,
+                sendUpdates='none'
+            ).execute()
+        except HttpError as e:
+            if e.resp.status == 409:
+                # Idempotency hit at Google side
+                pass
+            else:
+                raise
+                
+        try:
+            BookingReference.objects.create(
+                booking=booking,
+                connection=write_target.connection,
+                external_event_id=event_id,
+                external_calendar_id=write_target.external_calendar_id,
+                kind="calendar_event"
+            )
+        except IntegrityError:
+            pass # Someone else beat us to it
+            
+        booking.sync_status = Booking.SyncStatusChoices.SYNCED
+        booking.save(update_fields=['sync_status'])
+        
+    except Exception as e:
+        logger.error(f"Failed to create Google Calendar event for booking {booking.uid}: {e}")
+        try:
+            self.retry(countdown=2 ** self.request.retries)
+        except self.MaxRetriesExceededError:
+            booking.sync_status = Booking.SyncStatusChoices.FAILED
+            booking.save(update_fields=['sync_status'])
+
+@shared_task(bind=True, max_retries=5)
+def delete_calendar_event(self, reference_id: int):
+    from apps.bookings.models import BookingReference
+    from apps.integrations.google.client import GoogleCalendarClient
+    from googleapiclient.errors import HttpError
+    
+    try:
+        ref = BookingReference.objects.get(id=reference_id)
+    except BookingReference.DoesNotExist:
+        return
+        
+    if not ref.connection:
+        # Connection was deleted
+        ref.delete()
+        return
+        
+    try:
+        client = GoogleCalendarClient(ref.connection)
+        
+        try:
+            client.service.events().delete(
+                calendarId=ref.external_calendar_id,
+                eventId=ref.external_event_id,
+                sendUpdates='none'
+            ).execute()
+        except HttpError as e:
+            if e.resp.status in (404, 410):
+                # Already deleted
+                pass
+            else:
+                raise
+                
+        ref.delete()
+        
+    except Exception as e:
+        logger.error(f"Failed to delete Google Calendar event {ref.external_event_id}: {e}")
+        try:
+            self.retry(countdown=2 ** self.request.retries)
+        except self.MaxRetriesExceededError:
+            pass # Best effort, do not fail cancellation

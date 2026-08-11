@@ -39,6 +39,8 @@ def approve_booking(
         booking.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
         
         # [HOOK: Create Google Calendar event]
+        from apps.integrations.tasks import create_calendar_event
+        transaction.on_commit(lambda: create_calendar_event.delay(booking.id))
         
         # [HOOK: Send confirmation notifications]
         logger.info(f"Booking {booking.uid} approved by {approved_by.email}")
@@ -180,6 +182,15 @@ def cancel_booking(
         
         # [HOOK: Refund logic goes here in a later task]
         # [HOOK: Google Calendar event deletion goes here in a later task]
+        from apps.integrations.tasks import delete_calendar_event
+        from apps.bookings.models import BookingReference
+        
+        # Capture the booking ID and look up references when transaction commits
+        def _trigger_deletions(b_id):
+            for ref in BookingReference.objects.filter(booking_id=b_id):
+                delete_calendar_event.delay(ref.id)
+                
+        transaction.on_commit(lambda: _trigger_deletions(booking.id))
         
         # [HOOK: Notifications go here in task 18. Call celery tasks here]
         logger.info(f"Booking {booking.uid} cancelled by {cancelled_by}. Notifications pending.")
@@ -269,6 +280,10 @@ def create_booking(
                     email=guest_email,
                     is_organizer=False
                 )
+                
+            if status == Booking.StatusChoices.CONFIRMED:
+                from apps.integrations.tasks import create_calendar_event
+                transaction.on_commit(lambda: create_calendar_event.delay(booking.id))
     except (IntegrityError, OperationalError) as e:
         if "no_overlapping_bookings_per_host" in str(e) or "deadlock detected" in str(e):
             logger.info(f"Slot {start_at} unavailable due to constraint or deadlock for host {event_type.owner_id}")
