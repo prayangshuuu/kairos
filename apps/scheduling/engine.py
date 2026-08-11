@@ -2,8 +2,9 @@ from datetime import date, time, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from collections import defaultdict
 
-from apps.scheduling.models import Schedule, DateOverride, AvailabilityRule
-from apps.scheduling.intervals import Interval, normalize
+from apps.scheduling.models import Schedule, DateOverride, AvailabilityRule, EventType
+from apps.scheduling.intervals import Interval, normalize, clamp, subtract, contains
+from apps.bookings.models import Booking, BLOCKING_STATUSES
 
 def resolve_time(d: date, t: time, tz: ZoneInfo) -> datetime:
     """
@@ -96,8 +97,219 @@ def expand_schedule(schedule: Schedule, start_date: date, end_date: date) -> lis
     # 5. Return normalized intervals
     return normalize(intervals)
 
-def expand_schedule_for_event(event_type, start_date: date, end_date: date) -> list[Interval]:
+def expand_schedule_for_event(event_type: EventType, start_date: date, end_date: date) -> list[Interval]:
     """
     Resolves the effective schedule for an event type and expands it.
     """
     return expand_schedule(event_type.effective_schedule, start_date, end_date)
+
+def get_slots(
+    event_type: EventType,
+    from_date: date,
+    to_date: date,
+    now: datetime,
+    external_busy: list[Interval] | None = None,
+) -> list[datetime]:
+    """
+    Produces bookable start times. 
+    Performance: Issues 2 queries for schedule, 1 query for overlapping bookings, 1 query for limits (if any).
+    Total query count <= 4, independent of window length.
+    """
+    tz = event_type.effective_schedule.zoneinfo
+    
+    # 1. Expand availability
+    # Pad by one day either side
+    start_d = from_date - timedelta(days=1)
+    end_d = to_date + timedelta(days=1)
+    available_intervals = expand_schedule_for_event(event_type, start_d, end_d)
+    
+    # 2. Apply booking window
+    window_start = now
+    
+    if event_type.window_type == "rolling":
+        if event_type.rolling_business_days_only:
+            days_added = 0
+            cur = now
+            while days_added < event_type.rolling_days:
+                cur += timedelta(days=1)
+                if cur.astimezone(tz).weekday() < 5:
+                    days_added += 1
+            window_end = cur
+        else:
+            window_end = now + timedelta(days=event_type.rolling_days)
+    elif event_type.window_type == "fixed_range":
+        rs = datetime.combine(event_type.range_start, time.min, tzinfo=tz).astimezone(timezone.utc)
+        re = datetime.combine(event_type.range_end, time.max, tzinfo=tz).astimezone(timezone.utc)
+        window_start = max(window_start, rs)
+        window_end = re
+    else:
+        window_end = datetime.max.replace(tzinfo=timezone.utc)
+        
+    # Clamp to requested from_date/to_date (mapped to schedule timezone)
+    fd = datetime.combine(from_date, time.min, tzinfo=tz).astimezone(timezone.utc)
+    td = datetime.combine(to_date, time.max, tzinfo=tz).astimezone(timezone.utc)
+    
+    window_start = max(window_start, fd)
+    window_end = min(window_end, td)
+    
+    # 3. Apply minimum notice
+    min_notice = now + timedelta(minutes=event_type.minimum_notice_minutes)
+    window_start = max(window_start, min_notice)
+    
+    if window_start >= window_end:
+        return []
+        
+    available_intervals = clamp(available_intervals, window_start, window_end)
+    if not available_intervals:
+        return []
+        
+    # 4. Subtract busy time
+    limit_qs = Booking.objects.filter(
+        host=event_type.owner,
+        status__in=BLOCKING_STATUSES,
+        buffered_period__overlap=(window_start, window_end)
+    ).values_list('buffered_period', flat=True)
+    
+    busy_intervals = []
+    for bp in limit_qs:
+        if bp.lower and bp.upper:
+            busy_intervals.append((bp.lower, bp.upper))
+            
+    if external_busy:
+        busy_intervals.extend(external_busy)
+        
+    available_intervals = subtract(available_intervals, busy_intervals)
+    if not available_intervals:
+        return []
+        
+    # 5. Slice into candidate start times
+    slot_interval = event_type.effective_slot_interval
+    dur = timedelta(minutes=event_type.duration_minutes)
+    b_before = timedelta(minutes=event_type.buffer_before_minutes)
+    b_after = timedelta(minutes=event_type.buffer_after_minutes)
+    
+    local_window_start = window_start.astimezone(tz)
+    local_window_end = window_end.astimezone(tz)
+    
+    curr_d = local_window_start.date()
+    end_grid_date = local_window_end.date() + timedelta(days=1)
+    
+    raw_candidates = []
+    while curr_d <= end_grid_date:
+        t_minutes = 0
+        while t_minutes < 1440:
+            h = t_minutes // 60
+            m = t_minutes % 60
+            t = time(h, m)
+            
+            dt_naive = datetime.combine(curr_d, t)
+            dt0 = dt_naive.replace(tzinfo=tz, fold=0)
+            u0 = dt0.astimezone(timezone.utc)
+            
+            dt1 = dt_naive.replace(tzinfo=tz, fold=1)
+            u1 = dt1.astimezone(timezone.utc)
+            
+            if u0 > u1:
+                # Nonexistent time, no slot can start exactly here.
+                pass
+            elif u0 < u1:
+                # Ambiguous time
+                if window_start <= u0 < window_end:
+                    raw_candidates.append(u0)
+                if window_start <= u1 < window_end:
+                    raw_candidates.append(u1)
+            else:
+                if window_start <= u0 < window_end:
+                    raw_candidates.append(u0)
+                    
+            t_minutes += slot_interval
+            
+        curr_d += timedelta(days=1)
+        
+    raw_candidates = sorted(list(set(raw_candidates)))
+    
+    valid_candidates = []
+    for u_start in raw_candidates:
+        req_start = u_start - b_before
+        req_end = u_start + dur + b_after
+        
+        if contains(available_intervals, req_start, req_end):
+            valid_candidates.append(u_start)
+            
+    if not valid_candidates:
+        return []
+        
+    # 6. Apply booking limits
+    if event_type.max_bookings_per_day or event_type.max_bookings_per_week or event_type.max_bookings_per_month:
+        host_tz = event_type.owner.zoneinfo
+        min_c = valid_candidates[0].astimezone(host_tz)
+        max_c = valid_candidates[-1].astimezone(host_tz)
+        
+        month_start = min_c.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_month = max_c.replace(day=28) + timedelta(days=4)
+        month_end = next_month - timedelta(days=next_month.day)
+        month_end = month_end.replace(hour=23, minute=59, second=59)
+        
+        q_start = month_start.astimezone(timezone.utc)
+        q_end = month_end.astimezone(timezone.utc)
+        
+        limit_bookings = Booking.objects.filter(
+            host=event_type.owner,
+            status__in=BLOCKING_STATUSES,
+            start_at__gte=q_start,
+            start_at__lte=q_end
+        ).values_list('start_at', flat=True)
+        
+        bookings_by_day = defaultdict(int)
+        bookings_by_week = defaultdict(int)
+        bookings_by_month = defaultdict(int)
+        
+        week_start_day = event_type.owner.week_start
+        
+        for b_start in limit_bookings:
+            local_b = b_start.astimezone(host_tz)
+            
+            day_key = local_b.date()
+            bookings_by_day[day_key] += 1
+            
+            month_key = (local_b.year, local_b.month)
+            bookings_by_month[month_key] += 1
+            
+            days_since = (local_b.weekday() - week_start_day) % 7
+            week_key = local_b.date() - timedelta(days=days_since)
+            bookings_by_week[week_key] += 1
+            
+        final_candidates = []
+        for u_start in valid_candidates:
+            local_c = u_start.astimezone(host_tz)
+            day_key = local_c.date()
+            month_key = (local_c.year, local_c.month)
+            days_since = (local_c.weekday() - week_start_day) % 7
+            week_key = local_c.date() - timedelta(days=days_since)
+            
+            if event_type.max_bookings_per_day and bookings_by_day[day_key] >= event_type.max_bookings_per_day:
+                continue
+            if event_type.max_bookings_per_week and bookings_by_week[week_key] >= event_type.max_bookings_per_week:
+                continue
+            if event_type.max_bookings_per_month and bookings_by_month[month_key] >= event_type.max_bookings_per_month:
+                continue
+                
+            final_candidates.append(u_start)
+            
+        valid_candidates = final_candidates
+        
+    return valid_candidates
+
+def is_slot_available(
+    event_type: EventType,
+    start_at: datetime,
+    now: datetime,
+    external_busy: list[Interval] | None = None
+) -> bool:
+    """
+    Validates one specific start time by reusing get_slots for that single day.
+    """
+    tz = event_type.effective_schedule.zoneinfo
+    d = start_at.astimezone(tz).date()
+    slots = get_slots(event_type, d, d, now, external_busy)
+    return start_at in slots
