@@ -48,9 +48,15 @@
             
             <!-- User Menu -->
             <div class="flex items-center gap-3">
-                <span class="text-sm font-medium text-surface-700">{{ request.user.display_name|default:request.user.email|default:"Demo User" }}</span>
+                <span class="text-sm font-medium text-surface-700">
+                    {% if request.user.is_authenticated %}
+                        {{ request.user.display_name|default:request.user.email }}
+                    {% else %}
+                        Demo User
+                    {% endif %}
+                </span>
                 <div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold overflow-hidden">
-                    {% if request.user.avatar %}
+                    {% if request.user.is_authenticated and request.user.avatar %}
                         <img src="{{ request.user.avatar.url }}" alt="Avatar" class="w-full h-full object-cover">
                     {% else %}
                         K

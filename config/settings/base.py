@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
     
     # Local
     'apps.accounts.apps.AccountsConfig',
@@ -38,6 +39,8 @@ INSTALLED_APPS = [
     'apps.demo.apps.DemoConfig',
 ]
 
+SITE_ID = 1
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -47,6 +50,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'apps.accounts.middleware.OnboardingMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -117,3 +121,39 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
+
+# allauth settings
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_PRESERVE_USERNAME_CASING = False
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_RATE_LIMITS = {
+    "login": "5/5m",
+    "login_failed": "5/5m",
+}
+
+LOGIN_REDIRECT_URL = "/dashboard/"
+LOGOUT_REDIRECT_URL = "/"
+LOGIN_URL = "/accounts/login/"
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+        'APP': {
+            'client_id': env("GOOGLE_OAUTH_CLIENT_ID", default=""),
+            'secret': env("GOOGLE_OAUTH_CLIENT_SECRET", default=""),
+            'key': ''
+        }
+    }
+}

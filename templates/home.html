@@ -1,0 +1,22 @@
+{% extends "layouts/public.html" %}
+
+{% block title %}Kairos - Simple Scheduling{% endblock %}
+
+{% block public_content %}
+<div class="max-w-4xl mx-auto py-20 px-4 sm:px-6 lg:px-8 text-center">
+    <h1 class="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
+        Scheduling made simple
+    </h1>
+    <p class="mt-5 max-w-xl mx-auto text-xl text-gray-500">
+        Kairos helps you manage your meetings without the back-and-forth emails.
+    </p>
+    <div class="mt-10 flex justify-center gap-4">
+        <a href="{% url 'account_signup' %}" class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+            Sign up
+        </a>
+        <a href="{% url 'account_login' %}" class="inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Log in
+        </a>
+    </div>
+</div>
+{% endblock %}

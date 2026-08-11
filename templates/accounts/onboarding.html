@@ -1,0 +1,89 @@
+{% extends "layouts/public.html" %}
+
+{% block title %}Welcome to Kairos - Set up your account{% endblock %}
+
+{% block public_content %}
+<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Welcome to Kairos
+        </h2>
+        <p class="mt-2 text-center text-sm text-gray-600">
+            Let's get your booking page set up.
+        </p>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <form class="space-y-6" action="{% url 'onboarding' %}" method="POST">
+                {% csrf_token %}
+
+                <div>
+                    <label for="slug" class="block text-sm font-medium text-gray-700">
+                        Your booking link
+                    </label>
+                    <div class="mt-1 flex rounded-md shadow-sm">
+                        <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+                            joinkairos.me/
+                        </span>
+                        <input type="text" name="slug" id="slug" value="{{ suggested_slug }}"
+                            class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            hx-get="{% url 'check_slug' %}" hx-trigger="keyup changed delay:500ms" hx-target="#slug-check-result" required>
+                    </div>
+                    <div id="slug-check-result" class="mt-2 h-5"></div>
+                </div>
+
+                <div>
+                    <label for="display_name" class="block text-sm font-medium text-gray-700">
+                        Display Name
+                    </label>
+                    <div class="mt-1">
+                        <input id="display_name" name="display_name" type="text" value="{{ user.display_name|default:user.first_name|default:'' }}"
+                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="timezone" class="block text-sm font-medium text-gray-700">
+                        Timezone
+                    </label>
+                    <div class="mt-1">
+                        <select id="timezone" name="timezone" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            {% for tz in timezones %}
+                            <option value="{{ tz }}">{{ tz }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit"
+                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Continue to Dashboard
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Auto-detect timezone and select it
+        try {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const select = document.getElementById("timezone");
+            if (tz) {
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === tz) {
+                        select.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Timezone detection failed:", e);
+        }
+    });
+</script>
+{% endblock %}

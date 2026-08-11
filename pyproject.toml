@@ -10,7 +10,7 @@ dependencies = [
     "django-environ",
     "celery",
     "redis",
-    "django-allauth",
+    "django-allauth[socialaccount]",
     "icalendar",
     "pillow>=12.3.0",
 ]
