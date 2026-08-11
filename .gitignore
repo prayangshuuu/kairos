@@ -22,3 +22,5 @@ db.sqlite3-journal
 
 # macOS
 .DS_Store
+
+media/
