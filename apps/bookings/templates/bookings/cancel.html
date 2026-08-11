@@ -1,0 +1,72 @@
+{% extends "layouts/public.html" %}
+{% load tz %}
+
+{% block extra_head %}
+  <meta name="robots" content="noindex">
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+  <div class="bg-white rounded-2xl shadow-sm border border-surface-200 overflow-hidden">
+    <div class="p-8 border-b border-surface-200 bg-surface-50">
+      <h2 class="text-2xl font-bold text-gray-900">Cancel Booking</h2>
+      <p class="mt-2 text-sm text-gray-600">You are about to cancel your meeting with {{ booking.host.get_full_name|default:booking.host.email }}.</p>
+    </div>
+
+    <div class="px-8 py-6">
+      <div class="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
+        <h4 class="font-medium text-gray-900">{{ booking.event_type.title }}</h4>
+        <div class="mt-2 text-sm text-gray-600">
+          {% timezone booking.invitee_timezone %}
+            <div>{{ booking.start_at|date:"l, F j, Y" }}</div>
+            <div>{{ booking.start_at|time:"g:i A" }} - {{ booking.end_at|time:"g:i A" }} ({{ booking.invitee_timezone }})</div>
+          {% endtimezone %}
+        </div>
+      </div>
+
+      {% if cutoff_reached %}
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-yellow-700">
+                It is too close to the event start time to cancel online. 
+                Please <a href="mailto:{{ booking.host.email }}" class="font-medium underline hover:text-yellow-600">contact the host</a> directly.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-8">
+          <a href="{% url 'bookings:booking_confirmation' uid=booking.uid %}?t={{ token }}" class="text-sm font-medium text-primary-600 hover:text-primary-500">
+            &larr; Back to booking
+          </a>
+        </div>
+      {% else %}
+        <form method="post" action="{% url 'bookings:booking_cancel' uid=booking.uid %}?t={{ token }}">
+          {% csrf_token %}
+          <div>
+            <label for="reason" class="block text-sm font-medium text-gray-700">Reason for cancelling (optional)</label>
+            <div class="mt-1">
+              <textarea id="reason" name="reason" rows="3" class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md placeholder-gray-400" placeholder="Let the host know why you're cancelling..."></textarea>
+            </div>
+          </div>
+          
+          <div class="mt-8 flex items-center justify-between">
+            <a href="{% url 'bookings:booking_confirmation' uid=booking.uid %}?t={{ token }}" class="text-sm font-medium text-gray-600 hover:text-gray-900">
+              Keep my booking
+            </a>
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+              Cancel Booking
+            </button>
+          </div>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

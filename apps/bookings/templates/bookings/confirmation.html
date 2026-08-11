@@ -152,7 +152,7 @@
             {% endif %}
             
             {% if booking.event_type.allow_cancellation %}
-            <a href="#" class="text-red-600 hover:text-red-900 font-medium">Cancel</a>
+            <a href="{% url 'bookings:booking_cancel' uid=booking.uid %}?t={{ token }}" class="text-red-600 hover:text-red-900 font-medium">Cancel</a>
             {% endif %}
           </div>
         {% endif %}

@@ -10,6 +10,49 @@ logger = logging.getLogger(__name__)
 class SlotUnavailable(Exception):
     pass
 
+class AlreadyCancelled(Exception):
+    pass
+    
+class CancellationNotAllowed(Exception):
+    pass
+
+def cancel_booking(
+    *,
+    booking: Booking,
+    cancelled_by: str,
+    reason: str = "",
+    now: datetime,
+) -> Booking:
+    if booking.status in [Booking.StatusChoices.CANCELLED, Booking.StatusChoices.REJECTED]:
+        raise AlreadyCancelled("Booking is already cancelled or rejected.")
+        
+    if cancelled_by == "invitee":
+        if not booking.event_type.allow_cancellation:
+            raise CancellationNotAllowed("This event type does not allow cancellation by invitees.")
+        
+        if booking.event_type.cancellation_cutoff_hours is not None:
+            cutoff = booking.start_at - timedelta(hours=booking.event_type.cancellation_cutoff_hours)
+            if now > cutoff:
+                raise CancellationNotAllowed("It is too late to cancel this booking.")
+                
+    with transaction.atomic():
+        # Because the Postgres exclusion constraint excludes rows where
+        # status IN ('cancelled', 'rejected'), changing the status to 'cancelled'
+        # inherently releases the slot without any extra deletion logic.
+        booking.status = Booking.StatusChoices.CANCELLED
+        booking.cancelled_by = cancelled_by
+        booking.cancellation_reason = reason
+        booking.cancelled_at = now
+        booking.save(update_fields=['status', 'cancelled_by', 'cancellation_reason', 'cancelled_at', 'updated_at'])
+        
+        # [HOOK: Refund logic goes here in a later task]
+        # [HOOK: Google Calendar event deletion goes here in a later task]
+        
+        # [HOOK: Notifications go here in task 18. Call celery tasks here]
+        logger.info(f"Booking {booking.uid} cancelled by {cancelled_by}. Notifications pending.")
+        
+    return booking
+
 def create_booking(
     *,
     event_type: EventType,

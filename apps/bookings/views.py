@@ -375,3 +375,77 @@ class BookingICSView(View):
         response = HttpResponse(ics_content, content_type='text/calendar')
         response['Content-Disposition'] = f'attachment; filename="booking_{booking.uid}.ics"'
         return response
+
+from django.utils import timezone as django_timezone
+from django.shortcuts import redirect
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+class BookingCancelView(View):
+    def get(self, request, uid):
+        from apps.bookings.tokens import verify_manage_token
+        token = request.GET.get('t', '')
+        if not verify_manage_token(uid, token):
+            raise Http404("Not found")
+            
+        booking = get_object_or_404(Booking.objects.select_related('event_type', 'host'), uid=uid)
+        
+        if booking.status in [Booking.StatusChoices.CANCELLED, Booking.StatusChoices.REJECTED]:
+            return redirect(f"/booking/{booking.uid}/?t={token}")
+            
+        context = {
+            'booking': booking,
+            'token': token,
+            'cutoff_reached': False,
+        }
+        
+        if booking.event_type.cancellation_cutoff_hours is not None:
+            cutoff = booking.start_at - timedelta(hours=booking.event_type.cancellation_cutoff_hours)
+            if django_timezone.now() > cutoff:
+                context['cutoff_reached'] = True
+                
+        return render(request, "bookings/cancel.html", context)
+        
+    def post(self, request, uid):
+        from apps.bookings.tokens import verify_manage_token
+        token = request.GET.get('t', '')
+        if not verify_manage_token(uid, token):
+            raise Http404("Not found")
+            
+        booking = get_object_or_404(Booking.objects.select_related('event_type', 'host'), uid=uid)
+        
+        reason = request.POST.get('reason', '')
+        
+        from apps.bookings.services import cancel_booking, AlreadyCancelled, CancellationNotAllowed
+        try:
+            cancel_booking(
+                booking=booking,
+                cancelled_by="invitee",
+                reason=reason,
+                now=django_timezone.now()
+            )
+        except AlreadyCancelled:
+            pass # just redirect
+        except CancellationNotAllowed as e:
+            return HttpResponse(str(e), status=403)
+            
+        return redirect(f"/booking/{booking.uid}/?t={token}")
+
+class DashboardBookingCancelView(LoginRequiredMixin, View):
+    def post(self, request, uid):
+        booking = get_object_or_404(Booking, uid=uid, host=request.user)
+        reason = request.POST.get('reason', '')
+        
+        from apps.bookings.services import cancel_booking, AlreadyCancelled
+        try:
+            cancel_booking(
+                booking=booking,
+                cancelled_by="host",
+                reason=reason,
+                now=django_timezone.now()
+            )
+        except AlreadyCancelled:
+            pass
+            
+        # Redirect back to referring page, or dashboard
+        next_url = request.META.get('HTTP_REFERER', '/dashboard/')
+        return redirect(next_url)
