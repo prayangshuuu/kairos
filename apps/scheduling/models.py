@@ -125,6 +125,7 @@ class EventType(models.Model):
         GOOGLE_MEET = "google_meet", "Google Meet"
         ZOOM = "zoom", "Zoom"
         MS_TEAMS = "ms_teams", "MS Teams"
+        JITSI = "jitsi", "Jitsi"
         PHONE_HOST_CALLS = "phone_host_calls", "Phone (Host calls invitee)"
         PHONE_INVITEE_CALLS = "phone_invitee_calls", "Phone (Invitee calls host)"
         IN_PERSON = "in_person", "In Person"
