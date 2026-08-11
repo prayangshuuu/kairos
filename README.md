@@ -28,3 +28,16 @@ Scheduling and paid-appointments platform.
    ```bash
    uv run python manage.py runserver
    ```
+
+## Demo Account
+
+To create a quick test user for testing the dashboard and onboarding flows, run the following command in the Django shell (`uv run python manage.py shell`):
+
+```python
+from apps.accounts.models import User
+user = User.objects.create_user(email="test@joinkairos.me", password="password")
+```
+
+You can then log in at `http://127.0.0.1:8000/accounts/login/` with:
+- **Email**: `test@joinkairos.me`
+- **Password**: `password`

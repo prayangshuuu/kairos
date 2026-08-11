@@ -87,3 +87,29 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def get_default_schedule(self):
+        from apps.scheduling.models import Schedule, AvailabilityRule
+        import datetime
+        
+        schedule = self.schedules.filter(is_default=True).first()
+        if not schedule:
+            schedule = self.schedules.create(
+                name="Working Hours",
+                timezone=self.timezone,
+                is_default=True
+            )
+            # Create Mon-Fri 09:00-17:00
+            rules = []
+            for weekday in range(5):  # 0 to 4 (Mon to Fri)
+                rules.append(
+                    AvailabilityRule(
+                        schedule=schedule,
+                        weekday=weekday,
+                        start_time=datetime.time(9, 0),
+                        end_time=datetime.time(17, 0)
+                    )
+                )
+            AvailabilityRule.objects.bulk_create(rules)
+            
+        return schedule
