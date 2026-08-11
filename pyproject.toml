@@ -1,0 +1,37 @@
+[project]
+name = "kairos"
+version = "0.1.0"
+description = "Scheduling and paid-appointments platform"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.0",
+    "psycopg[binary]",
+    "django-environ",
+    "celery",
+    "redis",
+    "django-allauth",
+    "icalendar",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-django",
+    "pytest-cov",
+    "ruff",
+    "django-debug-toolbar",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM", "DJ"]
+ignore = []
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+testpaths = ["apps"]
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
