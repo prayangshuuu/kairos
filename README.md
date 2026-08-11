@@ -44,10 +44,8 @@ You can then log in at `http://127.0.0.1:8000/accounts/login/` with:
 
 ## Admin Account
 
-To create a superuser for accessing the Django admin interface, run:
+A default superuser has been created for accessing the Django admin interface at `http://127.0.0.1:8000/admin/`.
 
-```bash
-uv run python manage.py createsuperuser
-```
-
-You can then log in at `http://127.0.0.1:8000/admin/` with the email and password you provided.
+You can log in with:
+- **Email**: `admin@joinkairos.me`
+- **Password**: `adminpassword`
