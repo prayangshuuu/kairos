@@ -28,4 +28,6 @@ handler404 = 'apps.demo.views.custom_404'
 handler500 = 'apps.demo.views.custom_500'
 
 if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns += [path('__debug__/', include(debug_toolbar.urls))]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
