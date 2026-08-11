@@ -41,3 +41,13 @@ user = User.objects.create_user(email="test@joinkairos.me", password="password")
 You can then log in at `http://127.0.0.1:8000/accounts/login/` with:
 - **Email**: `test@joinkairos.me`
 - **Password**: `password`
+
+## Admin Account
+
+To create a superuser for accessing the Django admin interface, run:
+
+```bash
+uv run python manage.py createsuperuser
+```
+
+You can then log in at `http://127.0.0.1:8000/admin/` with the email and password you provided.
