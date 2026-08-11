@@ -30,7 +30,7 @@
             <a href="{% url 'socialaccount_connections' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if '3rdparty' in request.path or 'social' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Integrations
             </a>
-            <a href="{% url 'account_email' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'accounts' in request.path and '3rdparty' not in request.path and 'social' not in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
+            <a href="{% url 'accounts:settings_profile' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'settings' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Settings
             </a>
         </nav>

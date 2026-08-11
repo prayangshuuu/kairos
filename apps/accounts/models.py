@@ -59,6 +59,8 @@ class User(AbstractUser):
     locale = models.CharField(max_length=10, default="en")
     time_format = models.CharField(max_length=2, choices=TimeFormatChoices.choices, default=TimeFormatChoices.H12)
     week_start = models.IntegerField(choices=WeekStartChoices.choices, default=WeekStartChoices.MONDAY)
+    brand_color = models.CharField(max_length=7, default="#000000")
+    hide_branding = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -113,3 +115,16 @@ class User(AbstractUser):
             AvailabilityRule.objects.bulk_create(rules)
             
         return schedule
+
+class UserSlugHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="slug_history")
+    old_slug = models.SlugField(max_length=40, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class UserNotificationPreference(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="notification_preferences")
+    new_booking = models.BooleanField(default=True)
+    reschedule = models.BooleanField(default=True)
+    pending_reminder = models.BooleanField(default=True)
+    daily_agenda = models.BooleanField(default=True)
+    # Cancellation is omitted here because it cannot be disabled.

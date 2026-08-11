@@ -1,0 +1,13 @@
+{% extends "accounts/settings_layout.html" %}
+{% block settings_content %}
+<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6">
+    <h2 class="text-lg font-medium text-gray-900">Security</h2>
+    <p class="mt-2 text-sm text-gray-500">Manage your password, emails, and connected accounts.</p>
+    
+    <div class="mt-6 flex space-x-4">
+        <a href="{% url 'account_change_password' %}" class="text-blue-600 hover:underline">Change Password</a>
+        <a href="{% url 'account_email' %}" class="text-blue-600 hover:underline">Manage Emails</a>
+        <a href="{% url 'socialaccount_connections' %}" class="text-blue-600 hover:underline">Connected Accounts</a>
+    </div>
+</div>
+{% endblock %}

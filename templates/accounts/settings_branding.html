@@ -1,0 +1,30 @@
+{% extends "accounts/settings_layout.html" %}
+{% block settings_content %}
+<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6">
+    <h2 class="text-lg font-medium text-gray-900">Branding</h2>
+    
+    <form hx-post="{% url 'accounts:settings_branding' %}" hx-target="#settings-messages" class="mt-6 space-y-6">
+        {% csrf_token %}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Brand Color</label>
+            <div class="mt-1 flex items-center space-x-4">
+                <input type="color" name="brand_color" value="{{ brand_form.brand_color.value }}" class="h-8 w-8 rounded-md cursor-pointer border-gray-300">
+                <input type="text" name="brand_color_text" value="{{ brand_form.brand_color.value }}" class="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm" disabled>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Used for buttons and accents on your public booking page.</p>
+        </div>
+        
+        <div>
+            <label class="flex items-center">
+                <input type="checkbox" name="hide_branding" disabled class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
+                <span class="ml-2 text-sm text-gray-600">Hide "Powered by Kairos" branding</span>
+            </label>
+            <p class="text-xs text-yellow-600 mt-1 ml-6">This feature requires a paid plan (Coming soon).</p>
+        </div>
+        
+        <div class="flex justify-end">
+            <button type="submit" class="bg-brand-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">Save Branding</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

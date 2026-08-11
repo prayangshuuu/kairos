@@ -1,0 +1,37 @@
+{% extends "accounts/settings_layout.html" %}
+{% block settings_content %}
+<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6">
+    <h2 class="text-lg font-medium text-red-600">Export Data</h2>
+    <p class="mt-1 text-sm text-gray-500">Receive a JSON archive of your event types, schedules, and bookings.</p>
+    
+    <form hx-post="{% url 'accounts:settings_danger' %}" hx-target="#settings-messages" class="mt-4">
+        {% csrf_token %}
+        <input type="hidden" name="export_data" value="1">
+        <button type="submit" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">Request Export</button>
+    </form>
+</div>
+
+<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6 mt-6 border-t-4 border-red-600">
+    <h2 class="text-lg font-medium text-red-600">Delete Account</h2>
+    <p class="mt-1 text-sm text-gray-500">Deleting your account will cancel future bookings, anonymise past bookings, and permanently deactivate your profile after a 30-day grace period.</p>
+    
+    <form hx-post="{% url 'accounts:settings_danger' %}" hx-target="#settings-messages" class="mt-6 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="delete_account" value="1">
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Type your email to confirm</label>
+            <input type="email" name="email" required placeholder="{{ request.user.email }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm">
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Password</label>
+            <input type="password" name="password" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm">
+        </div>
+        
+        <div class="flex justify-end mt-4">
+            <button type="submit" onclick="return confirm('Are you sure you want to delete your account?')" class="bg-red-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Delete Account</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

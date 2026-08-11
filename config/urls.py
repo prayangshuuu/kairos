@@ -28,6 +28,7 @@ urlpatterns = [
     path('onboarding/check-slug/', account_views.check_slug, name='check_slug'),
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
+    path('', include('apps.accounts.urls')),
     path('demo/', include('apps.demo.urls')),
     path('', include('apps.scheduling.urls')),
     path('', include('apps.bookings.urls')),

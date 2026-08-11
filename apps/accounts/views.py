@@ -95,3 +95,129 @@ def check_slug(request):
         return HttpResponse("<span class='text-red-500 text-sm'>Unavailable</span>")
         
     return HttpResponse("<span class='text-green-500 text-sm'>Available</span>")
+
+from django.views.generic import View
+from django.contrib.auth.mixins import LoginRequiredMixin
+from apps.accounts.forms import ProfileForm, SlugForm, PreferencesForm, NotificationPreferencesForm, BrandingForm
+from apps.accounts.models import UserSlugHistory, UserNotificationPreference
+from apps.accounts.services import process_avatar
+from django.contrib.auth import authenticate
+
+class SettingsProfileView(LoginRequiredMixin, View):
+    def get(self, request):
+        profile_form = ProfileForm(instance=request.user)
+        slug_form = SlugForm(initial={'slug': request.user.slug})
+        return render(request, 'accounts/settings_profile.html', {
+            'profile_form': profile_form,
+            'slug_form': slug_form,
+        })
+        
+    def post(self, request):
+        if 'update_profile' in request.POST:
+            profile_form = ProfileForm(request.POST, request.FILES, instance=request.user)
+            if profile_form.is_valid():
+                user = profile_form.save(commit=False)
+                if 'avatar' in request.FILES:
+                    user.avatar = process_avatar(request.FILES['avatar'])
+                user.save()
+                return render(request, 'accounts/partials/settings_success.html', {'message': 'Profile updated successfully.'})
+            return render(request, 'accounts/partials/settings_error.html', {'message': 'Error updating profile.'})
+            
+        elif 'update_slug' in request.POST:
+            slug_form = SlugForm(request.POST)
+            if slug_form.is_valid():
+                new_slug = slug_form.cleaned_data['slug']
+                password = slug_form.cleaned_data['password']
+                
+                if not request.user.check_password(password):
+                    return render(request, 'accounts/partials/settings_error.html', {'message': 'Incorrect password.'})
+                    
+                if User.objects.filter(slug=new_slug).exclude(id=request.user.id).exists() or UserSlugHistory.objects.filter(old_slug=new_slug).exists():
+                    return render(request, 'accounts/partials/settings_error.html', {'message': 'Slug is not available.'})
+                    
+                # Save old slug to history
+                if request.user.slug:
+                    UserSlugHistory.objects.get_or_create(user=request.user, old_slug=request.user.slug)
+                    
+                request.user.slug = new_slug
+                request.user.save()
+                return render(request, 'accounts/partials/settings_success.html', {'message': 'Slug updated successfully.'})
+            return render(request, 'accounts/partials/settings_error.html', {'message': 'Error updating slug.'})
+
+class SettingsPreferencesView(LoginRequiredMixin, View):
+    def get(self, request):
+        pref_form = PreferencesForm(instance=request.user)
+        notif_pref, _ = UserNotificationPreference.objects.get_or_create(user=request.user)
+        notif_form = NotificationPreferencesForm(instance=notif_pref)
+        return render(request, 'accounts/settings_preferences.html', {
+            'pref_form': pref_form,
+            'notif_form': notif_form,
+        })
+        
+    def post(self, request):
+        if 'update_prefs' in request.POST:
+            pref_form = PreferencesForm(request.POST, instance=request.user)
+            if pref_form.is_valid():
+                pref_form.save()
+                
+                # Check if update schedules is checked
+                if request.POST.get('update_schedules'):
+                    request.user.schedules.update(timezone=pref_form.cleaned_data['timezone'])
+                    
+                return render(request, 'accounts/partials/settings_success.html', {'message': 'Preferences updated successfully.'})
+            return render(request, 'accounts/partials/settings_error.html', {'message': 'Error updating preferences.'})
+            
+        elif 'update_notifs' in request.POST:
+            notif_pref, _ = UserNotificationPreference.objects.get_or_create(user=request.user)
+            notif_form = NotificationPreferencesForm(request.POST, instance=notif_pref)
+            if notif_form.is_valid():
+                notif_form.save()
+                return render(request, 'accounts/partials/settings_success.html', {'message': 'Notifications updated successfully.'})
+            return render(request, 'accounts/partials/settings_error.html', {'message': 'Error updating notifications.'})
+
+class SettingsSecurityView(LoginRequiredMixin, View):
+    def get(self, request):
+        return render(request, 'accounts/settings_security.html')
+
+class SettingsBrandingView(LoginRequiredMixin, View):
+    def get(self, request):
+        brand_form = BrandingForm(instance=request.user)
+        return render(request, 'accounts/settings_branding.html', {'brand_form': brand_form})
+        
+    def post(self, request):
+        brand_form = BrandingForm(request.POST, instance=request.user)
+        if brand_form.is_valid():
+            # If hide_branding is true, maybe check plan in future. Force false if no plan.
+            brand_form.save()
+            return render(request, 'accounts/partials/settings_success.html', {'message': 'Branding updated successfully.'})
+        return render(request, 'accounts/partials/settings_error.html', {'message': 'Error updating branding.'})
+
+class SettingsDangerView(LoginRequiredMixin, View):
+    def get(self, request):
+        return render(request, 'accounts/settings_danger.html')
+        
+    def post(self, request):
+        if 'export_data' in request.POST:
+            from apps.accounts.tasks import export_user_data
+            export_user_data.delay(request.user.id)
+            return render(request, 'accounts/partials/settings_success.html', {'message': 'Export started. You will receive an email shortly.'})
+            
+        elif 'delete_account' in request.POST:
+            email_confirm = request.POST.get('email')
+            password = request.POST.get('password')
+            
+            if email_confirm != request.user.email:
+                return render(request, 'accounts/partials/settings_error.html', {'message': 'Email does not match.'})
+                
+            if not request.user.check_password(password):
+                return render(request, 'accounts/partials/settings_error.html', {'message': 'Incorrect password.'})
+                
+            # Schedule anonymization in 30 days
+            from apps.accounts.tasks import run_account_anonymization
+            run_account_anonymization.apply_async((request.user.id,), countdown=30*24*60*60)
+            
+            from django.contrib.auth import logout
+            logout(request)
+            response = HttpResponse()
+            response['HX-Redirect'] = '/'
+            return response

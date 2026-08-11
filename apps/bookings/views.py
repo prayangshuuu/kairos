@@ -43,12 +43,23 @@ class PublicProfileView(DetailView):
         
         obj = queryset.first()
         if not obj:
+            from apps.accounts.models import UserSlugHistory
+            history = UserSlugHistory.objects.filter(old_slug__iexact=slug).first()
+            if history and history.user.slug:
+                from django.http import HttpResponseRedirect
+                from django.urls import reverse
+                return HttpResponseRedirect(reverse('bookings:public_profile', kwargs={'slug': history.user.slug}))
             raise Http404("User not found or inactive")
             
         return obj
 
     def get(self, request, *args, **kwargs):
-        self.object = self.get_object()
+        obj_or_redirect = self.get_object()
+        from django.http import HttpResponseRedirect
+        if isinstance(obj_or_redirect, HttpResponseRedirect):
+            return obj_or_redirect
+            
+        self.object = obj_or_redirect
         
         referrer = request.META.get('HTTP_REFERER', '')
         record_page_view.delay(self.object.id, None, referrer)

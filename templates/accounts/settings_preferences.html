@@ -1,0 +1,82 @@
+{% extends "accounts/settings_layout.html" %}
+{% block settings_content %}
+<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6">
+    <h2 class="text-lg font-medium text-gray-900">Preferences</h2>
+    
+    <form hx-post="{% url 'accounts:settings_preferences' %}" hx-target="#settings-messages" class="mt-6 space-y-6">
+        {% csrf_token %}
+        <input type="hidden" name="update_prefs" value="1">
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Timezone</label>
+            <p class="text-xs text-gray-500 mb-1">Changing this does NOT change existing schedules (which have their own timezone).</p>
+            <select name="timezone" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-md">
+                <option value="{{ pref_form.timezone.value }}" selected>{{ pref_form.timezone.value }}</option>
+                <!-- Omitted full list for brevity in template, can be added via JS or view context -->
+            </select>
+            <label class="mt-2 flex items-center">
+                <input type="checkbox" name="update_schedules" value="1" class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
+                <span class="ml-2 text-sm text-gray-600">Also update existing schedules to this timezone</span>
+            </label>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Time Format</label>
+                <select name="time_format" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-md">
+                    <option value="12" {% if pref_form.time_format.value == '12' %}selected{% endif %}>12-hour (AM/PM)</option>
+                    <option value="24" {% if pref_form.time_format.value == '24' %}selected{% endif %}>24-hour</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Week Start</label>
+                <select name="week_start" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-md">
+                    <option value="0" {% if str(pref_form.week_start.value) == '0' %}selected{% endif %}>Monday</option>
+                    <option value="6" {% if str(pref_form.week_start.value) == '6' %}selected{% endif %}>Sunday</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="flex justify-end">
+            <button type="submit" class="bg-brand-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-brand-700">Save Preferences</button>
+        </div>
+    </form>
+</div>
+
+<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6 mt-6">
+    <h2 class="text-lg font-medium text-gray-900">Email Notifications</h2>
+    <form hx-post="{% url 'accounts:settings_preferences' %}" hx-target="#settings-messages" class="mt-6 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="update_notifs" value="1">
+        
+        <label class="flex items-center">
+            <input type="checkbox" name="new_booking" {% if notif_form.new_booking.value %}checked{% endif %} class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
+            <span class="ml-2 text-sm text-gray-600">New Booking</span>
+        </label>
+        
+        <label class="flex items-center">
+            <input type="checkbox" checked disabled class="rounded border-gray-300 text-gray-400 shadow-sm">
+            <span class="ml-2 text-sm text-gray-500">Cancellations (Required)</span>
+        </label>
+        
+        <label class="flex items-center">
+            <input type="checkbox" name="reschedule" {% if notif_form.reschedule.value %}checked{% endif %} class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
+            <span class="ml-2 text-sm text-gray-600">Reschedules</span>
+        </label>
+        
+        <label class="flex items-center">
+            <input type="checkbox" name="pending_reminder" {% if notif_form.pending_reminder.value %}checked{% endif %} class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
+            <span class="ml-2 text-sm text-gray-600">Pending Reminders</span>
+        </label>
+        
+        <label class="flex items-center">
+            <input type="checkbox" name="daily_agenda" {% if notif_form.daily_agenda.value %}checked{% endif %} class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
+            <span class="ml-2 text-sm text-gray-600">Daily Agenda</span>
+        </label>
+        
+        <div class="flex justify-end mt-4">
+            <button type="submit" class="bg-brand-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-brand-700">Save Notifications</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
