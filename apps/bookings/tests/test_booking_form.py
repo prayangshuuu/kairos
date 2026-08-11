@@ -4,10 +4,12 @@ from apps.accounts.models import User
 from apps.scheduling.models import EventType, BookingQuestion
 from datetime import datetime, timedelta, timezone
 from django.core.signing import Signer
+from unittest.mock import patch
 
 pytestmark = pytest.mark.django_db
 
-def test_booking_form_validation(client):
+@patch('apps.bookings.services.is_slot_available', return_value=True)
+def test_booking_form_validation(mock_is_slot_available, client):
     user = User.objects.create_user(
         email="host@example.com", 
         password="password", 
@@ -42,6 +44,7 @@ def test_booking_form_validation(client):
         "tz": "UTC",
         "event_type_id": event.id,
         "timestamp_token": token,
+        "idempotency_token": "token123",
         "website": "", # Honeypot empty
     }
     
@@ -61,4 +64,5 @@ def test_booking_form_validation(client):
     
     # Should get placeholder success
     assert response_valid.status_code == 200
-    assert b"Booking Form Validated!" in response_valid.content
+    assert "HX-Redirect" in response_valid.headers
+    assert "/host_slug/test/confirmation/" in response_valid.headers["HX-Redirect"]

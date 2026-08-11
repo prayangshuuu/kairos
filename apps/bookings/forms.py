@@ -23,6 +23,7 @@ class BookingForm(forms.Form):
     # Anti-abuse
     website = forms.CharField(required=False, label="", widget=forms.TextInput(attrs={'style': 'display:none;', 'tabindex': '-1', 'autocomplete': 'off'}))
     timestamp_token = forms.CharField(widget=forms.HiddenInput(), required=True)
+    idempotency_token = forms.CharField(widget=forms.HiddenInput(), required=True)
 
     def __init__(self, *args, **kwargs):
         self.event_type = kwargs.pop('event_type', None)

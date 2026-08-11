@@ -1,6 +1,12 @@
 {% load tz %}
 
-<div id="slots-partial" class="w-full h-full flex flex-col" aria-live="polite">
+<div id="slots-partial" class="w-full h-full flex flex-col border-l border-surface-200 pl-4 sm:pl-6 md:ml-6" aria-live="polite">
+  {% if error_message %}
+    <div class="bg-red-50 text-red-800 p-4 mb-4 rounded-md text-sm font-medium">
+      {{ error_message }}
+    </div>
+  {% endif %}
+
   {% if selected_date %}
     <h3 class="text-base font-medium text-surface-900 mb-6 sticky top-0 bg-surface-50 z-10">{{ selected_date|date:"l, F j" }}</h3>
     

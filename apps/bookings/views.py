@@ -217,13 +217,56 @@ class BookingStubView(View):
         # Let's check if the form is being submitted (contains invitee_email)
         from .forms import BookingForm
         from django.core.signing import Signer
+        import uuid
+        from apps.bookings.services import create_booking, SlotUnavailable
+        from apps.scheduling.engine import get_slots
+        from apps.bookings.models import Booking
+        from zoneinfo import ZoneInfo
         
         if 'invitee_email' in request.POST:
             # Form submission
             form = BookingForm(request.POST, event_type=event)
             if form.is_valid():
-                # For this task, do NOT create Booking row. Return success placeholder.
-                return HttpResponse('<div class="p-6 bg-green-50 text-green-800 rounded-xl text-center"><h2>Booking Form Validated!</h2><p>Database insertion will happen in the next task.</p></div>')
+                idemp_token = form.cleaned_data['idempotency_token']
+                cache_key = f"booking_idemp_{idemp_token}"
+                booking_id = cache.get(cache_key)
+                
+                if booking_id:
+                    # Idempotency hit: already processed
+                    booking = Booking.objects.get(id=booking_id)
+                else:
+                    try:
+                        booking = create_booking(
+                            event_type=event,
+                            start_at=form.cleaned_data['slot_time'],
+                            invitee_name=form.cleaned_data['invitee_name'],
+                            invitee_email=form.cleaned_data['invitee_email'],
+                            invitee_timezone=form.cleaned_data['tz'],
+                            answers=form.cleaned_data['answers'],
+                            notes=form.cleaned_data['invitee_notes'],
+                            guest_emails=form.cleaned_data['guest_emails'],
+                            now=django_timezone.now()
+                        )
+                        cache.set(cache_key, booking.id, 86400)
+                    except SlotUnavailable as e:
+                        # Re-render slot picker with fresh slots
+                        d = form.cleaned_data['slot_time'].astimezone(ZoneInfo(form.cleaned_data['tz'])).date()
+                        day_slots = get_slots(event, d, d, django_timezone.now())
+                        
+                        context = {
+                            'host': host,
+                            'event': event,
+                            'visitor_tz': form.cleaned_data['tz'],
+                            'day_slots': day_slots,
+                            'selected_day': d.isoformat(),
+                            'error_message': "Sorry, that time was just booked by someone else. Here are the remaining times for that day."
+                        }
+                        return render(request, "bookings/partials/slots.html", context, status=409)
+
+                # Return HX-Redirect header
+                response = HttpResponse()
+                response['HX-Redirect'] = f"/{host.slug}/{event.slug}/confirmation/{booking.uid}/"
+                return response
             else:
                 # Re-render form with errors
                 tz_str = request.POST.get('tz', 'UTC')
@@ -254,7 +297,8 @@ class BookingStubView(View):
                 'slot_time': slot_time_str,
                 'tz': tz_str,
                 'event_type_id': event.id,
-                'timestamp_token': signer.sign(str(django_timezone.now().timestamp()))
+                'timestamp_token': signer.sign(str(django_timezone.now().timestamp())),
+                'idempotency_token': uuid.uuid4().hex
             }
             form = BookingForm(initial=initial, event_type=event)
             
