@@ -20,12 +20,20 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from apps.accounts import views as account_views
+from apps.core.views import healthz, readyz, custom_bad_request, custom_permission_denied, custom_page_not_found, custom_server_error
+
+handler400 = 'apps.core.views.custom_bad_request'
+handler403 = 'apps.core.views.custom_permission_denied'
+handler404 = 'apps.core.views.custom_page_not_found'
+handler500 = 'apps.core.views.custom_server_error'
 
 urlpatterns = [
     path('', account_views.home, name='home'),
     path('dashboard/', account_views.dashboard, name='dashboard'),
     path('onboarding/', account_views.onboarding, name='onboarding'),
     path('onboarding/check-slug/', account_views.check_slug, name='check_slug'),
+    path('healthz/', healthz, name='healthz'),
+    path('readyz/', readyz, name='readyz'),
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
     path('', include('apps.accounts.urls')),

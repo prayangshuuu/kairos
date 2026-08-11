@@ -13,6 +13,10 @@ dependencies = [
     "django-allauth[socialaccount]",
     "icalendar",
     "pillow>=12.3.0",
+    "django-ratelimit>=4.1.0",
+    "django-csp>=4.0",
+    "sentry-sdk>=2.67.1",
+    "django-structlog>=10.1.0",
 ]
 
 [dependency-groups]

@@ -6,6 +6,8 @@ from .models import User
 from .validators import validate_slug
 from django.core.exceptions import ValidationError
 from django.utils import timezone as django_timezone
+from zoneinfo import ZoneInfo
+from django_ratelimit.decorators import ratelimit
 
 def home(request):
     if request.user.is_authenticated:
@@ -80,6 +82,7 @@ def onboarding(request):
     })
 
 @login_required
+@ratelimit(key='ip', rate='30/m', method='GET', block=True)
 def check_slug(request):
     slug = request.GET.get('slug', '').lower()
     
