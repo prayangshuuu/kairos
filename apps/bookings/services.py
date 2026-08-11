@@ -205,11 +205,20 @@ def create_booking(
         raise NotImplementedError("Paid events are not supported yet.")
 
     # 1. Fast path check
-    if not is_slot_available(event_type, start_at, now):
+    from apps.integrations.services import fetch_external_busy, check_live_conflict
+    external_busy = fetch_external_busy(event_type.owner, now, now + timedelta(days=365)) # Approximate, but we just need it for the specific slot check
+    
+    if not is_slot_available(event_type, start_at, now, external_busy=external_busy):
         logger.info(f"Slot {start_at} unavailable during fast path check for event {event_type.id}")
         raise SlotUnavailable("Slot is no longer available.")
 
     end_at = start_at + timedelta(minutes=event_type.duration_minutes)
+
+    # Live check before writing
+    if check_live_conflict(event_type.owner, start_at, end_at):
+        logger.info(f"Slot {start_at} unavailable due to live conflict for host {event_type.owner_id}")
+        raise SlotUnavailable("Slot was just booked on the host's external calendar.")
+
 
     status = Booking.StatusChoices.PENDING if event_type.requires_confirmation else Booking.StatusChoices.CONFIRMED
 

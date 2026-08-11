@@ -3,7 +3,8 @@ from django.utils import timezone
 from datetime import timedelta
 import logging
 
-from apps.integrations.models import CalendarConnection, NotificationLog
+from apps.integrations.models import CalendarConnection, NotificationLog, BusyBlock, SelectedCalendar
+from apps.scheduling.models import EventType
 
 logger = logging.getLogger(__name__)
 
@@ -88,3 +89,143 @@ def check_stale_connections():
             connection.save(update_fields=['last_synced_at'])
         except Exception as e:
             logger.error(f"Health check failed for connection_id={connection.id}: {e}")
+
+@shared_task
+def sync_busy_time(connection_id: int):
+    """
+    Syncs busy blocks for all calendars in a connection.
+    Window: now - 1 day to now + max booking window (capped 12 mos).
+    """
+    from apps.integrations.google.client import GoogleCalendarClient
+    from psycopg.types.range import Range
+    from django.db import transaction
+    from zoneinfo import ZoneInfo
+    from datetime import datetime, timezone as dt_timezone
+    
+    try:
+        connection = CalendarConnection.objects.get(id=connection_id, is_active=True)
+    except CalendarConnection.DoesNotExist:
+        return
+
+    now = timezone.now()
+    window_start = now - timedelta(days=1)
+    
+    # Calculate max window
+    max_days = 0
+    event_types = EventType.objects.filter(owner=connection.user, is_active=True)
+    for et in event_types:
+        if et.window_type == "rolling":
+            if et.rolling_days > max_days:
+                max_days = et.rolling_days
+        elif et.window_type == "fixed_range":
+            if et.range_end:
+                diff = (et.range_end - now.date()).days
+                if diff > max_days:
+                    max_days = diff
+                    
+    # Cap at 12 months (365 days)
+    if max_days > 365:
+        max_days = 365
+    elif max_days == 0:
+        max_days = 30 # fallback if no event types or max_days is 0
+        
+    window_end = now + timedelta(days=max_days)
+    
+    try:
+        client = GoogleCalendarClient(connection)
+    except Exception as e:
+        logger.error(f"Failed to init GoogleCalendarClient for {connection_id}: {e}")
+        return
+
+    calendars = connection.calendars.all()
+    
+    with transaction.atomic():
+        # Atomically delete and recreate
+        BusyBlock.objects.filter(connection=connection).delete()
+        
+        blocks_to_create = []
+        for cal in calendars:
+            try:
+                page_token = None
+                while True:
+                    response = client.service.events().list(
+                        calendarId=cal.external_calendar_id,
+                        timeMin=window_start.isoformat(),
+                        timeMax=window_end.isoformat(),
+                        singleEvents=True,
+                        pageToken=page_token
+                    ).execute()
+                    
+                    cal_tz_str = response.get('timeZone', 'UTC')
+                    cal_tz = ZoneInfo(cal_tz_str)
+                    
+                    events = response.get('items', [])
+                    for event in events:
+                        # Exclude transparent
+                        if event.get('transparency') == 'transparent':
+                            continue
+                            
+                        # Exclude declined
+                        declined = False
+                        if 'attendees' in event:
+                            for attendee in event['attendees']:
+                                if attendee.get('self') and attendee.get('responseStatus') == 'declined':
+                                    declined = True
+                                    break
+                        if declined:
+                            continue
+                            
+                        is_all_day = False
+                        
+                        start_info = event.get('start', {})
+                        end_info = event.get('end', {})
+                        
+                        if 'date' in start_info:
+                            is_all_day = True
+                            # All day event
+                            start_date = datetime.fromisoformat(start_info['date']).date()
+                            end_date = datetime.fromisoformat(end_info['date']).date()
+                            
+                            start_dt = datetime.combine(start_date, datetime.min.time(), tzinfo=cal_tz).astimezone(dt_timezone.utc)
+                            end_dt = datetime.combine(end_date, datetime.min.time(), tzinfo=cal_tz).astimezone(dt_timezone.utc)
+                        else:
+                            start_dt = datetime.fromisoformat(start_info['dateTime']).astimezone(dt_timezone.utc)
+                            end_dt = datetime.fromisoformat(end_info['dateTime']).astimezone(dt_timezone.utc)
+                            
+                        blocks_to_create.append(BusyBlock(
+                            connection=connection,
+                            calendar=cal,
+                            period=Range(start_dt, end_dt, '[)'),
+                            external_event_id=event.get('id', ''),
+                            is_all_day=is_all_day,
+                            synced_at=now
+                        ))
+                        
+                    page_token = response.get('nextPageToken')
+                    if not page_token:
+                        break
+            except Exception as e:
+                logger.error(f"Failed to fetch events for calendar {cal.external_calendar_id}: {e}")
+                
+        BusyBlock.objects.bulk_create(blocks_to_create)
+        connection.last_synced_at = now
+        connection.save(update_fields=['last_synced_at'])
+
+@shared_task
+def scheduled_sync_all():
+    """
+    Every 15 mins. Skips if synced within 5 mins.
+    """
+    import random
+    
+    cutoff = timezone.now() - timedelta(minutes=5)
+    connections = CalendarConnection.objects.filter(
+        is_active=True, provider='google'
+    ).filter(
+        last_synced_at__lt=cutoff
+    ) | CalendarConnection.objects.filter(is_active=True, provider='google', last_synced_at__isnull=True)
+    
+    for conn in connections:
+        # Jitter up to 60 seconds
+        delay = random.randint(0, 60)
+        sync_busy_time.apply_async(args=[conn.id], countdown=delay)

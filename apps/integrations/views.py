@@ -170,6 +170,30 @@ def google_callback(request):
     connection.last_error_at = None
     connection.save()
     
+    # Sync Calendar List
+    calendar_list_url = "https://www.googleapis.com/calendar/v3/users/me/calendarList"
+    calendar_list_response = requests.get(calendar_list_url, headers=headers)
+    if calendar_list_response.ok:
+        from apps.integrations.models import SelectedCalendar
+        calendars = calendar_list_response.json().get('items', [])
+        for cal in calendars:
+            is_primary = cal.get('primary', False)
+            SelectedCalendar.objects.update_or_create(
+                connection=connection,
+                external_calendar_id=cal['id'],
+                defaults={
+                    'name': cal.get('summaryOverride') or cal.get('summary', 'Unknown Calendar'),
+                    'summary': cal.get('description', ''),
+                    'background_color': cal.get('backgroundColor', ''),
+                    'is_busy_source': True,
+                    'is_write_target': is_primary,
+                }
+            )
+            
+    # Trigger initial busy sync
+    from apps.integrations.tasks import sync_busy_time
+    sync_busy_time.delay(connection.id)
+    
     messages.success(request, f"Successfully connected Google Calendar for {external_account_email}")
     return redirect('integrations:dashboard')
 

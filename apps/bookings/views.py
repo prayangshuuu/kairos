@@ -122,7 +122,11 @@ class BookingPageView(View):
         if available_dates is None:
             fetch_start = first_day_of_month - timedelta(days=2)
             fetch_end = last_day_of_month + timedelta(days=2)
-            month_slots = get_slots(event, fetch_start, fetch_end, now_utc)
+            from apps.integrations.services import fetch_external_busy
+            u_start = datetime.combine(fetch_start, datetime.min.time(), tzinfo=timezone.utc)
+            u_end = datetime.combine(fetch_end, datetime.max.time(), tzinfo=timezone.utc)
+            external_busy = fetch_external_busy(host, u_start, u_end)
+            month_slots = get_slots(event, fetch_start, fetch_end, now_utc, external_busy=external_busy)
             
             available_dates = set()
             for slot in month_slots:
@@ -144,7 +148,11 @@ class BookingPageView(View):
         if selected_date:
             day_start = selected_date - timedelta(days=2)
             day_end = selected_date + timedelta(days=2)
-            raw_slots = get_slots(event, day_start, day_end, now_utc)
+            from apps.integrations.services import fetch_external_busy
+            u_start = datetime.combine(day_start, datetime.min.time(), tzinfo=timezone.utc)
+            u_end = datetime.combine(day_end, datetime.max.time(), tzinfo=timezone.utc)
+            external_busy = fetch_external_busy(host, u_start, u_end)
+            raw_slots = get_slots(event, day_start, day_end, now_utc, external_busy=external_busy)
             
             day_slots = []
             for slot in raw_slots:
@@ -263,7 +271,11 @@ class BookingStubView(View):
                     except SlotUnavailable as e:
                         # Re-render slot picker with fresh slots
                         d = form.cleaned_data['slot_time'].astimezone(ZoneInfo(form.cleaned_data['tz'])).date()
-                        day_slots = get_slots(event, d, d, django_timezone.now())
+                        from apps.integrations.services import fetch_external_busy
+                        u_start = datetime.combine(d - timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
+                        u_end = datetime.combine(d + timedelta(days=1), datetime.max.time(), tzinfo=timezone.utc)
+                        external_busy = fetch_external_busy(host, u_start, u_end)
+                        day_slots = get_slots(event, d, d, django_timezone.now(), external_busy=external_busy)
                         context = {
                             'host': host,
                             'event': event,
@@ -519,7 +531,11 @@ class BookingRescheduleView(View):
         # No caching for reschedule since it's user-specific exclusion
         fetch_start = first_day_of_month - timedelta(days=2)
         fetch_end = last_day_of_month + timedelta(days=2)
-        month_slots = get_slots(event, fetch_start, fetch_end, now_utc, exclude_booking_id=booking.id)
+        from apps.integrations.services import fetch_external_busy
+        u_start = datetime.combine(fetch_start, datetime.min.time(), tzinfo=timezone.utc)
+        u_end = datetime.combine(fetch_end, datetime.max.time(), tzinfo=timezone.utc)
+        external_busy = fetch_external_busy(host, u_start, u_end)
+        month_slots = get_slots(event, fetch_start, fetch_end, now_utc, external_busy=external_busy, exclude_booking_id=booking.id)
         
         available_dates = set()
         for slot in month_slots:
@@ -539,7 +555,11 @@ class BookingRescheduleView(View):
         if selected_date:
             day_start = selected_date - timedelta(days=2)
             day_end = selected_date + timedelta(days=2)
-            raw_slots = get_slots(event, day_start, day_end, now_utc, exclude_booking_id=booking.id)
+            from apps.integrations.services import fetch_external_busy
+            u_start = datetime.combine(day_start, datetime.min.time(), tzinfo=timezone.utc)
+            u_end = datetime.combine(day_end, datetime.max.time(), tzinfo=timezone.utc)
+            external_busy = fetch_external_busy(host, u_start, u_end)
+            raw_slots = get_slots(event, day_start, day_end, now_utc, external_busy=external_busy, exclude_booking_id=booking.id)
             
             day_slots = []
             for slot in raw_slots:
@@ -626,7 +646,11 @@ class BookingRescheduleView(View):
             # Need to re-render the slots partial
             event = booking.event_type
             d = slot_time.astimezone(ZoneInfo(tz_str)).date()
-            day_slots = get_slots(event, d, d, django_timezone.now(), exclude_booking_id=booking.id)
+            from apps.integrations.services import fetch_external_busy
+            u_start = datetime.combine(d - timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
+            u_end = datetime.combine(d + timedelta(days=1), datetime.max.time(), tzinfo=timezone.utc)
+            external_busy = fetch_external_busy(booking.host, u_start, u_end)
+            day_slots = get_slots(event, d, d, django_timezone.now(), external_busy=external_busy, exclude_booking_id=booking.id)
             context = {
                 'host': booking.host,
                 'event': event,

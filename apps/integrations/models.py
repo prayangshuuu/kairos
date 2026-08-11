@@ -4,6 +4,8 @@ from django.utils.translation import gettext_lazy as _
 from encrypted_fields.fields import EncryptedTextField
 from cryptography.fernet import Fernet, MultiFernet
 from django.core.exceptions import ImproperlyConfigured
+from django.contrib.postgres.fields import DateTimeRangeField
+from django.contrib.postgres.indexes import GistIndex
 
 class DedicatedKeyEncryptedTextField(EncryptedTextField):
     @property
@@ -75,3 +77,50 @@ class NotificationLog(models.Model):
 
     def __str__(self):
         return f"{self.kind} for {self.connection_id}"
+
+class SelectedCalendar(models.Model):
+    connection = models.ForeignKey(CalendarConnection, on_delete=models.CASCADE, related_name="calendars")
+    external_calendar_id = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
+    summary = models.CharField(max_length=255, blank=True)
+    background_color = models.CharField(max_length=50, blank=True)
+    is_busy_source = models.BooleanField(default=True)
+    is_write_target = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["connection", "external_calendar_id"],
+                name="unique_connection_calendar"
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        from django.db import transaction
+        with transaction.atomic():
+            if self.is_write_target:
+                SelectedCalendar.objects.filter(
+                    connection__user=self.connection.user,
+                    is_write_target=True
+                ).exclude(pk=self.pk).update(is_write_target=False)
+            super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.external_calendar_id})"
+
+class BusyBlock(models.Model):
+    connection = models.ForeignKey(CalendarConnection, on_delete=models.CASCADE)
+    calendar = models.ForeignKey(SelectedCalendar, on_delete=models.CASCADE)
+    period = DateTimeRangeField()
+    external_event_id = models.CharField(max_length=255)
+    is_all_day = models.BooleanField(default=False)
+    synced_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            GistIndex(fields=['period'], name='busyblock_period_gist'),
+            models.Index(fields=['connection', 'period']),
+        ]
+
+    def __str__(self):
+        return f"BusyBlock {self.period} for {self.calendar_id}"
