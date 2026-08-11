@@ -261,6 +261,7 @@ RATELIMIT_VIEW = 'apps.core.views.custom_bad_request'
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
 GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
 GOOGLE_OAUTH_REDIRECT_URI = env("GOOGLE_OAUTH_REDIRECT_URI", default="http://localhost:8000/dashboard/integrations/google/callback/")
+WEBHOOK_BASE_URL = env("WEBHOOK_BASE_URL", default="https://api.joinkairos.me")
 
 # OAuth Token Encryption Key (32 url-safe base64-encoded bytes)
 # Note: Rotating this key invalidates EVERY stored token and requires all users to reconnect.

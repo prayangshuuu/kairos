@@ -56,9 +56,9 @@ Google Calendar Push Notifications require a publicly accessible HTTPS endpoint 
    ```bash
    ngrok http 8000
    ```
-3. **Configure the Webhook URL**: Note the HTTPS URL provided by ngrok (e.g., `https://1234abcd.ngrok-free.app`). Open `config/settings/dev.py` and set `WEBHOOK_BASE_URL` to this value, or export it in your environment:
+3. **Configure the Webhook URL**: Note the HTTPS URL provided by ngrok (e.g., `https://1234abcd.ngrok-free.app`). Open your `.env` file and set `WEBHOOK_BASE_URL` to this value:
    ```bash
-   export WEBHOOK_BASE_URL="https://1234abcd.ngrok-free.app"
+   WEBHOOK_BASE_URL="https://1234abcd.ngrok-free.app"
    ```
 4. With this configured, when Kairos attempts to register a watch channel with Google (e.g. during an initial connection or renewal), it will use your ngrok tunnel so Google can securely push incremental syncs to your local machine!
 
