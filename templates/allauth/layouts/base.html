@@ -1,0 +1,44 @@
+{% extends "layouts/public.html" %}
+{% load i18n %}
+
+{% block title %}
+    {% block head_title %}{% endblock head_title %}
+{% endblock %}
+
+{% block extra_head %}
+    {{ block.super }}
+{% endblock extra_head %}
+
+{% block public_content %}
+<div class="sm:mx-auto sm:w-full sm:max-w-md mt-8">
+    <div class="mb-4 text-center">
+        <h2 class="mt-2 text-center text-3xl font-extrabold text-surface-900">
+            {% block allauth_title %}Manage Account{% endblock %}
+        </h2>
+    </div>
+    
+    <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 allauth-container">
+        
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="p-3 text-sm rounded-md bg-brand-50 text-brand-800 mb-2">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block body %}
+            {% block content %}
+            {% endblock %}
+        {% endblock %}
+    </div>
+    
+    <div class="mt-6 text-center">
+        <a href="/" class="text-sm font-medium text-brand-600 hover:text-brand-500">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock public_content %}
+
+{% block extra_js %}
+    {% block extra_body %}{% endblock %}
+{% endblock %}

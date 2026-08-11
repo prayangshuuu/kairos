@@ -1,0 +1,31 @@
+{% extends "layouts/public.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Verify Your Email Address" %} - Kairos{% endblock %}
+
+{% block public_content %}
+<div class="min-h-screen bg-surface-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-surface-900">
+            {% trans "Verify Your Email Address" %}
+        </h2>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 text-center">
+            {% url 'account_email' as email_url %}
+            <p class="text-surface-600 mb-6">
+                {% blocktrans %}This part of the site requires us to verify that you are who you claim to be. For this purpose, we require that you verify ownership of your email address.{% endblocktrans %}
+            </p>
+            <p class="text-surface-600">
+                {% blocktrans %}We have sent an email to you for verification. Please click on the link inside that email. If you do not see the verification email in your main inbox, check your spam folder. Otherwise contact us if you do not receive it within a few minutes.{% endblocktrans %}
+            </p>
+            <div class="mt-6">
+                <a href="{{ email_url }}" class="text-brand-600 hover:text-brand-500 font-medium text-sm">
+                    {% trans "Manage Email Addresses" %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "layouts/public.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Account Inactive" %} - Kairos{% endblock %}
+
+{% block public_content %}
+<div class="min-h-screen bg-surface-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-surface-900">
+            {% trans "Account Inactive" %}
+        </h2>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 text-center">
+            <p class="text-surface-600">
+                {% trans "This account is currently inactive." %}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "layouts/app.html" %}
+{% load allauth i18n %}
+
+{% block title %}{% trans "Email Addresses" %} - Kairos{% endblock %}
+
+{% block app_content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 md:px-8 py-6">
+    <h1 class="text-2xl font-semibold text-gray-900 mb-6">{% trans "Email Addresses" %}</h1>
+
+    {% if emailaddresses %}
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8 border border-gray-200">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                Manage Email Addresses
+            </h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                {% trans 'The following email addresses are associated with your account:' %}
+            </p>
+        </div>
+        <div class="px-4 py-5 sm:p-6 bg-gray-50">
+            <form action="{% url 'account_email' %}" method="post" class="space-y-4">
+                {% csrf_token %}
+                <fieldset>
+                    <div class="space-y-4">
+                        {% for radio in emailaddress_radios %}
+                        {% with emailaddress=radio.emailaddress %}
+                        <div class="flex items-start bg-white p-4 rounded-md shadow-sm border border-gray-200">
+                            <div class="flex items-center h-5 mt-1">
+                                <input id="email_radio_{{forloop.counter}}" type="radio" name="email"
+                                    value="{{ emailaddress.email }}" {% if radio.checked %}checked="checked"{% endif %}
+                                    class="focus:ring-brand-500 h-4 w-4 text-brand-600 border-gray-300">
+                            </div>
+                            <label for="email_radio_{{forloop.counter}}" class="ml-3 flex flex-col w-full cursor-pointer">
+                                <span class="block text-sm font-medium text-gray-900">
+                                    {{ emailaddress.email }}
+                                </span>
+                                <span class="block text-sm mt-2 space-x-2">
+                                    {% if emailaddress.verified %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                                        {% translate "Verified" %}
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        {% translate "Unverified" %}
+                                    </span>
+                                    {% endif %}
+                                    {% if emailaddress.primary %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-brand-100 text-brand-800">
+                                        {% translate "Primary" %}
+                                    </span>
+                                    {% endif %}
+                                </span>
+                            </label>
+                        </div>
+                        {% endwith %}
+                        {% endfor %}
+                    </div>
+                </fieldset>
+
+                <div class="mt-6 flex flex-wrap items-center gap-3">
+                    <button type="submit" name="action_primary"
+                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
+                        {% trans 'Make Primary' %}
+                    </button>
+                    <button type="submit" name="action_send"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
+                        {% trans 'Re-send Verification' %}
+                    </button>
+                    <button type="submit" name="action_remove"
+                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        {% trans 'Remove' %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="rounded-md bg-yellow-50 p-4 mb-8">
+        <div class="flex">
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">
+                    Warning
+                </h3>
+                <div class="mt-2 text-sm text-yellow-700">
+                    <p>
+                        {% include "account/snippets/warn_no_email.html" %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if can_add_email %}
+    <div class="bg-white shadow sm:rounded-lg border border-gray-200">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                {% trans "Add Email Address" %}
+            </h3>
+            <div class="mt-5">
+                <form action="{% url 'account_email' %}" method="post" class="space-y-4">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                    <div class="text-red-600 text-sm mb-4">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            {{ form.email.label }}
+                        </label>
+                        <div class="mt-1">
+                            <input id="{{ form.email.id_for_label }}" name="{{ form.email.name }}" type="email" required
+                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
+                        </div>
+                        {% if form.email.errors %}
+                        <div class="text-red-500 text-sm mt-1">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" name="action_add"
+                            class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
+                            {% trans "Add Email" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_body %}
+    <script type="text/javascript">
+(function() {
+  var message = "{% trans 'Do you really want to remove the selected email address?' %}";
+  var actions = document.getElementsByName('action_remove');
+  if (actions.length) {
+    actions[0].addEventListener("click", function(e) {
+      if (! confirm(message)) {
+        e.preventDefault();
+      }
+    });
+  }
+})();
+    </script>
+{% endblock extra_body %}

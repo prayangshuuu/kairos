@@ -1,0 +1,81 @@
+{% extends "layouts/app.html" %}
+{% load i18n socialaccount %}
+
+{% block title %}{% trans "Account Connections" %} - Kairos{% endblock %}
+
+{% block app_content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 md:px-8 py-6">
+    <h1 class="text-2xl font-semibold text-surface-900 mb-6">{% trans "Account Connections" %}</h1>
+
+    <div class="bg-white shadow sm:rounded-lg border border-surface-200 mb-8">
+        <div class="px-4 py-5 sm:p-6">
+            {% if form.accounts %}
+            <p class="text-sm text-surface-600 mb-4">
+                {% trans 'You can sign in to your account using any of the following third party accounts:' %}
+            </p>
+            
+            <form method="post" action="{% url 'socialaccount_connections' %}" class="space-y-4">
+                {% csrf_token %}
+                <fieldset>
+                    {% if form.non_field_errors %}
+                    <div class="text-danger text-sm bg-red-50 p-3 rounded-md mb-4">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="space-y-3">
+                        {% for base_account in form.accounts %}
+                        {% with base_account.get_provider_account as account %}
+                        <div class="flex items-center p-4 border border-surface-200 rounded-lg">
+                            <div class="flex items-center h-5">
+                                <input id="id_account_{{ base_account.id }}" type="radio" name="account" value="{{ base_account.id }}" 
+                                    class="focus:ring-brand-500 h-4 w-4 text-brand-600 border-surface-300">
+                            </div>
+                            <label for="id_account_{{ base_account.id }}" class="ml-3 flex flex-col cursor-pointer">
+                                <span class="block text-sm font-medium text-surface-900">
+                                    {{ account.get_brand.name }}
+                                </span>
+                                <span class="block text-xs text-surface-500">
+                                    {{ account }}
+                                </span>
+                            </label>
+                        </div>
+                        {% endwith %}
+                        {% endfor %}
+                    </div>
+                </fieldset>
+                
+                <div class="pt-2">
+                    <button type="submit" class="btn btn-danger">
+                        {% trans 'Remove' %}
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <p class="text-sm text-surface-600">
+                {% trans 'You currently have no social network accounts connected to this account.' %}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="bg-white shadow sm:rounded-lg border border-surface-200">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-surface-900 mb-4">
+                {% trans 'Add a 3rd Party Account' %}
+            </h3>
+            <div class="mt-4">
+                <a href="{% provider_login_url 'google' process='connect' %}" class="w-full flex justify-center py-2 px-4 border border-surface-300 rounded-md shadow-sm bg-white text-sm font-medium text-surface-600 hover:bg-surface-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 max-w-sm">
+                    <svg class="h-5 w-5 mr-2" aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M12.0003 4.75C13.7703 4.75 15.3553 5.36002 16.6053 6.54998L20.0303 3.125C17.9502 1.19 15.2353 0 12.0003 0C7.31028 0 3.25527 2.69 1.28027 6.60998L5.27028 9.70498C6.21525 6.86002 8.87028 4.75 12.0003 4.75Z" fill="#EA4335" />
+                        <path d="M23.49 12.275C23.49 11.49 23.415 10.73 23.3 10H12V14.51H18.47C18.18 15.99 17.34 17.25 16.08 18.1L19.945 21.1C22.2 19.01 23.49 15.92 23.49 12.275Z" fill="#4285F4" />
+                        <path d="M5.26498 14.2949C5.02498 13.5699 4.88501 12.7999 4.88501 11.9999C4.88501 11.1999 5.01998 10.4299 5.26498 9.7049L1.275 6.60986C0.46 8.22986 0 10.0599 0 11.9999C0 13.9399 0.46 15.7699 1.28 17.3899L5.26498 14.2949Z" fill="#FBBC05" />
+                        <path d="M12.0004 24.0001C15.2404 24.0001 17.9654 22.935 19.9454 21.095L16.0804 18.095C15.0054 18.82 13.6204 19.245 12.0004 19.245C8.8704 19.245 6.21537 17.135 5.26537 14.29L1.27539 17.385C3.25539 21.31 7.3104 24.0001 12.0004 24.0001Z" fill="#34A853" />
+                    </svg>
+                    Connect with Google
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
