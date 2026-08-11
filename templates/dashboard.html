@@ -5,6 +5,31 @@
 {% block app_content %}
 <div class="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-8 animate-fade-in-up">
     
+    {% if broken_connections %}
+    <div class="mb-8 bg-red-50 border-l-4 border-red-500 p-4 rounded-md shadow-sm">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">Action Required: Calendar Connection Broken</h3>
+                <div class="mt-2 text-sm text-red-700">
+                    <p>One or more of your calendar connections have been disconnected. <strong>Your invitees can still book time with you</strong>, but your external busy times are currently not being applied, which could result in double bookings.</p>
+                </div>
+                <div class="mt-4">
+                    <div class="-mx-2 -my-1.5 flex">
+                        <a href="{% url 'integrations:dashboard' %}" class="rounded-md bg-red-50 px-2 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50">
+                            Reconnect Calendars
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Welcome Section -->
     <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>

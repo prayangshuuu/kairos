@@ -19,6 +19,7 @@ def home(request):
 @login_required
 def dashboard(request):
     from apps.bookings.models import Booking
+    from apps.integrations.models import CalendarConnection
     
     pending_bookings = Booking.objects.filter(
         host=request.user, 
@@ -31,9 +32,15 @@ def dashboard(request):
         start_at__gte=django_timezone.now()
     ).select_related('event_type').order_by('start_at').first()
     
+    broken_connections = CalendarConnection.objects.filter(
+        user=request.user,
+        is_active=False
+    )
+    
     return render(request, 'dashboard.html', {
         'pending_bookings': pending_bookings,
         'next_meeting': next_meeting,
+        'broken_connections': broken_connections,
     })
 
 @login_required

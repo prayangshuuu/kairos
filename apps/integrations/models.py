@@ -62,3 +62,16 @@ class CalendarConnection(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.provider} ({self.external_account_email})"
+
+class NotificationLog(models.Model):
+    connection = models.ForeignKey(CalendarConnection, on_delete=models.CASCADE, related_name="notifications")
+    kind = models.CharField(max_length=100)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["connection", "kind"], name="unique_notification_kind_per_connection")
+        ]
+
+    def __str__(self):
+        return f"{self.kind} for {self.connection_id}"
