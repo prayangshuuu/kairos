@@ -9,10 +9,10 @@ RESERVED_SLUGS = frozenset([
     "app", "api", "admin", "static", "media", "cdn", "www", "login", 
     "logout", "signup", "signin", "register", "help", "support", 
     "pricing", "about", "terms", "privacy", "legal", "blog", "docs", 
-    "settings", "account", "booking", "bookings", "event", "events", 
+    "settings", "account", "accounts", "booking", "bookings", "event", "events", 
     "team", "teams", "dashboard", "onboarding", "auth", "oauth", 
     "webhook", "webhooks", "health", "robots", "sitemap", "favicon", 
-    "embed", "new", "edit", "delete"
+    "embed", "new", "edit", "delete", "demo"
 ])
 
 def validate_slug(value):

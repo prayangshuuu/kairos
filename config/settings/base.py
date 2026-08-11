@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'apps.payments.apps.PaymentsConfig',
     'apps.teams.apps.TeamsConfig',
     'apps.demo.apps.DemoConfig',
+    'apps.analytics.apps.AnalyticsConfig',
 ]
 
 SITE_ID = 1
