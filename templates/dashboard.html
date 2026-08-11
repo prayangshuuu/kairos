@@ -3,65 +3,199 @@
 {% block title %}Dashboard - Kairos{% endblock %}
 
 {% block app_content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6">
-    <h1 class="text-2xl font-semibold text-gray-900">Dashboard</h1>
-    <div class="mt-4">
-        <p class="text-gray-600">Welcome to Kairos, {{ user.display_name|default:user.email }}!</p>
-        <p class="text-gray-600 mt-2">Your booking link is: <a href="{% url 'home' %}{{ user.slug }}" class="text-blue-600 hover:underline">joinkairos.me/{{ user.slug }}</a></p>
-    </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 animate-fade-in-up">
     
-    
-    {% if next_meeting %}
-    <div class="mt-8">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Next Meeting</h2>
-        <div class="bg-white shadow rounded-lg border border-gray-200 p-6 flex justify-between items-center">
-            <div>
-                <p class="text-lg font-medium text-gray-900">{{ next_meeting.event_type.title }} with {{ next_meeting.invitee_name }}</p>
-                <p class="text-sm text-gray-500">{{ next_meeting.start_at|date:"l, F j, Y 	 g:i A" }}</p>
+    <!-- Welcome Section -->
+    <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+            <h1 class="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-purple-600 mb-2">
+                Good {% now "A" as current_time %}{% if current_time == 'AM' %}morning{% else %}afternoon{% endif %}, {{ user.display_name|default:user.email|title }}!
+            </h1>
+            <p class="text-surface-600 text-lg font-medium">Here's what's happening with your schedule today.</p>
+        </div>
+        
+        <!-- Copy Link Card -->
+        <div class="bg-white/70 backdrop-blur-md rounded-2xl shadow-sm border border-surface-200 p-2 flex items-center gap-3 transition-transform hover:-translate-y-1 duration-300">
+            <div class="bg-brand-50 p-2.5 rounded-xl text-brand-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
             </div>
-            {% if next_meeting.meeting_url %}
-            <a href="{{ next_meeting.meeting_url }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                Join Meeting
-            </a>
-            {% endif %}
+            <div class="flex-1 pr-2">
+                <p class="text-xs text-surface-500 font-semibold uppercase tracking-wider mb-0.5">Your Booking Link</p>
+                <a href="{% url 'home' %}{{ user.slug }}" class="text-sm font-medium text-surface-900 hover:text-brand-600 transition-colors">
+                    joinkairos.me/{{ user.slug }}
+                </a>
+            </div>
+            <button onclick="navigator.clipboard.writeText('https://joinkairos.me/{{ user.slug }}'); alert('Copied!');" class="p-2.5 text-surface-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all" title="Copy to clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+            </button>
         </div>
     </div>
-    {% endif %}
     
-    {% if pending_bookings %}
-    <div class="mt-8">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Pending Approval</h2>
-        <div class="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
-            <ul role="list" class="divide-y divide-gray-200">
-                {% for booking in pending_bookings %}
-                <li>
-                    <div class="px-4 py-4 sm:px-6 flex items-center justify-between">
-                        <div class="flex flex-col">
-                            <p class="text-sm font-medium text-primary-600 truncate">{{ booking.invitee_name }} ({{ booking.invitee_email }})</p>
-                            <p class="mt-1 text-sm text-gray-500">
-                                {{ booking.event_type.title }} - {{ booking.start_at|date:"l, F j, Y \a\t g:i A" }}
-                            </p>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Column -->
+        <div class="lg:col-span-2 space-y-8">
+            
+            <!-- Next Meeting -->
+            <div class="relative">
+                <h2 class="text-xl font-bold text-surface-900 mb-4 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Up Next
+                </h2>
+                
+                {% if next_meeting %}
+                <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900 to-purple-900 shadow-xl shadow-brand-900/20 transition-all duration-300 hover:shadow-2xl hover:shadow-brand-900/40">
+                    <!-- Decorative background elements -->
+                    <div class="absolute -top-24 -right-24 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl group-hover:opacity-10 transition-opacity duration-700"></div>
+                    <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-brand-400 opacity-20 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-700"></div>
+                    
+                    <div class="relative p-8 md:p-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div class="text-white z-10">
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-medium text-white/90 mb-4 backdrop-blur-sm">
+                                <span class="relative flex h-2 w-2">
+                                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                  <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                                {{ next_meeting.start_at|timeuntil }}
+                            </div>
+                            <h3 class="text-2xl font-bold mb-2">{{ next_meeting.event_type.title }}</h3>
+                            <div class="flex items-center gap-4 text-brand-100">
+                                <span class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    {{ next_meeting.invitee_name }}
+                                </span>
+                                <span class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    {{ next_meeting.start_at|date:"g:i A" }}
+                                </span>
+                            </div>
                         </div>
-                        <div class="flex space-x-2">
-                            <form method="POST" action="{% url 'bookings:dashboard_booking_approve' booking.uid %}">
-                                {% csrf_token %}
-                                <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                                    Approve
-                                </button>
-                            </form>
-                            <form method="POST" action="{% url 'bookings:dashboard_booking_reject' booking.uid %}">
-                                {% csrf_token %}
-                                <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                                    Reject
-                                </button>
-                            </form>
+                        
+                        {% if next_meeting.meeting_url %}
+                        <a href="{{ next_meeting.meeting_url }}" target="_blank" class="z-10 group/btn relative inline-flex items-center justify-center gap-2 px-8 py-4 font-semibold text-brand-900 bg-white rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 hover:bg-brand-50 active:scale-95 focus:outline-none focus:ring-4 focus:ring-white/30">
+                            Join Meeting
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform duration-300 group-hover/btn:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="bg-white/50 backdrop-blur-sm border border-dashed border-surface-300 rounded-3xl p-10 text-center">
+                    <div class="w-16 h-16 mx-auto bg-surface-100 rounded-full flex items-center justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-medium text-surface-900 mb-1">No upcoming meetings</h3>
+                    <p class="text-surface-500">You have a clear schedule! Time to relax or share your link.</p>
+                </div>
+                {% endif %}
+            </div>
+            
+        </div>
+        
+        <!-- Right Column -->
+        <div class="lg:col-span-1">
+            
+            <h2 class="text-xl font-bold text-surface-900 mb-4 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    Pending Approvals
+                </span>
+                {% if pending_bookings %}
+                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">{{ pending_bookings|length }}</span>
+                {% endif %}
+            </h2>
+            
+            {% if pending_bookings %}
+            <div class="space-y-4">
+                {% for booking in pending_bookings %}
+                <div class="group bg-white rounded-2xl shadow-sm border border-surface-100 p-5 transition-all duration-300 hover:shadow-md hover:border-brand-200">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-100 to-purple-100 flex items-center justify-center text-brand-700 font-bold shadow-inner">
+                                {{ booking.invitee_name|make_list|first|upper }}
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-surface-900">{{ booking.invitee_name }}</h4>
+                                <p class="text-xs text-surface-500 truncate max-w-[150px]" title="{{ booking.invitee_email }}">{{ booking.invitee_email }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-medium text-surface-900 block">{{ booking.start_at|date:"M j" }}</span>
+                            <span class="text-xs text-surface-500">{{ booking.start_at|date:"g:i A" }}</span>
                         </div>
                     </div>
-                </li>
+                    
+                    <div class="mb-5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-50 text-xs font-medium text-surface-600 border border-surface-100 w-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-brand-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="truncate">{{ booking.event_type.title }}</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <form method="POST" action="{% url 'bookings:dashboard_booking_reject' booking.uid %}">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full flex justify-center items-center gap-1.5 px-4 py-2 border border-surface-200 text-sm font-medium rounded-xl text-surface-600 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                                Decline
+                            </button>
+                        </form>
+                        <form method="POST" action="{% url 'bookings:dashboard_booking_approve' booking.uid %}">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full flex justify-center items-center gap-1.5 px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                Accept
+                            </button>
+                        </form>
+                    </div>
+                </div>
                 {% endfor %}
-            </ul>
+            </div>
+            {% else %}
+            <div class="bg-white rounded-2xl shadow-sm border border-surface-100 p-8 text-center flex flex-col items-center">
+                <div class="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h3 class="text-sm font-bold text-surface-900 mb-1">All caught up!</h3>
+                <p class="text-xs text-surface-500">No pending approvals at the moment.</p>
+            </div>
+            {% endif %}
+            
         </div>
     </div>
-    {% endif %}
 </div>
+
+<style>
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease-out forwards;
+    }
+</style>
 {% endblock %}
