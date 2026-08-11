@@ -116,3 +116,20 @@ def test_cancelling_new_does_not_resurrect_old(mock_is_slot_available):
     b1.refresh_from_db()
     assert b1.status == Booking.StatusChoices.CANCELLED
     assert b2.status == Booking.StatusChoices.CANCELLED
+
+def test_pending_booking_blocks_slot():
+    user = User.objects.create_user(email="host6@example.com", password="password", slug="host6")
+    schedule = Schedule.objects.create(user=user, name="Default", timezone="UTC")
+    event = EventType.objects.create(owner=user, schedule=schedule, title="Test", slug="test", duration_minutes=30)
+    
+    now = datetime.now(timezone.utc)
+    start_at = now + timedelta(days=1)
+    
+    with patch('apps.bookings.services.is_slot_available', return_value=True):
+        b1 = create_booking(event_type=event, start_at=start_at, invitee_name="T", invitee_email="t@t.com", invitee_timezone="UTC", answers={}, now=now)
+        b1.status = Booking.StatusChoices.PENDING
+        b1.save()
+        
+        # Second booking should fail due to exclusion constraint
+        with pytest.raises(SlotUnavailable):
+            create_booking(event_type=event, start_at=start_at, invitee_name="T2", invitee_email="t2@t.com", invitee_timezone="UTC", answers={}, now=now)

@@ -176,6 +176,7 @@ class EventType(models.Model):
     allow_cancellation = models.BooleanField(default=True)
     cancellation_cutoff_hours = models.PositiveIntegerField(null=True, blank=True)
     reschedule_cutoff_hours = models.PositiveIntegerField(null=True, blank=True)
+    confirmation_deadline_hours = models.PositiveIntegerField(null=True, blank=True)
 
     price_cents = models.PositiveIntegerField(default=0)
     currency = models.CharField(max_length=3, default="USD")

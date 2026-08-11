@@ -15,7 +15,14 @@ def home(request):
 
 @login_required
 def dashboard(request):
-    return render(request, 'dashboard.html')
+    from apps.bookings.models import Booking
+    
+    pending_bookings = Booking.objects.filter(
+        host=request.user, 
+        status=Booking.StatusChoices.PENDING
+    ).select_related('event_type').order_by('start_at')
+    
+    return render(request, 'dashboard.html', {'pending_bookings': pending_bookings})
 
 @login_required
 def onboarding(request):

@@ -4,6 +4,7 @@ from django.db import transaction, IntegrityError, OperationalError
 from apps.bookings.models import Booking, Attendee
 from apps.scheduling.models import EventType
 from apps.scheduling.engine import is_slot_available
+from apps.accounts.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,55 @@ class AlreadyCancelled(Exception):
 class CancellationNotAllowed(Exception):
     pass
 
+class InvalidTransition(Exception):
+    pass
+
 class ReschedulingNotAllowed(Exception):
     pass
+
+def approve_booking(
+    *,
+    booking: Booking,
+    approved_by: User,
+    now: datetime,
+) -> Booking:
+    with transaction.atomic():
+        if booking.status != Booking.StatusChoices.PENDING:
+            raise InvalidTransition("Only pending bookings can be approved.")
+            
+        booking.status = Booking.StatusChoices.CONFIRMED
+        booking.approved_by = approved_by
+        booking.approved_at = now
+        booking.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
+        
+        # [HOOK: Create Google Calendar event]
+        
+        # [HOOK: Send confirmation notifications]
+        logger.info(f"Booking {booking.uid} approved by {approved_by.email}")
+        
+    return booking
+
+def reject_booking(
+    *,
+    booking: Booking,
+    rejected_by: User | None,
+    reason: str = "",
+    now: datetime,
+) -> Booking:
+    with transaction.atomic():
+        if booking.status != Booking.StatusChoices.PENDING:
+            raise InvalidTransition("Only pending bookings can be rejected.")
+            
+        booking.status = Booking.StatusChoices.REJECTED
+        booking.rejected_by = rejected_by
+        booking.cancellation_reason = reason
+        booking.rejected_at = now
+        booking.save(update_fields=['status', 'rejected_by', 'cancellation_reason', 'rejected_at', 'updated_at'])
+        
+        # [HOOK: Send rejection notifications]
+        logger.info(f"Booking {booking.uid} rejected by {rejected_by.email if rejected_by else 'system'}")
+        
+    return booking
 
 def reschedule_booking(
     *,

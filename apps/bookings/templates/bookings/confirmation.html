@@ -31,8 +31,9 @@
           </svg>
         </div>
         <h2 class="text-2xl font-bold text-gray-900">Pending Host Approval</h2>
-        <p class="mt-2 text-sm text-gray-600">Your request has been sent to {{ booking.host.get_full_name|default:booking.host.email }}.</p>
+        <p class="mt-2 text-sm text-gray-600">Your request has been sent to {{ booking.host.get_full_name|default:booking.host.email }} and the time is held meanwhile.</p>
       {% elif booking.status == 'pending_payment' %}
+
         <h2 class="text-2xl font-bold text-gray-900">Awaiting Payment</h2>
       {% elif booking.status == 'cancelled' %}
         <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
@@ -158,8 +159,8 @@
         
         {% if not is_past %}
           <div class="flex space-x-4 text-sm">
-            {% if booking.event_type.allow_rescheduling %}
-            <a href="#" class="text-primary-600 hover:text-primary-900 font-medium">Reschedule</a>
+            {% if booking.event_type.allow_rescheduling and booking.status != 'pending' %}
+            <a href="{% url 'bookings:booking_reschedule' uid=booking.uid %}?t={{ token }}" class="text-primary-600 hover:text-primary-900 font-medium">Reschedule</a>
             {% endif %}
             
             {% if booking.event_type.allow_cancellation %}

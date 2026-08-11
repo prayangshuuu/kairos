@@ -22,3 +22,34 @@ def verify_manage_token(uid: str, token: str) -> bool:
         return original == str(uid)
     except (BadSignature, SignatureExpired):
         return False
+
+APPROVE_SALT = "kairos.bookings.approve"
+REJECT_SALT = "kairos.bookings.reject"
+
+def make_approve_token(booking) -> str:
+    signer = TimestampSigner(salt=APPROVE_SALT)
+    return signer.sign(str(booking.uid))
+
+def verify_approve_token(uid: str, token: str) -> bool:
+    if not token:
+        return False
+    signer = TimestampSigner(salt=APPROVE_SALT)
+    try:
+        original = signer.unsign(token)
+        return original == str(uid)
+    except (BadSignature, SignatureExpired):
+        return False
+
+def make_reject_token(booking) -> str:
+    signer = TimestampSigner(salt=REJECT_SALT)
+    return signer.sign(str(booking.uid))
+
+def verify_reject_token(uid: str, token: str) -> bool:
+    if not token:
+        return False
+    signer = TimestampSigner(salt=REJECT_SALT)
+    try:
+        original = signer.unsign(token)
+        return original == str(uid)
+    except (BadSignature, SignatureExpired):
+        return False

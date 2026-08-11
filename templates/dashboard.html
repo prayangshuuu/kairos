@@ -9,5 +9,41 @@
         <p class="text-gray-600">Welcome to Kairos, {{ user.display_name|default:user.email }}!</p>
         <p class="text-gray-600 mt-2">Your booking link is: <a href="{% url 'home' %}{{ user.slug }}" class="text-blue-600 hover:underline">joinkairos.me/{{ user.slug }}</a></p>
     </div>
+    
+    {% if pending_bookings %}
+    <div class="mt-8">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Pending Approval</h2>
+        <div class="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
+            <ul role="list" class="divide-y divide-gray-200">
+                {% for booking in pending_bookings %}
+                <li>
+                    <div class="px-4 py-4 sm:px-6 flex items-center justify-between">
+                        <div class="flex flex-col">
+                            <p class="text-sm font-medium text-primary-600 truncate">{{ booking.invitee_name }} ({{ booking.invitee_email }})</p>
+                            <p class="mt-1 text-sm text-gray-500">
+                                {{ booking.event_type.title }} - {{ booking.start_at|date:"l, F j, Y \a\t g:i A" }}
+                            </p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <form method="POST" action="{% url 'bookings:dashboard_booking_approve' booking.uid %}">
+                                {% csrf_token %}
+                                <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Approve
+                                </button>
+                            </form>
+                            <form method="POST" action="{% url 'bookings:dashboard_booking_reject' booking.uid %}">
+                                {% csrf_token %}
+                                <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                    Reject
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

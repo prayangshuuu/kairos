@@ -12,6 +12,7 @@ from django.utils import timezone as django_timezone
 
 from apps.accounts.models import User
 from apps.scheduling.models import EventType
+from apps.bookings.models import Booking
 from apps.analytics.tasks import record_page_view
 from apps.scheduling.engine import get_slots
 
@@ -657,3 +658,76 @@ class DashboardBookingRescheduleView(LoginRequiredMixin, View):
             
         next_url = request.META.get('HTTP_REFERER', '/dashboard/')
         return redirect(next_url)
+
+class DashboardBookingApproveView(LoginRequiredMixin, View):
+    def post(self, request, uid):
+        booking = get_object_or_404(Booking, uid=uid, host=request.user)
+        from apps.bookings.services import approve_booking, InvalidTransition
+        try:
+            approve_booking(booking=booking, approved_by=request.user, now=django_timezone.now())
+        except InvalidTransition:
+            pass
+        return redirect('dashboard')
+
+class DashboardBookingRejectView(LoginRequiredMixin, View):
+    def post(self, request, uid):
+        booking = get_object_or_404(Booking, uid=uid, host=request.user)
+        reason = request.POST.get('reason', '')
+        from apps.bookings.services import reject_booking, InvalidTransition
+        try:
+            reject_booking(booking=booking, rejected_by=request.user, reason=reason, now=django_timezone.now())
+        except InvalidTransition:
+            pass
+        return redirect('dashboard')
+
+class BookingApproveView(View):
+    def get(self, request, uid):
+        from apps.bookings.tokens import verify_approve_token
+        token = request.GET.get('t', '')
+        if not verify_approve_token(uid, token):
+            raise Http404("Not found")
+            
+        booking = get_object_or_404(Booking, uid=uid)
+        return render(request, "bookings/approve_confirm.html", {"booking": booking, "token": token})
+
+    def post(self, request, uid):
+        from apps.bookings.tokens import verify_approve_token
+        token = request.GET.get('t', '')
+        if not verify_approve_token(uid, token):
+            raise Http404("Not found")
+            
+        booking = get_object_or_404(Booking, uid=uid)
+        from apps.bookings.services import approve_booking, InvalidTransition
+        try:
+            approve_booking(booking=booking, approved_by=booking.host, now=django_timezone.now())
+        except InvalidTransition:
+            pass
+            
+        return render(request, "bookings/action_success.html", {"booking": booking, "action": "approved"})
+
+class BookingRejectView(View):
+    def get(self, request, uid):
+        from apps.bookings.tokens import verify_reject_token
+        token = request.GET.get('t', '')
+        if not verify_reject_token(uid, token):
+            raise Http404("Not found")
+            
+        booking = get_object_or_404(Booking, uid=uid)
+        return render(request, "bookings/reject_confirm.html", {"booking": booking, "token": token})
+
+    def post(self, request, uid):
+        from apps.bookings.tokens import verify_reject_token
+        token = request.GET.get('t', '')
+        if not verify_reject_token(uid, token):
+            raise Http404("Not found")
+            
+        booking = get_object_or_404(Booking, uid=uid)
+        reason = request.POST.get("reason", "")
+        
+        from apps.bookings.services import reject_booking, InvalidTransition
+        try:
+            reject_booking(booking=booking, rejected_by=booking.host, reason=reason, now=django_timezone.now())
+        except InvalidTransition:
+            pass
+            
+        return render(request, "bookings/action_success.html", {"booking": booking, "action": "rejected"})
