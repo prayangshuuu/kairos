@@ -1,0 +1,11 @@
+[run]
+omit =
+    */migrations/*
+    */tests/*
+    */venv/*
+
+[report]
+fail_under = 0
+show_missing = True
+
+# We use github actions / make commands to check the floor for specific files

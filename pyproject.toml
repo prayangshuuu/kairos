@@ -17,6 +17,12 @@ dependencies = [
     "django-csp>=4.0",
     "sentry-sdk>=2.67.1",
     "django-structlog>=10.1.0",
+    "pytest>=9.1.1",
+    "pytest-django>=4.14.0",
+    "pytest-cov>=7.1.0",
+    "factory-boy>=3.3.3",
+    "pre-commit>=4.6.2",
+    "pytest-factoryboy>=2.8.1",
 ]
 
 [dependency-groups]
