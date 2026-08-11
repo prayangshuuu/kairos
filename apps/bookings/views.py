@@ -192,5 +192,77 @@ class BookingPageView(View):
 
 
 class BookingStubView(View):
+    def get_host_and_event(self, host_slug, event_slug):
+        host = User.objects.filter(slug__iexact=host_slug, is_active=True).first()
+        if not host:
+            raise Http404("Host not found")
+        event = EventType.objects.filter(owner=host, slug__iexact=event_slug, is_active=True).first()
+        if not event:
+            raise Http404("Event not found")
+        return host, event
+
     def post(self, request, host_slug, event_slug):
-        return HttpResponse("<div>Booking form partial will appear here in the next task.</div>")
+        host, event = self.get_host_and_event(host_slug, event_slug)
+        
+        # Simple IP rate limiting using Django cache
+        ip_addr = request.META.get('REMOTE_ADDR', '')
+        rate_key = f"rl_submit_{ip_addr}_{event.id}"
+        attempts = cache.get(rate_key, 0)
+        if attempts > 10:
+            return HttpResponse("Too many requests. Please try again later.", status=429)
+        cache.set(rate_key, attempts + 1, 60)
+        
+        # Are we submitting the form or requesting it?
+        # If it's a POST from the calendar slot button, it only sends slot_time, tz, etc in query params, or URL, or body
+        # Let's check if the form is being submitted (contains invitee_email)
+        from .forms import BookingForm
+        from django.core.signing import Signer
+        
+        if 'invitee_email' in request.POST:
+            # Form submission
+            form = BookingForm(request.POST, event_type=event)
+            if form.is_valid():
+                # For this task, do NOT create Booking row. Return success placeholder.
+                return HttpResponse('<div class="p-6 bg-green-50 text-green-800 rounded-xl text-center"><h2>Booking Form Validated!</h2><p>Database insertion will happen in the next task.</p></div>')
+            else:
+                # Re-render form with errors
+                tz_str = request.POST.get('tz', 'UTC')
+                try:
+                    slot_time = datetime.fromisoformat(request.POST.get('slot_time', '').replace('Z', '+00:00'))
+                except ValueError:
+                    slot_time = django_timezone.now()
+                    
+                context = {
+                    'host': host,
+                    'event': event,
+                    'form': form,
+                    'visitor_tz': tz_str,
+                    'slot_time': slot_time,
+                }
+                return render(request, "bookings/partials/booking_form.html", context)
+        else:
+            # Slot clicked, render empty form
+            tz_str = request.GET.get('tz') or request.POST.get('tz', 'UTC')
+            slot_time_str = request.GET.get('slot') or request.POST.get('slot', '')
+            try:
+                slot_time = datetime.fromisoformat(slot_time_str.replace('Z', '+00:00'))
+            except (ValueError, TypeError):
+                raise Http404("Invalid slot")
+                
+            signer = Signer()
+            initial = {
+                'slot_time': slot_time_str,
+                'tz': tz_str,
+                'event_type_id': event.id,
+                'timestamp_token': signer.sign(str(django_timezone.now().timestamp()))
+            }
+            form = BookingForm(initial=initial, event_type=event)
+            
+            context = {
+                'host': host,
+                'event': event,
+                'form': form,
+                'visitor_tz': tz_str,
+                'slot_time': slot_time,
+            }
+            return render(request, "bookings/partials/booking_form.html", context)
