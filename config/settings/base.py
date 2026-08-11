@@ -140,6 +140,9 @@ LOGIN_REDIRECT_URL = "/dashboard/"
 LOGOUT_REDIRECT_URL = "/"
 LOGIN_URL = "/accounts/login/"
 
+# Bypass the intermediate social login page
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [
