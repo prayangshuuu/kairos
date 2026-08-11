@@ -268,3 +268,17 @@ def create_booking(
 
     logger.info(f"Booking {booking.uid} created for event {event_type.id} and host {event_type.owner_id}")
     return booking
+
+def mark_booking_no_show(*, booking: Booking, marked_by: User, now: datetime) -> Booking:
+    with transaction.atomic():
+        if booking.status != Booking.StatusChoices.CONFIRMED:
+            raise InvalidTransition("Only confirmed bookings can be marked as no-show.")
+        if booking.start_at >= now:
+            raise InvalidTransition("Only past bookings can be marked as no-show.")
+            
+        booking.status = Booking.StatusChoices.NO_SHOW
+        booking.save(update_fields=['status', 'updated_at'])
+        
+        logger.info(f"Booking {booking.uid} marked as no-show by {marked_by.email}")
+        
+    return booking

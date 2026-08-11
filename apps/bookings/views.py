@@ -731,3 +731,113 @@ class BookingRejectView(View):
             pass
             
         return render(request, "bookings/action_success.html", {"booking": booking, "action": "rejected"})
+
+import csv
+from django.db.models import Count, Q, Value, IntegerField, F
+from django.http import StreamingHttpResponse
+
+class Echo:
+    def write(self, value):
+        return value
+
+class DashboardBookingsView(LoginRequiredMixin, View):
+    def get(self, request):
+        now = django_timezone.now()
+        
+        # Base queryset
+        qs = Booking.objects.filter(host=request.user).select_related('event_type', 'host').prefetch_related('attendees')
+        
+        # Single aggregate query for tab counts
+        counts = qs.aggregate(
+            upcoming=Count('id', filter=Q(status=Booking.StatusChoices.CONFIRMED, start_at__gte=now)),
+            pending=Count('id', filter=Q(status=Booking.StatusChoices.PENDING)),
+            past=Count('id', filter=Q(status=Booking.StatusChoices.CONFIRMED, start_at__lt=now)),
+            cancelled=Count('id', filter=Q(status__in=[Booking.StatusChoices.CANCELLED, Booking.StatusChoices.REJECTED])),
+        )
+        
+        tab = request.GET.get('tab', 'upcoming')
+        if tab == 'upcoming':
+            qs = qs.filter(status=Booking.StatusChoices.CONFIRMED, start_at__gte=now).order_by('start_at')
+        elif tab == 'pending':
+            qs = qs.filter(status=Booking.StatusChoices.PENDING).order_by('start_at')
+        elif tab == 'past':
+            qs = qs.filter(status=Booking.StatusChoices.CONFIRMED, start_at__lt=now).order_by('-start_at')
+        elif tab == 'cancelled':
+            qs = qs.filter(status__in=[Booking.StatusChoices.CANCELLED, Booking.StatusChoices.REJECTED]).order_by('-start_at')
+            
+        # Filtering
+        event_type_ids = request.GET.getlist('event_type')
+        if event_type_ids:
+            qs = qs.filter(event_type_id__in=event_type_ids)
+            
+        date_preset = request.GET.get('date')
+        if date_preset == 'this_week':
+            qs = qs.filter(start_at__gte=now, start_at__lte=now + timedelta(days=7))
+        elif date_preset == 'this_month':
+            qs = qs.filter(start_at__year=now.year, start_at__month=now.month)
+        elif date_preset == 'next_30':
+            qs = qs.filter(start_at__gte=now, start_at__lte=now + timedelta(days=30))
+            
+        search = request.GET.get('q')
+        if search:
+            qs = qs.filter(Q(invitee_name__icontains=search) | Q(invitee_email__icontains=search))
+            
+        # Export
+        if request.GET.get('export') == 'csv':
+            def get_rows():
+                yield ['Booking UID', 'Date', 'Time UTC', 'Time Local', 'Duration', 'Event Type', 'Invitee Name', 'Invitee Email', 'Status', 'Created At']
+                for b in qs:
+                    local_tz = zoneinfo.ZoneInfo(request.user.timezone) if request.user.timezone else zoneinfo.ZoneInfo('UTC')
+                    local_time = b.start_at.astimezone(local_tz)
+                    yield [
+                        str(b.uid),
+                        local_time.strftime('%Y-%m-%d'),
+                        b.start_at.strftime('%H:%M'),
+                        local_time.strftime('%H:%M'),
+                        str(b.event_type.duration_minutes),
+                        b.event_type.title,
+                        b.invitee_name,
+                        b.invitee_email,
+                        b.get_status_display(),
+                        b.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    ]
+            
+            pseudo_buffer = Echo()
+            writer = csv.writer(pseudo_buffer)
+            response = StreamingHttpResponse((writer.writerow(row) for row in get_rows()), content_type="text/csv")
+            response['Content-Disposition'] = 'attachment; filename="bookings.csv"'
+            return response
+            
+        # Pagination
+        from django.core.paginator import Paginator
+        paginator = Paginator(qs, 25)
+        page_number = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+        
+        event_types = EventType.objects.filter(owner=request.user)
+        
+        context = {
+            'page_obj': page_obj,
+            'tab': tab,
+            'counts': counts,
+            'event_types': event_types,
+            'current_event_types': [int(i) for i in event_type_ids if i.isdigit()],
+            'current_date': date_preset,
+            'search_q': search,
+            'host_tz': request.user.timezone or 'UTC',
+        }
+        
+        if request.headers.get('HX-Request'):
+            return render(request, 'dashboard/bookings/list_partial.html', context)
+        return render(request, 'dashboard/bookings/list.html', context)
+
+class DashboardBookingNoShowView(LoginRequiredMixin, View):
+    def post(self, request, uid):
+        booking = get_object_or_404(Booking, uid=uid, host=request.user)
+        from apps.bookings.services import mark_booking_no_show, InvalidTransition
+        try:
+            mark_booking_no_show(booking=booking, marked_by=request.user, now=django_timezone.now())
+        except InvalidTransition:
+            pass
+        next_url = request.META.get('HTTP_REFERER', '/dashboard/bookings/')
+        return redirect(next_url)

@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from .models import User
 from .validators import validate_slug
 from django.core.exceptions import ValidationError
+from django.utils import timezone as django_timezone
 
 def home(request):
     if request.user.is_authenticated:
@@ -22,7 +23,16 @@ def dashboard(request):
         status=Booking.StatusChoices.PENDING
     ).select_related('event_type').order_by('start_at')
     
-    return render(request, 'dashboard.html', {'pending_bookings': pending_bookings})
+    next_meeting = Booking.objects.filter(
+        host=request.user,
+        status=Booking.StatusChoices.CONFIRMED,
+        start_at__gte=django_timezone.now()
+    ).select_related('event_type').order_by('start_at').first()
+    
+    return render(request, 'dashboard.html', {
+        'pending_bookings': pending_bookings,
+        'next_meeting': next_meeting,
+    })
 
 @login_required
 def onboarding(request):

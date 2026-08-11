@@ -18,19 +18,19 @@
         </div>
         
         <nav class="p-4 space-y-1">
-            <a href="{% url 'scheduling:eventtype_list' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md text-surface-900 bg-surface-100">
+            <a href="{% url 'scheduling:eventtype_list' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'event-types' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Event Types
             </a>
-            <a href="#" class="flex items-center px-4 py-2 text-sm font-medium rounded-md text-surface-600 hover:bg-surface-50 hover:text-surface-900">
+            <a href="{% url 'bookings:dashboard_bookings' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'dashboard/bookings' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Bookings
             </a>
-            <a href="#" class="flex items-center px-4 py-2 text-sm font-medium rounded-md text-surface-600 hover:bg-surface-50 hover:text-surface-900">
+            <a href="{% url 'scheduling:schedule_list' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'availability' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Availability
             </a>
-            <a href="#" class="flex items-center px-4 py-2 text-sm font-medium rounded-md text-surface-600 hover:bg-surface-50 hover:text-surface-900">
+            <a href="{% url 'socialaccount_connections' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if '3rdparty' in request.path or 'social' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Integrations
             </a>
-            <a href="#" class="flex items-center px-4 py-2 text-sm font-medium rounded-md text-surface-600 hover:bg-surface-50 hover:text-surface-900">
+            <a href="{% url 'account_email' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'accounts' in request.path and '3rdparty' not in request.path and 'social' not in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Settings
             </a>
         </nav>

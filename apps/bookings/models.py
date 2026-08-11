@@ -78,6 +78,7 @@ class Booking(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["host", "start_at"]),
+            models.Index(fields=["invitee_name"]),
         ]
         constraints = [
             models.CheckConstraint(

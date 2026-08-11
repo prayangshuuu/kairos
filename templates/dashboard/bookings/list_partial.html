@@ -1,0 +1,193 @@
+{% load booking_tags %}
+{% now "Y-m-d H:i:s" as current_time_str %}
+
+{% if not page_obj %}
+<div class="text-center py-12 bg-white rounded-lg shadow">
+    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-gray-900">No {{ tab }} bookings</h3>
+    <p class="mt-1 text-sm text-gray-500">
+        {% if tab == 'upcoming' %}
+        Share your link to get booked!
+        {% elif tab == 'pending' %}
+        You're all caught up on approvals.
+        {% elif tab == 'past' %}
+        Your past meetings will appear here.
+        {% else %}
+        No cancelled meetings found.
+        {% endif %}
+    </p>
+</div>
+{% else %}
+<div class="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
+    <ul role="list" class="divide-y divide-gray-200">
+        {% for booking in page_obj %}
+        <li class="p-4 sm:px-6 hover:bg-gray-50" x-data="{ expanded: false }">
+            <div class="flex items-center justify-between cursor-pointer" @click="expanded = !expanded">
+                <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                        <div class="flex flex-col">
+                            <p class="text-sm font-medium text-blue-600 truncate">
+                                {{ booking.invitee_name }}
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                <a href="mailto:{{ booking.invitee_email }}?subject=Re: {{ booking.event_type.title }}" class="hover:underline" @click.stop>{{ booking.invitee_email }}</a>
+                                <button class="ml-1 text-gray-400 hover:text-gray-600" title="Copy email" @click.stop="navigator.clipboard.writeText('{{ booking.invitee_email }}'); alert('Copied to clipboard')">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                </button>
+                            </p>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <p class="text-sm text-gray-900 font-medium">
+                                {{ booking.start_at|astimezone:host_tz|date:"M j, g:i A" }}
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                Invitee time: {{ booking.start_at|astimezone:booking.invitee_timezone|date:"g:i A" }}
+                            </p>
+                            <p class="text-xs font-semibold text-green-600 mt-1">
+                                {{ booking.start_at|relative_time }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-2 flex justify-between items-center">
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm text-gray-500">{{ booking.event_type.title }} ({{ booking.event_type.duration_minutes }}m)</span>
+                            {% if booking.meeting_url %}
+                            <a href="{{ booking.meeting_url }}" target="_blank" @click.stop class="inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50">
+                                Join Meeting
+                            </a>
+                            {% endif %}
+                            
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                {% if booking.status == 'confirmed' %}bg-green-100 text-green-800
+                                {% elif booking.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                {% elif booking.status == 'cancelled' or booking.status == 'rejected' %}bg-red-100 text-red-800
+                                {% elif booking.status == 'no_show' %}bg-gray-100 text-gray-800
+                                {% endif %}">
+                                {{ booking.get_status_display }}
+                            </span>
+                            
+                            {% if booking.rescheduled_from %}
+                            <span class="inline-flex items-center text-xs text-blue-600 font-medium" title="Rescheduled from an earlier booking">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                Rescheduled
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="flex space-x-2" @click.stop>
+                            {% if tab == 'pending' %}
+                            <form method="POST" action="{% url 'bookings:dashboard_booking_approve' booking.uid %}">
+                                {% csrf_token %}
+                                <button type="submit" class="text-green-600 hover:text-green-900 text-sm font-medium">Approve</button>
+                            </form>
+                            <form method="POST" action="{% url 'bookings:dashboard_booking_reject' booking.uid %}">
+                                {% csrf_token %}
+                                <button type="submit" class="text-red-600 hover:text-red-900 text-sm font-medium">Reject</button>
+                            </form>
+                            {% endif %}
+                            
+                            {% if booking.status == 'confirmed' and tab == 'upcoming' %}
+                            <button @click="document.getElementById('cancel-modal-{{ booking.uid }}').showModal()" class="text-red-600 hover:text-red-900 text-sm font-medium">Cancel</button>
+                            {% endif %}
+                            
+                            {% if tab == 'past' and booking.status == 'confirmed' %}
+                            <form method="POST" action="{% url 'bookings:dashboard_booking_no_show' booking.uid %}" onsubmit="return confirm('Mark as no-show? This will drive no-show fees and client records later.')">
+                                {% csrf_token %}
+                                <button type="submit" class="text-gray-600 hover:text-gray-900 text-sm font-medium">Mark No-Show</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Expanded Area -->
+            <div x-show="expanded" class="mt-4 pt-4 border-t border-gray-100 text-sm text-gray-700" style="display: none;">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="font-medium text-gray-900">Booking Info</p>
+                        <p>Created at: {{ booking.created_at|date:"M j, Y, g:i A" }}</p>
+                        {% if booking.cancellation_reason %}
+                        <p class="text-red-600 mt-2"><strong>Cancellation Reason:</strong> {{ booking.cancellation_reason }}</p>
+                        {% endif %}
+                        
+                        {% if booking.invitee_notes %}
+                        <p class="mt-2"><strong>Notes:</strong> {{ booking.invitee_notes }}</p>
+                        {% endif %}
+                        
+                        {% if booking.answers %}
+                        <div class="mt-2">
+                            <strong>Questions:</strong>
+                            <ul class="list-disc pl-5 mt-1">
+                                {% for q, a in booking.answers.items %}
+                                <li>{{ q }}: {{ a }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Attendees</p>
+                        <ul class="list-disc pl-5 mt-1">
+                            {% for attendee in booking.attendees.all %}
+                            <li>{{ attendee.name }} ({{ attendee.email }}) {% if attendee.is_organizer %}<span class="text-xs text-blue-500 font-medium">Organizer</span>{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cancel Modal -->
+            <dialog id="cancel-modal-{{ booking.uid }}" class="rounded-lg shadow-xl p-0 backdrop:bg-gray-500 backdrop:bg-opacity-75">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Cancel Booking</h3>
+                    <form method="POST" action="{% url 'bookings:dashboard_booking_cancel' booking.uid %}" class="mt-4">
+                        {% csrf_token %}
+                        <textarea name="reason" class="w-full border-gray-300 rounded-md shadow-sm" rows="3" placeholder="Reason for cancellation (sent to invitee)"></textarea>
+                        <div class="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
+                            <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:ml-3 sm:w-auto sm:text-sm">
+                                Cancel Booking
+                            </button>
+                            <button type="button" @click="document.getElementById('cancel-modal-{{ booking.uid }}').close()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                                Go back
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </dialog>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4 rounded-md shadow">
+    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+            <p class="text-sm text-gray-700">
+                Showing <span class="font-medium">{{ page_obj.start_index }}</span> to <span class="font-medium">{{ page_obj.end_index }}</span> of <span class="font-medium">{{ page_obj.paginator.count }}</span> results
+            </p>
+        </div>
+        <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                {% if page_obj.has_previous %}
+                <button hx-get="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}" hx-target="#booking-list" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    Previous
+                </button>
+                {% endif %}
+                
+                {% if page_obj.has_next %}
+                <button hx-get="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}" hx-target="#booking-list" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    Next
+                </button>
+                {% endif %}
+            </nav>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endif %}
