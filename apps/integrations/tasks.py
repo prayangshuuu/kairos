@@ -215,6 +215,7 @@ def sync_busy_time(connection_id: int):
 def scheduled_sync_all():
     """
     Every 15 mins. Skips if synced within 5 mins.
+    Also skips if connection has healthy watch channels for all its busy-source calendars.
     """
     import random
     
@@ -226,6 +227,20 @@ def scheduled_sync_all():
     ) | CalendarConnection.objects.filter(is_active=True, provider='google', last_synced_at__isnull=True)
     
     for conn in connections:
+        # Check if we should skip due to watch channels
+        # A connection is "healthy" if every busy-source calendar has an active watch channel
+        from apps.integrations.models import SelectedCalendar
+        cals = conn.calendars.filter(is_busy_source=True)
+        all_watched = True
+        for cal in cals:
+            if not cal.watch_channels.filter(expires_at__gt=timezone.now()).exists():
+                all_watched = False
+                break
+                
+        if all_watched and conn.last_synced_at and conn.last_synced_at > (timezone.now() - timedelta(hours=24)):
+            # Skip 15-minute polling if watches are active and we synced in the last 24h as a sanity check
+            continue
+            
         # Jitter up to 60 seconds
         delay = random.randint(0, 60)
         sync_busy_time.apply_async(args=[conn.id], countdown=delay)
@@ -384,3 +399,244 @@ def delete_calendar_event(self, reference_id: int):
             self.retry(countdown=2 ** self.request.retries)
         except self.MaxRetriesExceededError:
             pass # Best effort, do not fail cancellation
+
+
+@shared_task
+def register_watch(calendar_id: int):
+    from apps.integrations.models import SelectedCalendar, WatchChannel
+    from apps.integrations.google.client import GoogleCalendarClient
+    from django.conf import settings
+    import uuid
+    from datetime import timedelta
+    
+    try:
+        cal = SelectedCalendar.objects.get(id=calendar_id, is_busy_source=True, connection__is_active=True)
+    except SelectedCalendar.DoesNotExist:
+        return
+        
+    client = GoogleCalendarClient(cal.connection)
+    
+    # We need a publicly reachable webhook URL.
+    # For local dev, this must be an ngrok URL.
+    webhook_url = getattr(settings, 'WEBHOOK_BASE_URL', 'https://api.joinkairos.me') + "/webhook/google/calendar/"
+    
+    channel_id = str(uuid.uuid4())
+    token = str(uuid.uuid4())
+    
+    body = {
+        "id": channel_id,
+        "type": "web_hook",
+        "address": webhook_url,
+        "token": token
+    }
+    
+    try:
+        res = client.service.events().watch(calendarId=cal.external_calendar_id, body=body).execute()
+    except Exception as e:
+        logger.error(f"Failed to register watch for calendar {cal.id}: {e}")
+        return
+        
+    # Store channel details
+    from django.utils import timezone
+    import datetime
+    
+    # Google channels typically expire in 7 days or less.
+    # The API returns 'expiration' as a Unix timestamp in milliseconds as a string.
+    expiration_ms = int(res.get('expiration', 0))
+    if expiration_ms > 0:
+        expires_at = datetime.datetime.fromtimestamp(expiration_ms / 1000.0, tz=datetime.timezone.utc)
+    else:
+        expires_at = timezone.now() + timedelta(days=7)
+        
+    WatchChannel.objects.create(
+        connection=cal.connection,
+        calendar=cal,
+        channel_id=channel_id,
+        resource_id=res.get('resourceId'),
+        token=token,
+        expires_at=expires_at
+    )
+
+@shared_task
+def sync_calendar_incremental(calendar_id: int):
+    from apps.integrations.models import SelectedCalendar, BusyBlock
+    from apps.integrations.google.client import GoogleCalendarClient
+    from googleapiclient.errors import HttpError
+    from psycopg.types.range import Range
+    from django.utils import timezone
+    from zoneinfo import ZoneInfo
+    import datetime
+    
+    try:
+        cal = SelectedCalendar.objects.get(id=calendar_id, connection__is_active=True)
+    except SelectedCalendar.DoesNotExist:
+        return
+        
+    client = GoogleCalendarClient(cal.connection)
+    
+    if not cal.sync_token:
+        # Full sync without singleEvents=True to get a sync token
+        # This is expensive but necessary once.
+        sync_busy_time(cal.connection.id)
+        
+        try:
+            page_token = None
+            # Use timeMin to avoid fetching history, we only care about future/recent events
+            time_min = (timezone.now() - datetime.timedelta(days=1)).isoformat()
+            while True:
+                res = client.service.events().list(
+                    calendarId=cal.external_calendar_id,
+                    timeMin=time_min,
+                    pageToken=page_token
+                ).execute()
+                
+                page_token = res.get('nextPageToken')
+                if not page_token:
+                    cal.sync_token = res.get('nextSyncToken')
+                    cal.save(update_fields=['sync_token'])
+                    break
+        except Exception as e:
+            logger.error(f"Failed to initialize sync token for cal {cal.id}: {e}")
+        return
+        
+    # Incremental sync using sync_token
+    page_token = None
+    needs_full_sync = False
+    
+    while True:
+        try:
+            res = client.service.events().list(
+                calendarId=cal.external_calendar_id,
+                syncToken=cal.sync_token,
+                pageToken=page_token
+            ).execute()
+        except HttpError as e:
+            if e.resp.status == 410:
+                # Sync token invalid
+                cal.sync_token = None
+                cal.save(update_fields=['sync_token'])
+                BusyBlock.objects.filter(calendar=cal).delete()
+                # And re-init token (which does a full sync internally)
+                sync_calendar_incremental(cal.id)
+                return
+            raise e
+            
+        cal_tz_str = res.get('timeZone', 'UTC')
+        cal_tz = ZoneInfo(cal_tz_str)
+        
+        events = res.get('items', [])
+        for event in events:
+            event_id = event.get('id')
+            
+            # Handle deletions
+            if event.get('status') == 'cancelled':
+                BusyBlock.objects.filter(calendar=cal, external_event_id=event_id).delete()
+                continue
+                
+            # If it's a recurring event master, it has 'recurrence'
+            if 'recurrence' in event:
+                # Trade-off: Incremental sync doesn't expand recurrences.
+                # When a recurring master changes, we drop the calendar's blocks and do a full sync.
+                # This is simpler than manual recurrence expansion or bounded partial syncs.
+                needs_full_sync = True
+                break
+                
+            # Exclude transparent
+            if event.get('transparency') == 'transparent':
+                BusyBlock.objects.filter(calendar=cal, external_event_id=event_id).delete()
+                continue
+                
+            # Exclude declined
+            declined = False
+            if 'attendees' in event:
+                for attendee in event['attendees']:
+                    if attendee.get('self') and attendee.get('responseStatus') == 'declined':
+                        declined = True
+                        break
+            if declined:
+                BusyBlock.objects.filter(calendar=cal, external_event_id=event_id).delete()
+                continue
+                
+            # Upsert BusyBlock
+            start_info = event.get('start', {})
+            end_info = event.get('end', {})
+            
+            if 'date' in start_info:
+                is_all_day = True
+                start_date = datetime.datetime.fromisoformat(start_info['date']).date()
+                end_date = datetime.datetime.fromisoformat(end_info['date']).date()
+                start_dt = datetime.datetime.combine(start_date, datetime.datetime.min.time(), tzinfo=cal_tz).astimezone(datetime.timezone.utc)
+                end_dt = datetime.datetime.combine(end_date, datetime.datetime.min.time(), tzinfo=cal_tz).astimezone(datetime.timezone.utc)
+            elif 'dateTime' in start_info:
+                is_all_day = False
+                start_dt = datetime.datetime.fromisoformat(start_info['dateTime']).astimezone(datetime.timezone.utc)
+                end_dt = datetime.datetime.fromisoformat(end_info['dateTime']).astimezone(datetime.timezone.utc)
+            else:
+                continue # Missing start/end?
+                
+            BusyBlock.objects.update_or_create(
+                calendar=cal,
+                external_event_id=event_id,
+                defaults={
+                    'connection': cal.connection,
+                    'period': Range(start_dt, end_dt, '[)'),
+                    'is_all_day': is_all_day,
+                    'synced_at': timezone.now()
+                }
+            )
+            
+        if needs_full_sync:
+            break
+            
+        page_token = res.get('nextPageToken')
+        if not page_token:
+            cal.sync_token = res.get('nextSyncToken')
+            cal.save(update_fields=['sync_token'])
+            break
+
+    if needs_full_sync:
+        sync_busy_time(cal.connection.id)
+        # Fetch a new sync token
+        client = GoogleCalendarClient(cal.connection)
+        try:
+            pt = None
+            time_min = (timezone.now() - datetime.timedelta(days=1)).isoformat()
+            while True:
+                res = client.service.events().list(
+                    calendarId=cal.external_calendar_id,
+                    timeMin=time_min,
+                    pageToken=pt
+                ).execute()
+                pt = res.get('nextPageToken')
+                if not pt:
+                    cal.sync_token = res.get('nextSyncToken')
+                    cal.save(update_fields=['sync_token'])
+                    break
+        except Exception:
+            pass
+
+@shared_task
+def renew_watch_channels():
+    from apps.integrations.models import WatchChannel, SelectedCalendar
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    # Renew channels expiring within 48 hours
+    cutoff = timezone.now() + timedelta(hours=48)
+    expiring = WatchChannel.objects.filter(expires_at__lt=cutoff)
+    
+    for channel in expiring:
+        cal_id = channel.calendar_id
+        # We can't really "renew" a Google channel, we just create a new one.
+        # But we don't strictly need to delete the old one, though it's polite.
+        channel.delete()
+        register_watch.delay(cal_id)
+        
+    # Find active busy source calendars without any watch channel
+    cals_without_watch = SelectedCalendar.objects.filter(
+        is_busy_source=True,
+        connection__is_active=True
+    ).exclude(watch_channels__isnull=False)
+    
+    for cal in cals_without_watch:
+        register_watch.delay(cal.id)

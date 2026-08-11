@@ -86,6 +86,7 @@ class SelectedCalendar(models.Model):
     background_color = models.CharField(max_length=50, blank=True)
     is_busy_source = models.BooleanField(default=True)
     is_write_target = models.BooleanField(default=False)
+    sync_token = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         constraints = [
@@ -124,3 +125,24 @@ class BusyBlock(models.Model):
 
     def __str__(self):
         return f"BusyBlock {self.period} for {self.calendar_id}"
+
+
+import uuid
+
+class WatchChannel(models.Model):
+    connection = models.ForeignKey(CalendarConnection, on_delete=models.CASCADE, related_name="watch_channels")
+    calendar = models.ForeignKey(SelectedCalendar, on_delete=models.CASCADE, related_name="watch_channels")
+    channel_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    resource_id = models.CharField(max_length=255)
+    token = models.CharField(max_length=255)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["connection", "calendar"], name="unique_watch_channel_per_calendar")
+        ]
+
+    def __str__(self):
+        return f"Watch {self.channel_id} for {self.calendar_id}"
+

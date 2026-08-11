@@ -4,6 +4,9 @@ from urllib.parse import urlencode
 import requests
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.http import HttpResponse
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -221,3 +224,39 @@ def google_disconnect(request):
             
         messages.success(request, "Google Calendar disconnected.")
     return redirect('integrations:dashboard')
+
+@csrf_exempt
+@require_POST
+def google_webhook(request):
+    channel_id = request.headers.get("X-Goog-Channel-Id")
+    resource_id = request.headers.get("X-Goog-Resource-Id")
+    token = request.headers.get("X-Goog-Channel-Token")
+    resource_state = request.headers.get("X-Goog-Resource-State")
+
+    if not channel_id or not token:
+        return HttpResponse(status=404)
+
+    from apps.integrations.models import WatchChannel
+    try:
+        channel = WatchChannel.objects.get(channel_id=channel_id)
+    except WatchChannel.DoesNotExist:
+        return HttpResponse(status=404)
+
+    if channel.token != token:
+        return HttpResponse(status=404)
+
+    if resource_state == "sync":
+        return HttpResponse("OK")
+
+    if resource_state == "exists":
+        from django.core.cache import cache
+        from apps.integrations.tasks import sync_calendar_incremental
+        
+        cache_key = f"sync_debounce_{channel.calendar_id}"
+        if not cache.get(cache_key):
+            # lock for 5 seconds to prevent burst
+            cache.set(cache_key, "1", timeout=5)
+            # wait 2 seconds before syncing to batch changes
+            sync_calendar_incremental.apply_async(args=[channel.calendar_id], countdown=2)
+
+    return HttpResponse("OK")
