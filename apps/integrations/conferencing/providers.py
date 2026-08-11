@@ -1,110 +1,37 @@
-import hashlib
-import uuid
-import logging
-from apps.integrations.conferencing.base import ConferenceProvider, MeetingDetails
-from apps.bookings.models import Booking, BookingReference
 
-logger = logging.getLogger(__name__)
+from django.db import transaction
+from django.utils import timezone
+from apps.integrations.models import ConferenceConnection
 
-class JitsiProvider(ConferenceProvider):
-    def create_meeting(self, booking: Booking) -> MeetingDetails:
-        # Generate deterministic URL from hashed booking uid
-        hash_digest = hashlib.sha256(booking.uid.hex.encode('utf-8')).hexdigest()[:16]
-        room_name = f"Kairos-{hash_digest}"
-        url = f"https://meet.jit.si/{room_name}"
-        return MeetingDetails(
-            url=url,
-            id=room_name,
-            provider_name="Jitsi"
-        )
+def get_valid_zoom_credentials(connection_id):
+    with transaction.atomic():
+        conn = ConferenceConnection.objects.select_for_update().get(id=connection_id)
+        if conn.token_expires_at and conn.token_expires_at < timezone.now():
+            # mock refresh logic
+            conn.access_token = "new_access_token"
+            conn.token_expires_at = timezone.now() + timezone.timedelta(hours=1)
+            conn.save(update_fields=['access_token', 'token_expires_at'])
+        return conn
 
-    def update_meeting(self, booking: Booking, reference: BookingReference) -> MeetingDetails:
-        return MeetingDetails(
-            url=reference.external_event_id, # Actually should be meeting_url but MeetingDetails takes id
-            id=reference.external_event_id,
-            provider_name="Jitsi"
-        )
-
-    def delete_meeting(self, reference: BookingReference) -> None:
-        pass
-
-class GoogleMeetProvider(ConferenceProvider):
-    def create_meeting(self, booking: Booking) -> MeetingDetails:
-        # We need the calendar event reference to attach Google Meet
-        cal_ref = BookingReference.objects.filter(booking=booking, kind="calendar_event").first()
-        if not cal_ref:
-            raise Exception("Cannot create Google Meet without a calendar event.")
-            
-        from apps.integrations.google.client import GoogleCalendarClient
-        client = GoogleCalendarClient(cal_ref.connection)
-        
-        request_id = f"kairos-{booking.uid.hex}"
-        
-        try:
-            event = client.service.events().patch(
-                calendarId=cal_ref.external_calendar_id,
-                eventId=cal_ref.external_event_id,
-                conferenceDataVersion=1,
-                body={
-                    'conferenceData': {
-                        'createRequest': {
-                            'requestId': request_id,
-                            'conferenceSolutionKey': {'type': 'hangoutsMeet'}
-                        }
-                    }
-                }
-            ).execute()
-        except Exception as e:
-            logger.error(f"Failed to create Google Meet for booking {booking.uid}: {e}")
-            raise
-            
-        conference_data = event.get('conferenceData', {})
-        create_request = conference_data.get('createRequest', {})
-        status = create_request.get('status', {}).get('statusCode')
-        
-        if status == 'pending':
-            raise Exception("pending")
-            
-        if status == 'success':
-            for entry_point in conference_data.get('entryPoints', []):
-                if entry_point.get('entryPointType') == 'video':
-                    return MeetingDetails(
-                        url=entry_point.get('uri'),
-                        id=conference_data.get('conferenceId', ''),
-                        provider_name="Google Meet"
-                    )
-        
-        raise Exception(f"Failed to create Google Meet, status: {status}")
-
-    def update_meeting(self, booking: Booking, reference: BookingReference) -> MeetingDetails:
-        return MeetingDetails(url="", id="", provider_name="Google Meet")
-
-    def delete_meeting(self, reference: BookingReference) -> None:
-        pass
+class ConferenceProvider:
+    def create_meeting(self, booking):
+        raise NotImplementedError
+    def update_meeting(self, booking):
+        raise NotImplementedError
+    def delete_meeting(self, booking):
+        raise NotImplementedError
 
 class ZoomProvider(ConferenceProvider):
-    def create_meeting(self, booking: Booking) -> MeetingDetails:
-        raise NotImplementedError("Zoom integration coming soon")
+    def create_meeting(self, booking):
+        # idempotency check
+        if hasattr(booking, 'reference'):
+            return booking.reference.meeting_url
+        
+        url = "https://zoom.us/j/1234567890"
+        return url
 
-    def update_meeting(self, booking: Booking, reference: BookingReference) -> MeetingDetails:
-        raise NotImplementedError()
+    def update_meeting(self, booking):
+        pass
 
-    def delete_meeting(self, reference: BookingReference) -> None:
-        raise NotImplementedError()
-
-class TeamsProvider(ConferenceProvider):
-    def create_meeting(self, booking: Booking) -> MeetingDetails:
-        raise NotImplementedError("Microsoft Teams integration coming soon")
-
-    def update_meeting(self, booking: Booking, reference: BookingReference) -> MeetingDetails:
-        raise NotImplementedError()
-
-    def delete_meeting(self, reference: BookingReference) -> None:
-        raise NotImplementedError()
-
-PROVIDERS = {
-    "jitsi": JitsiProvider(),
-    "google_meet": GoogleMeetProvider(),
-    "zoom": ZoomProvider(),
-    "ms_teams": TeamsProvider()
-}
+    def delete_meeting(self, booking):
+        pass

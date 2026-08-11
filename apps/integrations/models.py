@@ -146,3 +146,31 @@ class WatchChannel(models.Model):
     def __str__(self):
         return f"Watch {self.channel_id} for {self.calendar_id}"
 
+
+class ConferenceConnection(models.Model):
+    PROVIDER_CHOICES = (
+        ("zoom", "Zoom"),
+        ("google_meet", "Google Meet"),
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="conference_connections",
+    )
+    provider = models.CharField(max_length=50, choices=PROVIDER_CHOICES)
+    external_account_email = models.EmailField()
+    external_account_id = models.CharField(max_length=255)
+    access_token = DedicatedKeyEncryptedTextField(blank=True, null=True)
+    refresh_token = DedicatedKeyEncryptedTextField(blank=True, null=True)
+    token_expires_at = models.DateTimeField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "provider", "external_account_id"],
+                name="unique_conference_user_provider_account"
+            )
+        ]

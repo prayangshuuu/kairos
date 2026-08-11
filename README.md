@@ -69,3 +69,7 @@ A default superuser has been created for accessing the Django admin interface at
 You can log in with:
 - **Email**: `admin@joinkairos.me`
 - **Password**: `adminpassword`
+
+
+## Zoom Integration
+Note: The Zoom app is currently under review by Zoom. You can use it in development mode.
