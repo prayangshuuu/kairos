@@ -256,3 +256,16 @@ CONN_MAX_AGE = int(os.environ.get('CONN_MAX_AGE', 600))
 
 # Ratelimit custom view
 RATELIMIT_VIEW = 'apps.core.views.custom_bad_request'
+
+# Integrations Configuration
+GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
+GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
+
+# OAuth Token Encryption Key (32 url-safe base64-encoded bytes)
+# Note: Rotating this key invalidates EVERY stored token and requires all users to reconnect.
+_oauth_key = env("OAUTH_ENCRYPTION_KEY", default="")
+if not _oauth_key:
+    # Development fallback
+    _oauth_key = "T6w3gL9fE-h5V2B1x8Z0qP4nJ7mK3vC8sR5yU1oN2wM="
+
+FERNET_KEYS = [_oauth_key]

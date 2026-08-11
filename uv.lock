@@ -467,6 +467,31 @@ socialaccount = [
 ]
 
 [[package]]
+name = "django-appconf"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d1/a2/e58bec8d7941b914af52a67c35b5709eceed2caa2848f28437f1666ed668/django_appconf-1.2.0.tar.gz", hash = "sha256:15a88d60dd942d6059f467412fe4581db632ef03018a3c183fb415d6fc9e5cec", size = 16127, upload-time = "2025-11-08T15:46:27.304Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e8/e6/4c34d94dfb74bbcbc489606e61f1924933de30d22c593dd1f429f35fbd7f/django_appconf-1.2.0-py3-none-any.whl", hash = "sha256:b81bce5ef0ceb9d84df48dfb623a32235d941c78cc5e45dbb6947f154ea277f4", size = 6500, upload-time = "2025-11-08T15:46:25.957Z" },
+]
+
+[[package]]
+name = "django-cryptography"
+version = "1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "django" },
+    { name = "django-appconf" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e4/ba/d5e1264c60a86cebb4b63f1dae8220e15dd751e46d24229ee0803f19a66b/django_cryptography-1.1-py2.py3-none-any.whl", hash = "sha256:93702fcf0d75865d55362f20ecd95274c4eef60ccdce46cbdade0420acee07cb", size = 11107, upload-time = "2022-04-06T04:27:28.34Z" },
+]
+
+[[package]]
 name = "django-csp"
 version = "4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -499,6 +524,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/57/e1/4c4ddcf6e90f023e89edb1d92f9a7fffce61ad4b691df497f2f5c0be6e26/django_environ-0.14.0.tar.gz", hash = "sha256:b6c48d93b9d2ff8a3ea14099e90c35aa4f101c1b4d5f262dfee0d27b06742ed7", size = 60417, upload-time = "2026-06-18T22:49:55.847Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1a/fe/67b423fc30f16d10259e901320fbc121746bf168aaaad9043e6ebb0110c1/django_environ-0.14.0-py3-none-any.whl", hash = "sha256:8dbe8a57f0a540ab8abd6f54f230de5e99e3a2c9d797cb9caecb037bca3d47d8", size = 20934, upload-time = "2026-06-18T22:49:54.355Z" },
+]
+
+[[package]]
+name = "django-fernet-encrypted-fields"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/95/d7/df0426ebf5b1784d064825ec8e5940e634991452066cfacc7fe0138f091a/django_fernet_encrypted_fields-0.4.0.tar.gz", hash = "sha256:836c927a260a834a35c4caecf82a97a5e411408cbecb44e25caddd02d8cdd86e", size = 5505, upload-time = "2026-04-14T01:25:15.216Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/83/75/c6de2333c26d0052d2175bf21dc3f5c45e878090946a75fb0c827da6e40a/django_fernet_encrypted_fields-0.4.0-py3-none-any.whl", hash = "sha256:b3e4049882b8c7216d868b7aa7533e466a48c1307b5d4b1b8dc4cb5946d87eec", size = 5681, upload-time = "2026-04-14T01:25:13.309Z" },
 ]
 
 [[package]]
@@ -628,8 +666,10 @@ dependencies = [
     { name = "celery" },
     { name = "django" },
     { name = "django-allauth", extra = ["socialaccount"] },
+    { name = "django-cryptography" },
     { name = "django-csp" },
     { name = "django-environ" },
+    { name = "django-fernet-encrypted-fields" },
     { name = "django-ratelimit" },
     { name = "django-structlog" },
     { name = "factory-boy" },
@@ -642,6 +682,7 @@ dependencies = [
     { name = "pytest-django" },
     { name = "pytest-factoryboy" },
     { name = "redis" },
+    { name = "requests" },
     { name = "sentry-sdk" },
 ]
 
@@ -659,8 +700,10 @@ requires-dist = [
     { name = "celery" },
     { name = "django", specifier = ">=5.0" },
     { name = "django-allauth", extras = ["socialaccount"] },
+    { name = "django-cryptography", specifier = ">=1.1" },
     { name = "django-csp", specifier = ">=4.0" },
     { name = "django-environ" },
+    { name = "django-fernet-encrypted-fields", specifier = ">=0.4.0" },
     { name = "django-ratelimit", specifier = ">=4.1.0" },
     { name = "django-structlog", specifier = ">=10.1.0" },
     { name = "factory-boy", specifier = ">=3.3.3" },
@@ -673,6 +716,7 @@ requires-dist = [
     { name = "pytest-django", specifier = ">=4.14.0" },
     { name = "pytest-factoryboy", specifier = ">=2.8.1" },
     { name = "redis" },
+    { name = "requests", specifier = ">=2.34.2" },
     { name = "sentry-sdk", specifier = ">=2.67.1" },
 ]
 
