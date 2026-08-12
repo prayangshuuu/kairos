@@ -82,52 +82,92 @@
     </div>
 
     <!-- Microsoft Calendar -->
-    <div class="bg-gray-50 dark:bg-gray-800/50 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700 opacity-75">
+    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700 opacity-75">
       <div class="p-6">
         <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <!-- Microsoft Icon -->
+            <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="2" width="9" height="9" fill="#F25022"/>
+              <rect x="13" y="2" width="9" height="9" fill="#7FBA00"/>
+              <rect x="2" y="13" width="9" height="9" fill="#00A4EF"/>
+              <rect x="13" y="13" width="9" height="9" fill="#FFB900"/>
+            </svg>
+          </div>
           <div class="ml-4">
             <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">Microsoft Outlook</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Coming soon</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Sync your availability and create events.</p>
           </div>
         </div>
         <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-          <button disabled class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-400 bg-gray-200 cursor-not-allowed dark:bg-gray-700">
-            Connect
-          </button>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-900 dark:text-white">Coming Soon</p>
+              <p class="text-xs text-gray-500">Currently in development</p>
+            </div>
+            <!-- Disabled Toggle Switch -->
+            <div class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-not-allowed rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-200 ease-in-out" role="switch" aria-checked="false">
+              <span class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
     
     <!-- CalDAV Calendar -->
-    <div class="bg-gray-50 dark:bg-gray-800/50 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700 opacity-75">
+    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700 opacity-75">
       <div class="p-6">
         <div class="flex items-center">
+          <div class="flex-shrink-0 text-gray-400">
+            <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
           <div class="ml-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">CalDAV</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Coming soon</p>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">CalDAV Server</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Sync your availability and create events.</p>
           </div>
         </div>
         <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-          <button disabled class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-400 bg-gray-200 cursor-not-allowed dark:bg-gray-700">
-            Connect
-          </button>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-900 dark:text-white">Coming Soon</p>
+              <p class="text-xs text-gray-500">Currently in development</p>
+            </div>
+            <!-- Disabled Toggle Switch -->
+            <div class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-not-allowed rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-200 ease-in-out" role="switch" aria-checked="false">
+              <span class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Apple Calendar -->
-    <div class="bg-gray-50 dark:bg-gray-800/50 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700 opacity-75">
+    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700 opacity-75">
       <div class="p-6">
         <div class="flex items-center">
+          <div class="flex-shrink-0 text-gray-900 dark:text-white">
+            <svg class="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12c0-5.523-4.477-10-10-10z"/>
+            </svg>
+          </div>
           <div class="ml-4">
             <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">Apple Calendar</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Coming soon</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Sync your availability and create events.</p>
           </div>
         </div>
         <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-          <button disabled class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-400 bg-gray-200 cursor-not-allowed dark:bg-gray-700">
-            Connect
-          </button>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-900 dark:text-white">Coming Soon</p>
+              <p class="text-xs text-gray-500">Currently in development</p>
+            </div>
+            <!-- Disabled Toggle Switch -->
+            <div class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-not-allowed rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-200 ease-in-out" role="switch" aria-checked="false">
+              <span class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
