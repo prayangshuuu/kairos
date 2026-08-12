@@ -1,30 +1,196 @@
 {% extends "accounts/settings_layout.html" %}
 {% block settings_content %}
-<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6">
-    <h2 class="text-lg font-medium text-gray-900">Branding</h2>
-    
-    <form hx-post="{% url 'accounts:settings_branding' %}" hx-target="#settings-messages" class="mt-6 space-y-6">
-        {% csrf_token %}
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Brand Color</label>
-            <div class="mt-1 flex items-center space-x-4">
-                <input type="color" name="brand_color" value="{{ brand_form.brand_color.value }}" class="h-8 w-8 rounded-md cursor-pointer border-gray-300">
-                <input type="text" name="brand_color_text" value="{{ brand_form.brand_color.value }}" class="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm" disabled>
-            </div>
-            <p class="text-xs text-gray-500 mt-1">Used for buttons and accents on your public booking page.</p>
+<style>
+  .brand-card {
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.75rem;
+  }
+  .brand-card-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #0d9488;
+    margin-bottom: 0.3rem;
+  }
+  .brand-card-title { font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
+  .brand-card-sub   { font-size: 0.85rem; color: #64748b; margin-bottom: 1.75rem; }
+
+  .brand-field { margin-bottom: 1.5rem; }
+  .brand-field-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 0.5rem;
+  }
+  .brand-field-desc { font-size: 0.78rem; color: #94a3b8; margin-top: 0.35rem; }
+
+  /* Color picker row */
+  .color-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .color-swatch-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .color-swatch-wrap input[type="color"] {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    border: 2px solid #e2e8f0;
+    padding: 3px;
+    cursor: pointer;
+    background: none;
+    transition: border-color 0.15s;
+  }
+  .color-swatch-wrap input[type="color"]:hover { border-color: #0d9488; }
+  .color-hex-input {
+    width: 110px;
+    padding: 0.625rem 0.875rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: monospace;
+    color: #0f172a;
+    letter-spacing: 0.05em;
+    background: #f8fafc;
+  }
+  .color-preview-label {
+    font-size: 0.78rem;
+    color: #64748b;
+  }
+
+  /* Toggle row */
+  .brand-toggle-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.25rem 0;
+    border-top: 1px solid #f1f5f9;
+  }
+  .brand-toggle-info { flex: 1; }
+  .brand-toggle-name {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.2rem;
+  }
+  .brand-toggle-desc { font-size: 0.78rem; color: #64748b; }
+  .coming-soon-badge {
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+  }
+  /* disabled toggle */
+  .toggle-switch-disabled {
+    position: relative;
+    flex-shrink: 0;
+    width: 44px;
+    height: 24px;
+    border-radius: 9999px;
+    background: #e2e8f0;
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .toggle-switch-disabled::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+
+  .brand-save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    background: #0d9488;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+    margin-top: 1.5rem;
+    float: right;
+  }
+  .brand-save-btn:hover { background: #0f766e; transform: translateY(-1px); }
+</style>
+
+<div class="brand-card">
+  <p class="brand-card-label">Customization</p>
+  <h2 class="brand-card-title">Branding</h2>
+  <p class="brand-card-sub">Customize how your public booking page looks to visitors.</p>
+
+  <form hx-post="{% url 'accounts:settings_branding' %}" hx-target="#settings-messages">
+    {% csrf_token %}
+    <input type="hidden" name="update_branding" value="1">
+
+    {# Brand color #}
+    <div class="brand-field">
+      <label class="brand-field-label">Brand color</label>
+      <div class="color-picker-row">
+        <div class="color-swatch-wrap">
+          <input type="color" name="brand_color" id="brand_color"
+                 value="{{ brand_form.brand_color.value|default:'#0d9488' }}"
+                 oninput="document.getElementById('brand_hex').value = this.value; document.getElementById('color_preview').style.background = this.value;">
         </div>
-        
-        <div>
-            <label class="flex items-center">
-                <input type="checkbox" name="hide_branding" disabled class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
-                <span class="ml-2 text-sm text-gray-600">Hide "Powered by Kairos" branding</span>
-            </label>
-            <p class="text-xs text-yellow-600 mt-1 ml-6">This feature requires a paid plan (Coming soon).</p>
+        <input type="text" id="brand_hex" class="color-hex-input"
+               value="{{ brand_form.brand_color.value|default:'#0d9488' }}"
+               readonly>
+        <span class="color-preview-label">Used for buttons &amp; accents on your booking page</span>
+      </div>
+    </div>
+
+    {# Hide branding (disabled) #}
+    <div class="brand-toggle-row">
+      <div class="brand-toggle-info">
+        <div class="brand-toggle-name">
+          Remove Kairos branding
+          <span class="coming-soon-badge">Coming soon</span>
         </div>
-        
-        <div class="flex justify-end">
-            <button type="submit" class="bg-brand-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">Save Branding</button>
-        </div>
-    </form>
+        <div class="brand-toggle-desc">Hide the "Powered by Kairos" label on your public booking page</div>
+      </div>
+      <div class="toggle-switch-disabled"></div>
+    </div>
+
+    <button type="submit" class="brand-save-btn">
+      Save branding
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </button>
+    <div style="clear:both;"></div>
+  </form>
 </div>
+
+<script>
+  (function() {
+    const picker = document.getElementById('brand_color');
+    const hex    = document.getElementById('brand_hex');
+    if (picker && hex) {
+      picker.addEventListener('input', function() {
+        hex.value = this.value;
+      });
+    }
+  })();
+</script>
 {% endblock %}

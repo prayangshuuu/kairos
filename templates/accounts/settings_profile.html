@@ -1,68 +1,273 @@
-{% extends "accounts/settings_layout.html" %}
+{% extends 'accounts/settings_layout.html' %}
+
 {% block settings_content %}
-<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6">
-    <h2 class="text-lg font-medium text-gray-900">Profile</h2>
-    <p class="mt-1 text-sm text-gray-500">This information will be displayed publicly.</p>
+<style>
+    .settings-section-card {
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.75rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .section-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--teal-600, #0d9488);
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+        display: block;
+    }
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.5rem;
+    }
+    .section-subtitle {
+        font-size: 0.875rem;
+        color: #64748b;
+        margin-bottom: 1.5rem;
+    }
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 0.5rem;
+    }
+    .form-input, .form-textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        color: #0f172a;
+        transition: all 0.2s ease;
+        font-family: inherit;
+        background-color: #fff;
+    }
+    .form-input:focus, .form-textarea:focus {
+        outline: none;
+        border-color: var(--teal-600, #0d9488);
+        box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+    }
+    .form-textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
     
-    <form hx-post="{% url 'accounts:settings_profile' %}" hx-encoding="multipart/form-data" hx-target="#settings-messages" class="mt-6 space-y-6">
+    .avatar-upload-group {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .avatar-preview {
+        width: 4rem;
+        height: 4rem;
+        border-radius: 50%;
+        object-fit: cover;
+        background-color: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--teal-600, #0d9488);
+    }
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+    }
+    .file-input-btn {
+        padding: 0.5rem 1rem;
+        background-color: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .file-input-wrapper:hover .file-input-btn {
+        background-color: #f1f5f9;
+        border-color: #94a3b8;
+    }
+    .file-input {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        cursor: pointer;
+        height: 100%;
+        width: 100%;
+    }
+    
+    .button-group {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 2rem;
+    }
+    .btn-primary {
+        background-color: var(--teal-600, #0d9488);
+        color: #ffffff;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        width: 100%;
+    }
+    .btn-primary:hover {
+        background-color: #0f766e;
+    }
+    @media (min-width: 640px) {
+        .btn-primary {
+            width: auto;
+        }
+    }
+    
+    .warning-box {
+        background-color: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .warning-text {
+        font-size: 0.875rem;
+        color: #92400e;
+        font-weight: 500;
+    }
+    .input-group {
+        display: flex;
+        align-items: stretch;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        border: 1px solid #cbd5e1;
+    }
+    .input-group:focus-within {
+        border-color: var(--teal-600, #0d9488);
+        box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+    }
+    .input-prefix {
+        background-color: #f8fafc;
+        padding: 0.75rem 1rem;
+        color: #64748b;
+        font-size: 0.875rem;
+        border-right: 1px solid #cbd5e1;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+    }
+    .input-group .form-input {
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    .btn-warning {
+        background-color: #f59e0b;
+        color: #ffffff;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        width: 100%;
+    }
+    .btn-warning:hover {
+        background-color: #d97706;
+    }
+    @media (min-width: 640px) {
+        .btn-warning {
+            width: auto;
+        }
+    }
+    #slug-check {
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+</style>
+
+<!-- Profile Section -->
+<div class="settings-section-card">
+    <span class="section-label">Public Profile</span>
+    <h2 class="section-title">Your profile</h2>
+    <p class="section-subtitle">This information is shown on your public booking page.</p>
+
+    <form hx-post="{% url 'accounts:settings_profile' %}" hx-encoding="multipart/form-data" hx-target="#settings-messages">
         {% csrf_token %}
         <input type="hidden" name="update_profile" value="1">
         
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Display Name</label>
-            <input type="text" name="display_name" value="{{ profile_form.display_name.value|default:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
-        </div>
-        
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Bio</label>
-            <textarea name="bio" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">{{ profile_form.bio.value|default:'' }}</textarea>
-        </div>
-        
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Avatar</label>
-            <div class="mt-1 flex items-center">
-                {% if request.user.avatar %}
-                <img src="{{ request.user.avatar.url }}" class="h-12 w-12 rounded-full object-cover">
-                {% else %}
-                <span class="inline-block h-12 w-12 rounded-full overflow-hidden bg-gray-100"></span>
-                {% endif %}
-                <input type="file" name="avatar" accept="image/*" class="ml-5 bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
+        <div class="avatar-upload-group">
+            {% if request.user.avatar %}
+                <img src="{{ request.user.avatar.url }}" alt="Profile Photo" class="avatar-preview">
+            {% else %}
+                <div class="avatar-preview">{{ request.user.username|make_list|first|upper }}</div>
+            {% endif %}
+            
+            <div class="file-input-wrapper">
+                <div class="file-input-btn">Upload photo</div>
+                <input type="file" name="avatar" class="file-input" accept="image/*">
             </div>
-            <p class="text-xs text-gray-500 mt-2">Images will be resized and scrubbed of location data.</p>
         </div>
-        
-        <div class="flex justify-end">
-            <button type="submit" class="bg-brand-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">Save</button>
+
+        <div class="form-group">
+            <label class="form-label">Display Name</label>
+            <input type="text" name="display_name" class="form-input" value="{{ profile_form.display_name.value|default:'' }}">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Bio</label>
+            <textarea name="bio" class="form-textarea" rows="3">{{ profile_form.bio.value|default:'' }}</textarea>
+        </div>
+
+        <div class="button-group">
+            <button type="submit" class="btn-primary">Save changes</button>
         </div>
     </form>
 </div>
 
-<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6 mt-6">
-    <h2 class="text-lg font-medium text-gray-900">Booking Link (Slug)</h2>
-    <div class="rounded-md bg-yellow-50 p-4 mt-2 mb-4">
-        <p class="text-sm font-medium text-yellow-800">Warning: Changing this will break any existing booking links you've shared. We will redirect your old link, but it's not a guarantee against external cache issues.</p>
-    </div>
+<!-- Booking Link Section -->
+<div class="settings-section-card">
+    <h2 class="section-title">Booking Link</h2>
     
-    <form hx-post="{% url 'accounts:settings_profile' %}" hx-target="#settings-messages" class="mt-6 space-y-6">
+    <div class="warning-box">
+        <p class="warning-text">Changing this will break existing booking links you've shared.</p>
+    </div>
+
+    <form hx-post="{% url 'accounts:settings_profile' %}" hx-target="#settings-messages" onsubmit="return confirm('Are you sure you want to change your booking link? Old links will stop working.');">
         {% csrf_token %}
         <input type="hidden" name="update_slug" value="1">
         
-        <div>
-            <label class="block text-sm font-medium text-gray-700">New Slug</label>
-            <div class="mt-1 flex rounded-md shadow-sm">
-                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">joinkairos.me/</span>
-                <input type="text" name="slug" value="{{ slug_form.slug.value|default:'' }}" hx-get="{% url 'check_slug' %}" hx-target="#slug-check" hx-trigger="keyup changed delay:500ms" class="flex-1 block w-full min-w-0 rounded-none rounded-r-md sm:text-sm border-gray-300">
+        <div class="form-group">
+            <label class="form-label">Booking URL</label>
+            <div class="input-group">
+                <div class="input-prefix">kairos.app/</div>
+                <input type="text" name="slug" class="form-input" value="{{ slug_form.slug.value|default:'' }}" 
+                       hx-get="{% url 'check_slug' %}" hx-target="#slug-check" hx-trigger="keyup changed delay:500ms">
             </div>
-            <div id="slug-check" class="mt-1"></div>
+            <div id="slug-check"></div>
         </div>
-        
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" name="password" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm" placeholder="Verify password to change slug">
+
+        <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-input" required placeholder="Confirm password to change">
         </div>
-        
-        <div class="flex justify-end">
-            <button type="submit" onclick="return confirm('Are you absolutely sure you want to change your booking link?')" class="bg-yellow-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">Change Link</button>
+
+        <div class="button-group">
+            <button type="submit" class="btn-warning">Update link</button>
         </div>
     </form>
 </div>

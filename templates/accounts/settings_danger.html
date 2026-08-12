@@ -1,37 +1,212 @@
-{% extends "accounts/settings_layout.html" %}
-{% block settings_content %}
-<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6">
-    <h2 class="text-lg font-medium text-red-600">Export Data</h2>
-    <p class="mt-1 text-sm text-gray-500">Receive a JSON archive of your event types, schedules, and bookings.</p>
-    
-    <form hx-post="{% url 'accounts:settings_danger' %}" hx-target="#settings-messages" class="mt-4">
-        {% csrf_token %}
-        <input type="hidden" name="export_data" value="1">
-        <button type="submit" class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">Request Export</button>
-    </form>
-</div>
+{% extends 'accounts/settings_layout.html' %}
 
-<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6 mt-6 border-t-4 border-red-600">
-    <h2 class="text-lg font-medium text-red-600">Delete Account</h2>
-    <p class="mt-1 text-sm text-gray-500">Deleting your account will cancel future bookings, anonymise past bookings, and permanently deactivate your profile after a 30-day grace period.</p>
-    
-    <form hx-post="{% url 'accounts:settings_danger' %}" hx-target="#settings-messages" class="mt-6 space-y-4">
-        {% csrf_token %}
-        <input type="hidden" name="delete_account" value="1">
+{% block settings_content %}
+<style>
+    .danger-zone-container {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        max-width: 600px;
+    }
+
+    .card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-neutral {
+        border-color: #cbd5e1;
+    }
+
+    .card-danger {
+        border-left: 4px solid #dc2626;
+    }
+
+    .card-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .label-neutral {
+        color: #64748b;
+    }
+
+    .label-danger {
+        color: #dc2626;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .title-neutral {
+        color: #0f172a;
+    }
+
+    .title-danger {
+        color: #dc2626;
+    }
+
+    .card-description {
+        color: #475569;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+    }
+
+    .warning-box {
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+    }
+
+    .warning-icon {
+        color: #dc2626;
+        width: 1.25rem;
+        height: 1.25rem;
+        flex-shrink: 0;
+        margin-top: 0.125rem;
+    }
+
+    .warning-text {
+        color: #991b1b;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #334155;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        color: #0f172a;
+        background-color: #ffffff;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #dc2626;
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.625rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+    }
+
+    .btn-outline-slate {
+        background-color: transparent;
+        border-color: #cbd5e1;
+        color: #334155;
+    }
+
+    .btn-outline-slate:hover {
+        background-color: #f8fafc;
+        border-color: #94a3b8;
+    }
+
+    .btn-danger {
+        background-color: #dc2626;
+        color: #ffffff;
+    }
+
+    .btn-danger:hover {
+        background-color: #b91c1c;
+    }
+
+    .btn-danger:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3);
+    }
+
+    .actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 1.5rem;
+    }
+</style>
+
+<div class="danger-zone-container">
+    <!-- Export Data Card -->
+    <div class="card card-neutral">
+        <div class="card-label label-neutral">Data</div>
+        <h2 class="card-title title-neutral">Export your data</h2>
+        <p class="card-description">Download a complete JSON archive of all your event types, schedules, and bookings.</p>
         
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Type your email to confirm</label>
-            <input type="email" name="email" required placeholder="{{ request.user.email }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm">
-        </div>
+        <form hx-post="{% url 'accounts:settings_danger' %}" hx-target="#settings-messages">
+            {% csrf_token %}
+            <input type="hidden" name="export_data" value="1">
+            <button type="submit" class="btn btn-outline-slate">Request data export</button>
+        </form>
+    </div>
+
+    <!-- Delete Account Card -->
+    <div class="card card-danger">
+        <div class="card-label label-danger">Danger zone</div>
+        <h2 class="card-title title-danger">Delete account</h2>
+        <p class="card-description">This will cancel all future bookings and permanently deactivate your account after a 30-day grace period. This action cannot be undone.</p>
         
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" name="password" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm">
+        <div class="warning-box">
+            <svg class="warning-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span class="warning-text">Once you delete your account, there is no going back.</span>
         </div>
-        
-        <div class="flex justify-end mt-4">
-            <button type="submit" onclick="return confirm('Are you sure you want to delete your account?')" class="bg-red-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Delete Account</button>
-        </div>
-    </form>
+
+        <form hx-post="{% url 'accounts:settings_danger' %}" hx-target="#settings-messages" onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
+            {% csrf_token %}
+            <input type="hidden" name="delete_account" value="1">
+            
+            <div class="form-group">
+                <label for="id_email" class="form-label">Type your email address to confirm</label>
+                <input type="email" id="id_email" name="email" class="form-input" required placeholder="{{ request.user.email }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="id_password" class="form-label">Password</label>
+                <input type="password" id="id_password" name="password" class="form-input" required>
+            </div>
+            
+            <div class="actions">
+                <button type="submit" class="btn btn-danger">Delete my account</button>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

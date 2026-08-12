@@ -1,82 +1,283 @@
 {% extends "accounts/settings_layout.html" %}
 {% block settings_content %}
-<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6">
-    <h2 class="text-lg font-medium text-gray-900">Preferences</h2>
-    
-    <form hx-post="{% url 'accounts:settings_preferences' %}" hx-target="#settings-messages" class="mt-6 space-y-6">
-        {% csrf_token %}
-        <input type="hidden" name="update_prefs" value="1">
-        
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Timezone</label>
-            <p class="text-xs text-gray-500 mb-1">Changing this does NOT change existing schedules (which have their own timezone).</p>
-            <select name="timezone" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-md">
-                <option value="{{ pref_form.timezone.value }}" selected>{{ pref_form.timezone.value }}</option>
-                <!-- Omitted full list for brevity in template, can be added via JS or view context -->
-            </select>
-            <label class="mt-2 flex items-center">
-                <input type="checkbox" name="update_schedules" value="1" class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
-                <span class="ml-2 text-sm text-gray-600">Also update existing schedules to this timezone</span>
-            </label>
-        </div>
-        
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Time Format</label>
-                <select name="time_format" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-md">
-                    <option value="12" {% if pref_form.time_format.value == '12' %}selected{% endif %}>12-hour (AM/PM)</option>
-                    <option value="24" {% if pref_form.time_format.value == '24' %}selected{% endif %}>24-hour</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Week Start</label>
-                <select name="week_start" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm rounded-md">
-                    <option value="0" {% if pref_form.week_start.value|stringformat:"s" == '0' %}selected{% endif %}>Monday</option>
-                    <option value="6" {% if pref_form.week_start.value|stringformat:"s" == '6' %}selected{% endif %}>Sunday</option>
-                </select>
-            </div>
-        </div>
-        
-        <div class="flex justify-end">
-            <button type="submit" class="bg-brand-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-brand-700">Save Preferences</button>
-        </div>
-    </form>
+
+<style>
+  .pref-card {
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .pref-card-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #0d9488;
+    margin-bottom: 0.375rem;
+  }
+  .pref-card-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.25rem;
+  }
+  .pref-card-sub {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 1.5rem;
+  }
+  .pref-field-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 0.4rem;
+  }
+  .pref-select-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .pref-select {
+    flex: 1;
+    padding: 0.625rem 0.875rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #0f172a;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.5rem;
+    cursor: pointer;
+  }
+  .pref-select:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 3px rgba(13,148,136,0.12);
+  }
+  .pref-detect-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem 0.875rem;
+    border-radius: 9px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0d9488;
+    background: rgba(13,148,136,0.07);
+    border: 1.5px solid rgba(13,148,136,0.18);
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .pref-detect-btn:hover { background: rgba(13,148,136,0.12); }
+  .pref-save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    background: #0d9488;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+    margin-top: 1.25rem;
+  }
+  .pref-save-btn:hover { background: #0f766e; transform: translateY(-1px); }
+  .pref-card-divider {
+    border: none;
+    border-top: 1px solid #f1f5f9;
+    margin: 1.25rem 0;
+  }
+
+  /* Toggle switch */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid #f8fafc;
+  }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-info { flex: 1; min-width: 0; margin-right: 1.5rem; }
+  .toggle-name {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .toggle-desc { font-size: 0.78rem; color: #64748b; margin-top: 0.15rem; }
+  .required-badge {
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748b;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    padding: 0.15rem 0.45rem;
+    border-radius: 9999px;
+  }
+  /* CSS toggle */
+  .toggle-switch { position: relative; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track {
+    display: block;
+    width: 44px;
+    height: 24px;
+    border-radius: 9999px;
+    background: #e2e8f0;
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    transition: transform 0.2s;
+  }
+  .toggle-switch input:checked + .toggle-track { background: #0d9488; }
+  .toggle-switch input:checked + .toggle-track::after { transform: translateX(20px); }
+  .toggle-switch input:disabled + .toggle-track { opacity: 0.5; cursor: not-allowed; }
+
+  .pref-form-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+  }
+</style>
+
+{# ── Timezone ── #}
+<div class="pref-card">
+  <p class="pref-card-label">Location</p>
+  <h2 class="pref-card-title">Time Zone</h2>
+  <p class="pref-card-sub">All availability and booking times will be shown in this timezone.</p>
+
+  <form hx-post="{% url 'accounts:settings_preferences' %}" hx-target="#settings-messages">
+    {% csrf_token %}
+    <input type="hidden" name="update_timezone" value="1">
+
+    <label for="timezone" class="pref-field-label">Your timezone</label>
+    <div class="pref-select-row">
+      <select id="timezone" name="timezone" class="pref-select">
+        {% for tz in timezones %}
+          <option value="{{ tz }}" {% if tz == request.user.timezone %}selected{% endif %}>{{ tz }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" class="pref-detect-btn" onclick="detectTimezone()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Detect
+      </button>
+    </div>
+
+    <div class="pref-form-footer">
+      <button type="submit" class="pref-save-btn">Save timezone</button>
+    </div>
+  </form>
 </div>
 
-<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6 mt-6">
-    <h2 class="text-lg font-medium text-gray-900">Email Notifications</h2>
-    <form hx-post="{% url 'accounts:settings_preferences' %}" hx-target="#settings-messages" class="mt-6 space-y-4">
-        {% csrf_token %}
-        <input type="hidden" name="update_notifs" value="1">
-        
-        <label class="flex items-center">
-            <input type="checkbox" name="new_booking" {% if notif_form.new_booking.value %}checked{% endif %} class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
-            <span class="ml-2 text-sm text-gray-600">New Booking</span>
-        </label>
-        
-        <label class="flex items-center">
-            <input type="checkbox" checked disabled class="rounded border-gray-300 text-gray-400 shadow-sm">
-            <span class="ml-2 text-sm text-gray-500">Cancellations (Required)</span>
-        </label>
-        
-        <label class="flex items-center">
-            <input type="checkbox" name="reschedule" {% if notif_form.reschedule.value %}checked{% endif %} class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
-            <span class="ml-2 text-sm text-gray-600">Reschedules</span>
-        </label>
-        
-        <label class="flex items-center">
-            <input type="checkbox" name="pending_reminder" {% if notif_form.pending_reminder.value %}checked{% endif %} class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
-            <span class="ml-2 text-sm text-gray-600">Pending Reminders</span>
-        </label>
-        
-        <label class="flex items-center">
-            <input type="checkbox" name="daily_agenda" {% if notif_form.daily_agenda.value %}checked{% endif %} class="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50">
-            <span class="ml-2 text-sm text-gray-600">Daily Agenda</span>
-        </label>
-        
-        <div class="flex justify-end mt-4">
-            <button type="submit" class="bg-brand-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-brand-700">Save Notifications</button>
+{# ── Notifications ── #}
+<div class="pref-card">
+  <p class="pref-card-label">Notifications</p>
+  <h2 class="pref-card-title">Email Notifications</h2>
+  <p class="pref-card-sub">Choose which emails you'd like to receive from Kairos.</p>
+
+  <form hx-post="{% url 'accounts:settings_preferences' %}" hx-target="#settings-messages">
+    {% csrf_token %}
+    <input type="hidden" name="update_notifs" value="1">
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">New Booking</div>
+        <div class="toggle-desc">Get notified when someone books time with you</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" name="new_booking" {% if notif_form.new_booking.value %}checked{% endif %}>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">
+          Cancellations
+          <span class="required-badge">Required</span>
         </div>
-    </form>
+        <div class="toggle-desc">Always sent when a booking is cancelled</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" checked disabled>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">Reschedules</div>
+        <div class="toggle-desc">Get notified when a booking is rescheduled</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" name="reschedule" {% if notif_form.reschedule.value %}checked{% endif %}>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">Pending Reminders</div>
+        <div class="toggle-desc">Reminders about bookings awaiting your approval</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" name="pending_reminder" {% if notif_form.pending_reminder.value %}checked{% endif %}>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-name">Daily Agenda</div>
+        <div class="toggle-desc">A morning summary of your day's meetings</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" name="daily_agenda" {% if notif_form.daily_agenda.value %}checked{% endif %}>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="pref-form-footer">
+      <button type="submit" class="pref-save-btn">Save preferences</button>
+    </div>
+  </form>
 </div>
+
+<script>
+function detectTimezone() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const sel = document.getElementById('timezone');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === tz) { sel.selectedIndex = i; break; }
+    }
+  } catch(e) {}
+}
+</script>
 {% endblock %}

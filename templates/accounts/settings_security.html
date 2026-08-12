@@ -1,13 +1,134 @@
 {% extends "accounts/settings_layout.html" %}
 {% block settings_content %}
-<div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6">
-    <h2 class="text-lg font-medium text-gray-900">Security</h2>
-    <p class="mt-2 text-sm text-gray-500">Manage your password, emails, and connected accounts.</p>
-    
-    <div class="mt-6 flex space-x-4">
-        <a href="{% url 'account_change_password' %}" class="text-blue-600 hover:underline">Change Password</a>
-        <a href="{% url 'account_email' %}" class="text-blue-600 hover:underline">Manage Emails</a>
-        <a href="{% url 'socialaccount_connections' %}" class="text-blue-600 hover:underline">Connected Accounts</a>
+<style>
+  .sec-card {
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .sec-card-header {
+    padding: 1.5rem 1.75rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .sec-card-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #0d9488;
+    margin-bottom: 0.3rem;
+  }
+  .sec-card-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.2rem;
+  }
+  .sec-card-sub { font-size: 0.85rem; color: #64748b; }
+
+  .sec-action-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid #f8fafc;
+    transition: background 0.15s;
+  }
+  .sec-action-row:last-child { border-bottom: none; }
+  .sec-action-row:hover { background: #fafbfc; }
+
+  .sec-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(13,148,136,0.08);
+    border: 1px solid rgba(13,148,136,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #0d9488;
+  }
+  .sec-action-info { flex: 1; min-width: 0; }
+  .sec-action-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.15rem;
+  }
+  .sec-action-desc { font-size: 0.8rem; color: #64748b; }
+
+  .sec-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 1rem;
+    border-radius: 9px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0d9488;
+    border: 1.5px solid rgba(13,148,136,0.25);
+    background: rgba(13,148,136,0.04);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    flex-shrink: 0;
+  }
+  .sec-action-btn:hover {
+    background: rgba(13,148,136,0.1);
+    border-color: #0d9488;
+    transform: translateY(-1px);
+  }
+</style>
+
+<div class="sec-card">
+  <div class="sec-card-header">
+    <p class="sec-card-label">Account</p>
+    <h2 class="sec-card-title">Security</h2>
+    <p class="sec-card-sub">Manage your password, email addresses, and connected social accounts.</p>
+  </div>
+
+  <div class="sec-action-row">
+    <div class="sec-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </div>
+    <div class="sec-action-info">
+      <div class="sec-action-title">Password</div>
+      <div class="sec-action-desc">Update your account password and keep your account secure</div>
+    </div>
+    <a href="{% url 'account_change_password' %}" class="sec-action-btn">
+      Change password
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+
+  <div class="sec-action-row">
+    <div class="sec-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    </div>
+    <div class="sec-action-info">
+      <div class="sec-action-title">Email addresses</div>
+      <div class="sec-action-desc">Add or remove email addresses linked to your account</div>
+    </div>
+    <a href="{% url 'account_email' %}" class="sec-action-btn">
+      Manage emails
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+
+  <div class="sec-action-row">
+    <div class="sec-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    </div>
+    <div class="sec-action-info">
+      <div class="sec-action-title">Social connections</div>
+      <div class="sec-action-desc">Connect your Google account for faster, passwordless sign-in</div>
+    </div>
+    <a href="{% url 'socialaccount_connections' %}" class="sec-action-btn">
+      Manage connections
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </div>
 </div>
 {% endblock %}
