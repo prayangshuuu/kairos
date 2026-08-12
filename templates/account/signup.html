@@ -1,91 +1,333 @@
-{% extends "layouts/public.html" %}
+{% extends 'base.html' %}
+{% load allauth account socialaccount %}
 
-{% load allauth %}
-{% load socialaccount %}
+{% block content %}
+<style>
+    :root {
+        --teal-600: #0d9488;
+        --teal-700: #0f766e;
+    }
+    body {
+        margin: 0;
+        font-family: 'Inter', sans-serif;
+        background: white;
+    }
+    .auth-container {
+        display: flex;
+        min-height: 100vh;
+        width: 100%;
+    }
+    .auth-sidebar {
+        flex: 0 0 40%;
+        background: linear-gradient(160deg, #0a1412 0%, #0f1f1c 50%, #091210 100%);
+        color: white;
+        padding: 3rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+    .auth-sidebar::before, .auth-sidebar::after {
+        content: '';
+        position: absolute;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(13,148,136,0.15) 0%, transparent 70%);
+    }
+    .auth-sidebar::before {
+        top: -100px;
+        left: -100px;
+        width: 400px;
+        height: 400px;
+    }
+    .auth-sidebar::after {
+        bottom: 10%;
+        right: -150px;
+        width: 500px;
+        height: 500px;
+    }
+    .auth-sidebar-content {
+        position: relative;
+        z-index: 1;
+    }
+    .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 4rem;
+        color: white;
+        text-decoration: none;
+    }
+    .logo-container svg {
+        width: 28px;
+        height: 28px;
+        color: var(--teal-600);
+    }
+    .tagline {
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 2rem;
+    }
+    .benefits {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .benefits li {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        color: #e2e8f0;
+    }
+    .benefits li svg {
+        width: 20px;
+        height: 20px;
+        color: var(--teal-600);
+        flex-shrink: 0;
+    }
+    .powered-by {
+        font-size: 0.875rem;
+        color: #94a3b8;
+    }
+    .auth-form-container {
+        flex: 1;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 3rem;
+    }
+    .auth-form-wrapper {
+        max-width: 440px;
+        width: 100%;
+        margin: 0 auto;
+    }
+    .form-label-small {
+        color: var(--teal-600);
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    .form-heading {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0 0 2rem 0;
+    }
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #334155;
+    }
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        box-sizing: border-box;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+    .form-control:focus {
+        outline: none;
+        border-color: var(--teal-600);
+        box-shadow: 0 0 0 4px rgba(13,148,136,0.1);
+    }
+    .error-msg {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+    .submit-btn {
+        width: 100%;
+        background-color: var(--teal-600);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        margin-top: 0.5rem;
+        font-family: inherit;
+    }
+    .submit-btn:hover {
+        background-color: var(--teal-700);
+    }
+    .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 2rem 0;
+        color: #94a3b8;
+        font-size: 0.875rem;
+    }
+    .divider::before, .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .divider:not(:empty)::before {
+        margin-right: 1rem;
+    }
+    .divider:not(:empty)::after {
+        margin-left: 1rem;
+    }
+    .social-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        background: white;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        text-decoration: none;
+        box-sizing: border-box;
+    }
+    .social-btn:hover {
+        background: #f8fafc;
+    }
+    .social-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+    .auth-footer {
+        text-align: center;
+        margin-top: 2rem;
+        font-size: 0.875rem;
+        color: #64748b;
+    }
+    .auth-footer a {
+        color: var(--teal-600);
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .auth-footer a:hover {
+        text-decoration: underline;
+    }
+    @media (max-width: 768px) {
+        .auth-container {
+            flex-direction: column;
+        }
+        .auth-sidebar {
+            flex: none;
+            padding: 2rem;
+            min-height: 400px;
+        }
+        .auth-form-container {
+            padding: 2rem;
+        }
+    }
+</style>
 
-{% block title %}Sign up for Kairos{% endblock %}
-
-{% block public_content %}
-<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-        </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
-            Already have an account?
-            <a href="{% url 'account_login' %}" class="font-medium text-blue-600 hover:text-blue-500">
-                Log in
+<div class="auth-container">
+    <div class="auth-sidebar">
+        <div class="auth-sidebar-content">
+            <a href="/" class="logo-container">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Kairos
             </a>
-        </p>
+            <div class="tagline">Your scheduling page, in 60 seconds.</div>
+            <ul class="benefits">
+                <li>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Free forever
+                </li>
+                <li>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Custom booking link
+                </li>
+                <li>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Works for any team size
+                </li>
+            </ul>
+        </div>
+        <div class="auth-sidebar-content powered-by">
+            Powered by Kairos
+        </div>
     </div>
-
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <form class="space-y-6" action="{% url 'account_signup' %}" method="POST">
+    <div class="auth-form-container">
+        <div class="auth-form-wrapper">
+            <span class="form-label-small">Get started &mdash; it's free</span>
+            <h1 class="form-heading">Create your account</h1>
+            
+            <form action="{% url 'account_signup' %}" method="POST">
                 {% csrf_token %}
+                
                 {% if form.non_field_errors %}
-                <div class="text-red-600 text-sm mb-4">
-                    {{ form.non_field_errors }}
-                </div>
+                    <div class="error-msg" style="margin-bottom: 1rem;">
+                        {{ form.non_field_errors }}
+                    </div>
                 {% endif %}
-
-                <div>
-                    <label for="id_email" class="block text-sm font-medium text-gray-700">
-                        Email address
-                    </label>
-                    <div class="mt-1">
-                        <input id="id_email" name="email" type="email" autocomplete="email" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
+                
+                <div class="form-group">
+                    <label for="id_email">Email</label>
+                    <input type="email" name="email" id="id_email" class="form-control" {% if form.email.value %}value="{{ form.email.value }}"{% endif %} required>
                     {% if form.email.errors %}
-                    <div class="text-red-500 text-sm mt-1">{{ form.email.errors }}</div>
+                        <span class="error-msg">{{ form.email.errors|striptags }}</span>
                     {% endif %}
                 </div>
-
-                <div>
-                    <label for="id_password1" class="block text-sm font-medium text-gray-700">
-                        Password
-                    </label>
-                    <div class="mt-1">
-                        <input id="id_password1" name="password" type="password" autocomplete="new-password" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
-                    {% if form.password.errors %}
-                    <div class="text-red-500 text-sm mt-1">{{ form.password.errors }}</div>
+                
+                <div class="form-group">
+                    <label for="id_password1">Password</label>
+                    <input type="password" name="password1" id="id_password1" class="form-control" required>
+                    {% if form.password1.errors %}
+                        <span class="error-msg">{{ form.password1.errors|striptags }}</span>
                     {% endif %}
                 </div>
+                
+                {% for field in form %}
+                    {% if field.name != 'email' and field.name != 'password1' %}
+                        <div class="form-group" style="display:none;">
+                            {{ field }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
 
-                <div>
-                    <button type="submit"
-                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Sign up
-                    </button>
-                </div>
+                <button type="submit" class="submit-btn">Create free account</button>
             </form>
-
-            <div class="mt-6">
-                <div class="relative">
-                    <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="px-2 bg-white text-gray-500">
-                            Or continue with
-                        </span>
-                    </div>
-                </div>
-
-                <div class="mt-6">
-                    <a href="{% provider_login_url 'google' %}" class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                        <svg class="h-5 w-5 mr-2" aria-hidden="true" viewBox="0 0 24 24">
-                            <path d="M12.0003 4.75C13.7703 4.75 15.3553 5.36002 16.6053 6.54998L20.0303 3.125C17.9502 1.19 15.2353 0 12.0003 0C7.31028 0 3.25527 2.69 1.28027 6.60998L5.27028 9.70498C6.21525 6.86002 8.87028 4.75 12.0003 4.75Z" fill="#EA4335" />
-                            <path d="M23.49 12.275C23.49 11.49 23.415 10.73 23.3 10H12V14.51H18.47C18.18 15.99 17.34 17.25 16.08 18.1L19.945 21.1C22.2 19.01 23.49 15.92 23.49 12.275Z" fill="#4285F4" />
-                            <path d="M5.26498 14.2949C5.02498 13.5699 4.88501 12.7999 4.88501 11.9999C4.88501 11.1999 5.01998 10.4299 5.26498 9.7049L1.275 6.60986C0.46 8.22986 0 10.0599 0 11.9999C0 13.9399 0.46 15.7699 1.28 17.3899L5.26498 14.2949Z" fill="#FBBC05" />
-                            <path d="M12.0004 24.0001C15.2404 24.0001 17.9654 22.935 19.9454 21.095L16.0804 18.095C15.0054 18.82 13.6204 19.245 12.0004 19.245C8.8704 19.245 6.21537 17.135 5.26537 14.29L1.27539 17.385C3.25539 21.31 7.3104 24.0001 12.0004 24.0001Z" fill="#34A853" />
-                        </svg>
-                        Google
-                    </a>
-                </div>
+            
+            <div class="divider">Or continue with</div>
+            
+            <a href="{% provider_login_url 'google' %}" class="social-btn">
+                <svg viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Google
+            </a>
+            
+            <div class="auth-footer">
+                Already have an account? <a href="{% url 'account_login' %}">Log in</a>
             </div>
         </div>
     </div>
