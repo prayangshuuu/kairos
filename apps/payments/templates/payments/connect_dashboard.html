@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Stripe Connect — Kairos{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-8 px-4">
+    <h1 class="text-2xl font-semibold mb-6">Payment Settings</h1>
+
+    {% if not account %}
+        {# No connected account yet #}
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 class="text-lg font-medium mb-2">Connect with Stripe</h2>
+            <p class="text-gray-600 mb-4">
+                To accept payments for your meetings, connect a Stripe account. 
+                Meeting fees go directly to you — Kairos never holds your funds.
+            </p>
+            <a href="{% url 'payments:stripe_connect_onboard' %}" 
+               class="inline-block bg-indigo-600 text-white px-5 py-2.5 rounded-md hover:bg-indigo-700 transition">
+                Connect Stripe Account
+            </a>
+        </div>
+    {% else %}
+        {# Account exists — show status #}
+        <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+            <h2 class="text-lg font-medium mb-4">Connection Status</h2>
+            <dl class="space-y-3">
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">Account ID</dt>
+                    <dd class="font-mono text-sm">{{ account.external_account_id }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">Country</dt>
+                    <dd>{{ account.country|default:"—" }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">Default Currency</dt>
+                    <dd>{{ account.default_currency|upper|default:"—" }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">Can Accept Charges</dt>
+                    <dd>
+                        {% if account.charges_enabled %}
+                            <span class="text-green-600 font-medium">✓ Yes</span>
+                        {% else %}
+                            <span class="text-red-600 font-medium">✗ Not yet</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">Payouts Enabled</dt>
+                    <dd>
+                        {% if account.payouts_enabled %}
+                            <span class="text-green-600 font-medium">✓ Yes</span>
+                        {% else %}
+                            <span class="text-amber-600 font-medium">✗ Not yet</span>
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+        </div>
+
+        {% if not account.charges_enabled %}
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-5 mb-6">
+                <h3 class="text-amber-800 font-medium mb-2">⚠ Onboarding Incomplete</h3>
+                <p class="text-amber-700 text-sm mb-3">
+                    Your account cannot accept charges yet. Stripe still needs the following:
+                </p>
+                {% if account.requirements_due %}
+                    <ul class="list-disc list-inside text-sm text-amber-700 space-y-1 mb-4">
+                        {% for req in account.requirements_due %}
+                            <li>{{ req }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <a href="{% url 'payments:stripe_connect_onboard' %}" 
+                   class="inline-block bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700 transition text-sm">
+                    Complete Onboarding
+                </a>
+                <p class="text-xs text-amber-600 mt-3">
+                    You will not be able to set up paid event types until charges are enabled.
+                </p>
+            </div>
+        {% endif %}
+
+        {% if express_dashboard_url %}
+            <div class="bg-white border border-gray-200 rounded-lg p-6">
+                <h2 class="text-lg font-medium mb-2">Stripe Dashboard</h2>
+                <p class="text-gray-600 text-sm mb-4">
+                    View your payouts, transaction history, and manage your Stripe account directly.
+                </p>
+                <a href="{{ express_dashboard_url }}" 
+                   target="_blank" rel="noopener"
+                   class="inline-block bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 transition text-sm">
+                    Open Stripe Dashboard ↗
+                </a>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

@@ -41,6 +41,7 @@ urlpatterns = [
 
     path('', include('apps.scheduling.urls')),
     path('', include('apps.bookings.urls')),
+    path('payments/', include('apps.payments.urls')),
 ]
 
 handler404 = 'apps.core.views.custom_404'

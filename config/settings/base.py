@@ -273,3 +273,22 @@ if not _oauth_key:
     _oauth_key = "T6w3gL9fE-h5V2B1x8Z0qP4nJ7mK3vC8sR5yU1oN2wM="
 
 FERNET_KEYS = [_oauth_key]
+
+# ---------- Stripe Connect ----------
+STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")
+STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")
+STRIPE_CONNECT_WEBHOOK_SECRET = env("STRIPE_CONNECT_WEBHOOK_SECRET", default="")
+
+# ---------- Kairos Platform Fees ----------
+# Fee = max(MIN, (amount × PERCENT / 100) + FIXED)
+# These are frozen on each Payment at creation time. Changing them later does
+# NOT retroactively affect existing payments.
+KAIROS_PLATFORM_FEE_PERCENT = float(env("KAIROS_PLATFORM_FEE_PERCENT", default="5.0"))
+KAIROS_PLATFORM_FEE_FIXED_CENTS = int(env("KAIROS_PLATFORM_FEE_FIXED_CENTS", default="0"))
+KAIROS_PLATFORM_FEE_MIN_CENTS = int(env("KAIROS_PLATFORM_FEE_MIN_CENTS", default="50"))
+
+# ---------- Slot Hold ----------
+# TTL for checkout sessions and slot holds. These MUST agree.
+# Stripe requires at least 30 minutes for Checkout Session expiry.
+KAIROS_SLOT_HOLD_TTL_MINUTES = int(env("KAIROS_SLOT_HOLD_TTL_MINUTES", default="30"))
+

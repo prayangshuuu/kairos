@@ -16,4 +16,12 @@ app.conf.beat_schedule = {
         'task': 'apps.scheduling.tasks.auto_delete_expired_date_overrides',
         'schedule': crontab(hour=0, minute=0),  # run daily at midnight
     },
+    'release_expired_slot_holds': {
+        'task': 'apps.payments.tasks.release_expired_slot_holds',
+        'schedule': crontab(),  # every minute
+    },
+    'reconcile_payments': {
+        'task': 'apps.payments.tasks.reconcile_payments',
+        'schedule': crontab(hour=3, minute=0),  # daily at 3 AM
+    },
 }
