@@ -12,98 +12,108 @@
       <h3 class="text-xl font-black text-surface-900 tracking-tight">{{ selected_date|date:"l, F j" }}</h3>
       <p class="text-xs font-semibold text-surface-400 uppercase tracking-widest mt-1">Pick a start time</p>
     </div>
-    
+
     {% if day_slots %}
-      <div class="flex-grow flex flex-col items-center justify-start pt-2 pb-8 space-y-6">
-        <div class="timepicker-ui w-full relative group">
-          <input type="text" class="timepicker-ui-input w-full py-4 px-6 bg-white border border-surface-300 text-surface-900 rounded-xl text-center text-xl font-bold shadow-sm focus:border-brand-500 focus:ring-0 cursor-pointer hover:border-brand-400 hover:shadow-md transition-all duration-300 outline-none" value="{{ day_slots.0|time:'h:i A' }}" readonly>
-          <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-surface-400 group-hover:text-brand-500 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          </div>
+      <div class="flex-grow overflow-y-auto pb-6 custom-scrollbar" x-data="slotsUI()" x-init="init()">
+        <div class="space-y-2.5 pr-1">
+          {% for slot in day_slots %}
+            <div class="flex items-stretch gap-2.5">
+              {# Time slot button #}
+              <button
+                type="button"
+                @click="select('{{ slot.isoformat }}')"
+                data-iso="{{ slot.isoformat }}"
+                :class="selected === '{{ slot.isoformat }}'
+                  ? 'border-brand-600 bg-brand-600 text-white shadow-sm'
+                  : 'border-surface-200 bg-white text-surface-800 hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700'"
+                class="slot-btn flex-1 py-3 px-4 rounded-xl border-2 text-sm font-semibold text-center transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+              >
+                {{ slot|time:"h:i A" }}
+              </button>
+
+              {# Confirm button — slides in when this slot is selected #}
+              <div
+                x-show="selected === '{{ slot.isoformat }}'"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-x-75 origin-left"
+                x-transition:enter-end="opacity-100 scale-x-100 origin-left"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-x-100 origin-left"
+                x-transition:leave-end="opacity-0 scale-x-75 origin-left"
+                class="shrink-0"
+              >
+                <button
+                  type="button"
+                  @click="confirm('{{ slot.isoformat }}')"
+                  class="h-full py-3 px-5 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-sm font-bold shadow-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          {% endfor %}
         </div>
-        
-        <button id="confirm-time-btn" class="w-full py-4 px-6 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
-          Confirm Selected Time
-        </button>
-        
-        <script src="https://cdn.jsdelivr.net/npm/timepicker-ui@2.6.1/dist/timepicker-ui.umd.js"></script>
-        <script>
-          (function() {
-            const container = document.querySelector('.timepicker-ui');
-            const input = document.querySelector('.timepicker-ui-input');
-            const btn = document.getElementById('confirm-time-btn');
-            
-            if (container && !window.kairosTimepickerLoaded) {
-              const picker = new window.tui.TimepickerUI(container, {
-                mobile: true,
-                theme: 'basic',
-                incrementMinutes: 30,
-                timeLabel: 'Pick a Start Time',
-                mobileTimeLabel: 'Pick a Start Time',
-                cancelLabel: 'Cancel',
-                okLabel: 'Select'
-              });
-              picker.create();
-              window.kairosTimepickerLoaded = true;
-              
-              const slotsData = [
-                {% for slot in day_slots %}
-                  { label: "{{ slot|time:'h:i A' }}", iso: "{{ slot.isoformat }}" },
-                {% endfor %}
-              ];
-              
-              btn.addEventListener('click', function() {
-                const timeStr = input.value;
-                let selectedIso = "";
-                
-                // 1. Try to find an exact match in available slots
-                const match = slotsData.find(s => s.label === timeStr);
-                
-                if (match) {
-                  selectedIso = match.iso;
-                } else {
-                  // 2. Construct ISO for the arbitrary time they picked
-                  const timeParts = timeStr.match(/(\d+):(\d+) (AM|PM)/);
-                  if (timeParts) {
-                    let hours = parseInt(timeParts[1], 10);
-                    const minutes = timeParts[2].padStart(2, '0');
-                    if (timeParts[3] === 'PM' && hours < 12) hours += 12;
-                    if (timeParts[3] === 'AM' && hours === 12) hours = 0;
-                    const hh = hours.toString().padStart(2, '0');
-                    
-                    const sampleIso = slotsData[0].iso; 
-                    const offset = sampleIso.substring(19); 
-                    selectedIso = "{{ selected_date.isoformat }}T" + hh + ":" + minutes + ":00" + offset;
-                  }
-                }
-                
-                {% if booking %}
-                htmx.ajax('POST', "{% url 'bookings:booking_reschedule' uid=booking.uid %}?t={{ token }}", {
-                  values: { slot_time: selectedIso, tz: "{{ visitor_tz }}" },
-                  target: '#slots-partial',
-                  swap: 'outerHTML'
-                });
-                {% else %}
-                htmx.ajax('POST', "{% url 'bookings:booking_stub' host_slug=host.slug event_slug=event.slug %}", {
-                  values: { slot: selectedIso, tz: "{{ visitor_tz }}" },
-                  target: '#slots-partial',
-                  swap: 'outerHTML'
-                });
-                {% endif %}
-              });
-            }
-          })();
-        </script>
       </div>
+
+      <script>
+        function slotsUI() {
+          return {
+            selected: null,
+
+            init() {
+              // Pre-select the first available slot
+              {% if day_slots %}
+              this.selected = '{{ day_slots.0.isoformat }}';
+              {% endif %}
+            },
+
+            select(iso) {
+              this.selected = iso;
+            },
+
+            confirm(iso) {
+              if (!iso) return;
+
+              {% if booking %}
+              htmx.ajax('POST', "{% url 'bookings:booking_reschedule' uid=booking.uid %}?t={{ token }}", {
+                values: { slot_time: iso, tz: "{{ visitor_tz }}" },
+                target: '#slots-partial',
+                swap: 'outerHTML'
+              });
+              {% else %}
+              htmx.ajax('POST', "{% url 'bookings:booking_stub' host_slug=host.slug event_slug=event.slug %}", {
+                values: { slot: iso, tz: "{{ visitor_tz }}" },
+                target: '#slots-partial',
+                swap: 'outerHTML'
+              });
+              {% endif %}
+            }
+          }
+        }
+      </script>
+
     {% else %}
-      <div class="flex flex-col items-center justify-center mt-12 text-surface-500">
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-4 opacity-50"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-        <p class="mb-4 text-sm">No times available.</p>
+      <div class="flex flex-col items-center justify-center mt-12 text-center text-surface-400">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-3 opacity-50">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        <p class="text-sm font-medium text-surface-600">No times available</p>
+        <p class="text-xs mt-1">Try selecting a different date.</p>
       </div>
     {% endif %}
+
   {% else %}
-    <div class="flex items-center justify-center mt-12 text-surface-500 text-sm">
-      <p>No available days in this month.</p>
+    <div class="flex flex-col items-center justify-center mt-12 text-center text-surface-400">
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-3 opacity-40">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+      <p class="text-sm text-surface-500">Select a date to see available times</p>
     </div>
   {% endif %}
 </div>
