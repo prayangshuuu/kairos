@@ -5,7 +5,6 @@
 {% block meta_description %}{{ host.bio|default:"Book a meeting with me on Kairos."|truncatechars:160 }}{% endblock %}
 
 {% block extra_head %}
-<!-- Open Graph / Twitter Cards -->
 <meta property="og:title" content="{{ host.display_name|default:host.email|title }}">
 <meta property="og:description" content="{{ host.bio|default:"Book a meeting with me on Kairos."|truncatechars:160 }}">
 <meta property="og:image" content="{% if host.avatar %}{{ request.scheme }}://{{ request.get_host }}{{ host.avatar.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{% static 'img/default-avatar.png' %}{% endif %}">
@@ -16,8 +15,6 @@
 <meta name="twitter:description" content="{{ host.bio|default:"Book a meeting with me on Kairos."|truncatechars:160 }}">
 <meta name="twitter:image" content="{% if host.avatar %}{{ request.scheme }}://{{ request.get_host }}{{ host.avatar.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{% static 'img/default-avatar.png' %}{% endif %}">
 <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ host.booking_url }}">
-
-<!-- JSON-LD -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -30,263 +27,64 @@
 </script>
 
 <style>
-  /* ── Keyframes ──────────────────────────────────── */
-  @keyframes kp-spin {
+  /* ── Avatar ring spin (same keyframe name as booking page) ── */
+  @keyframes spin {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
   }
+
+  /* ── Sidebar dark theme (identical to booking page) ────── */
+  .kairos-sidebar {
+    background: linear-gradient(160deg, #0a1412 0%, #0f1f1c 50%, #091210 100%);
+    border-right: 1px solid rgba(45, 212, 191, 0.12);
+  }
+  @media (max-width: 767px) {
+    .kairos-sidebar {
+      border-right: none;
+      border-bottom: 1px solid rgba(45, 212, 191, 0.12);
+    }
+  }
+  .kairos-avatar-ring {
+    transform-origin: center;
+  }
+
+  /* ── Event cards ─────────────────────────────────────── */
   @keyframes kp-fadein {
-    from { opacity: 0; transform: translateY(12px); }
+    from { opacity: 0; transform: translateY(10px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  @keyframes kp-pulse-ring {
-    0%, 100% { opacity: 0.6; transform: scale(1); }
-    50%       { opacity: 1;   transform: scale(1.04); }
-  }
 
-  /* ── Layout ─────────────────────────────────────── */
-  .kp-page {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-    animation: kp-fadein 0.5s ease both;
-  }
-
-  @media (min-width: 900px) {
-    .kp-page {
-      flex-direction: row;
-      align-items: flex-start;
-      gap: 2.5rem;
-    }
-  }
-
-  /* ── Sidebar / Hero card ─────────────────────────── */
-  .kp-hero {
-    position: relative;
-    overflow: hidden;
-    border-radius: 1.5rem;
-    background: linear-gradient(160deg, #0a1412 0%, #0f1f1c 55%, #091210 100%);
-    border: 1px solid rgba(45,212,191,0.12);
-    padding: 2.5rem 2rem;
-    flex-shrink: 0;
-  }
-
-  @media (min-width: 900px) {
-    .kp-hero {
-      width: 300px;
-      position: sticky;
-      top: 2rem;
-    }
-  }
-
-  .kp-hero-blob {
-    pointer-events: none;
-    position: absolute;
-    border-radius: 9999px;
-  }
-  .kp-hero-blob-1 {
-    width: 220px; height: 220px;
-    top: -60px; left: -60px;
-    background: radial-gradient(circle, #0d9488 0%, transparent 70%);
-    opacity: 0.22;
-  }
-  .kp-hero-blob-2 {
-    width: 180px; height: 180px;
-    bottom: -50px; right: -40px;
-    background: radial-gradient(circle, #14b8a6 0%, transparent 70%);
-    opacity: 0.15;
-  }
-
-  /* Avatar ring */
-  .kp-avatar-wrap {
-    position: relative;
-    display: inline-block;
-    margin-bottom: 1.5rem;
-  }
-  .kp-avatar-ring {
-    position: absolute;
-    inset: -4px;
-    border-radius: 9999px;
-    background: conic-gradient(from 0deg, #0d9488, #2dd4bf, #5eead4, #0d9488);
-    animation: kp-spin 5s linear infinite;
-  }
-  .kp-avatar-inner {
-    position: relative;
-    padding: 3px;
-    border-radius: 9999px;
-  }
-  .kp-avatar-img {
-    width: 88px;
-    height: 88px;
-    border-radius: 9999px;
-    object-fit: cover;
-    display: block;
-    box-shadow: 0 0 0 3px #0a1412;
-  }
-  .kp-avatar-initials {
-    width: 88px;
-    height: 88px;
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: 900;
-    background: linear-gradient(135deg, #134e4a, #0d9488);
-    color: #ccfbf1;
-    box-shadow: 0 0 0 3px #0a1412;
-  }
-
-  /* Hero text */
-  .kp-hero-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: #2dd4bf;
-    margin-bottom: 0.35rem;
-  }
-  .kp-hero-name {
-    font-size: 1.75rem;
-    font-weight: 900;
-    color: #ffffff;
-    line-height: 1.2;
-    margin-bottom: 0.75rem;
-  }
-  .kp-hero-bio {
-    font-size: 0.875rem;
-    line-height: 1.65;
-    color: #94a3b8;
-    border-top: 1px solid rgba(255,255,255,0.07);
-    padding-top: 1rem;
-    margin-top: 0.5rem;
-  }
-
-  /* Kairos badge at bottom */
-  .kp-hero-badge {
-    margin-top: 2rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: rgba(45,212,191,0.5);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  /* ── Event list ──────────────────────────────────── */
-  .kp-event-list {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    min-width: 0;
-  }
-
-  .kp-section-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: #64748b;
-    margin-bottom: 0.5rem;
-  }
-
-  /* ── Event card ──────────────────────────────────── */
-  .kp-card {
+  .kp-event-card {
     display: flex;
     align-items: stretch;
     background: #ffffff;
     border: 1.5px solid #e2e8f0;
-    border-radius: 1.25rem;
+    border-radius: 1rem;
     text-decoration: none;
     color: inherit;
     overflow: hidden;
     transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
-    animation: kp-fadein 0.45s ease both;
+    animation: kp-fadein 0.4s ease both;
   }
-  .kp-card:hover {
+  .kp-event-card:hover {
     border-color: #0d9488;
-    box-shadow: 0 8px 32px -4px rgba(13,148,136,0.15), 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: 0 8px 28px -4px rgba(13, 148, 136, 0.14), 0 2px 6px rgba(0,0,0,0.05);
     transform: translateY(-2px);
   }
-  .kp-card:focus-visible {
+  .kp-event-card:focus-visible {
     outline: 2px solid #0d9488;
     outline-offset: 2px;
   }
-
-  /* Left accent strip (color bar) */
   .kp-card-strip {
     width: 4px;
     flex-shrink: 0;
     background: linear-gradient(to bottom, #0d9488, #2dd4bf);
-    border-radius: 0;
-    opacity: 0.7;
+    opacity: 0.65;
     transition: opacity 0.18s;
   }
-  .kp-card:hover .kp-card-strip {
+  .kp-event-card:hover .kp-card-strip {
     opacity: 1;
   }
-
-  /* Card body */
-  .kp-card-body {
-    flex: 1;
-    padding: 1.4rem 1.5rem;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-
-  .kp-card-title {
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 0.35rem;
-    line-height: 1.3;
-  }
-  .kp-card-desc {
-    font-size: 0.875rem;
-    color: #64748b;
-    line-height: 1.6;
-    margin-bottom: 1rem;
-    flex: 1;
-  }
-
-  /* Meta pills row */
-  .kp-card-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: center;
-  }
-  .kp-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.28rem 0.7rem;
-    border-radius: 9999px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    border: 1px solid transparent;
-  }
-  .kp-pill-time {
-    background: rgba(13,148,136,0.08);
-    color: #0d9488;
-    border-color: rgba(13,148,136,0.18);
-  }
-  .kp-pill-loc {
-    background: #f1f5f9;
-    color: #475569;
-    border-color: #e2e8f0;
-  }
-  .kp-pill-price {
-    background: rgba(16,185,129,0.08);
-    color: #059669;
-    border-color: rgba(16,185,129,0.2);
-  }
-
-  /* Card right arrow */
   .kp-card-arrow {
     flex-shrink: 0;
     display: flex;
@@ -295,28 +93,9 @@
     color: #cbd5e1;
     transition: color 0.18s, transform 0.18s;
   }
-  .kp-card:hover .kp-card-arrow {
+  .kp-event-card:hover .kp-card-arrow {
     color: #0d9488;
-    transform: translateX(2px);
-  }
-
-  /* ── Empty state ─────────────────────────────────── */
-  .kp-empty {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: white;
-    border: 1.5px dashed #e2e8f0;
-    border-radius: 1.25rem;
-    color: #94a3b8;
-  }
-  .kp-empty h2 {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #475569;
-    margin: 0.75rem 0 0.375rem;
-  }
-  .kp-empty p {
-    font-size: 0.875rem;
+    transform: translateX(3px);
   }
 </style>
 {% endblock %}
@@ -324,115 +103,166 @@
 {% block public_content %}
 <div class="w-full px-4 py-6 sm:px-6 md:py-10">
 
-  {# ── Top nav bar ───────────────────────────────────── #}
-  <div class="mx-auto mb-6 flex max-w-5xl items-center justify-between">
+  {# ── Top nav — identical to booking page ── #}
+  <div class="mx-auto mb-5 flex max-w-6xl items-center justify-between">
     <a href="/" class="text-xl font-bold text-brand-600">Kairos</a>
-    <a href="{% url 'account_signup' %}" class="inline-flex items-center rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-surface-700 shadow-sm hover:border-brand-400 hover:text-brand-600 transition-all">
+    <a href="{% url 'account_signup' %}" class="inline-flex items-center rounded-md border border-surface-300 bg-white px-4 py-2 text-sm font-medium text-surface-700 shadow-sm hover:bg-surface-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
       Create your page
     </a>
   </div>
 
-  {# ── Main layout ───────────────────────────────────── #}
-  <div class="kp-page mx-auto max-w-5xl">
+  {# ── Main card — identical wrapper to booking page ── #}
+  <div class="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-xl lg:min-h-[580px] md:flex relative">
 
-    {# ── Left: Hero / profile card ──────────────────── #}
-    <aside class="kp-hero">
+    {# ══ LEFT: Dark sidebar (1/3) — pixel-identical to booking page ══ #}
+    <div class="kairos-sidebar relative w-full overflow-hidden md:w-1/3 flex flex-col">
+
       {# Decorative blobs #}
-      <div class="kp-hero-blob kp-hero-blob-1"></div>
-      <div class="kp-hero-blob kp-hero-blob-2"></div>
-
-      <div style="position:relative; z-index:1;">
-        {# Avatar #}
-        <div class="kp-avatar-wrap">
-          <div class="kp-avatar-ring"></div>
-          <div class="kp-avatar-inner">
-            {% if host.avatar %}
-              <img src="{{ host.avatar.url }}" alt="{{ host.display_name|default:host.email }}" class="kp-avatar-img">
-            {% else %}
-              <div class="kp-avatar-initials">
-                {{ host.display_name|default:host.email|make_list|first|upper|default:"K" }}
-              </div>
-            {% endif %}
-          </div>
-        </div>
-
-        {# Name & bio #}
-        <p class="kp-hero-label">Scheduling with</p>
-        <h1 class="kp-hero-name">{{ host.display_name|default:host.email }}</h1>
-
-        {% if host.bio %}
-          <p class="kp-hero-bio">{{ host.bio }}</p>
-        {% endif %}
-
-        {# Kairos branding #}
-        <div class="kp-hero-badge">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Powered by Kairos
-        </div>
+      <div class="pointer-events-none absolute inset-0 z-0">
+        <div class="absolute -top-16 -left-16 w-64 h-64 rounded-full opacity-20" style="background: radial-gradient(circle, #0d9488 0%, transparent 70%);"></div>
+        <div class="absolute -bottom-20 -right-10 w-56 h-56 rounded-full opacity-15" style="background: radial-gradient(circle, #14b8a6 0%, transparent 70%);"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full opacity-5" style="background: radial-gradient(circle, #2dd4bf 0%, transparent 60%);"></div>
       </div>
-    </aside>
 
-    {# ── Right: Event list ──────────────────────────── #}
-    <div class="kp-event-list">
-      <p class="kp-section-label">
-        {{ host.public_event_types|length }} event type{{ host.public_event_types|length|pluralize }} available
-      </p>
+      {# Content #}
+      <div class="relative z-10 flex flex-col h-full p-7 md:p-8 lg:p-10">
 
-      {% if host.public_event_types %}
-        {% for event in host.public_event_types %}
-          <a href="{% url 'bookings:public_profile' slug=host.slug %}{{ event.slug }}/"
-             class="kp-card"
-             style="animation-delay: {{ forloop.counter0 }}00ms;"
-             aria-label="Book {{ event.title }}">
-
-            {# Teal left strip #}
-            <div class="kp-card-strip"></div>
-
-            {# Card body #}
-            <div class="kp-card-body">
-              <h2 class="kp-card-title">{{ event.title }}</h2>
-              {% if event.description %}
-                <p class="kp-card-desc">{{ event.description|truncatechars:110 }}</p>
-              {% else %}
-                <p class="kp-card-desc" style="color:#cbd5e1;">No description provided.</p>
-              {% endif %}
-
-              {# Meta pills #}
-              <div class="kp-card-meta">
-                <span class="kp-pill kp-pill-time">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  {{ event.duration_minutes }} min
-                </span>
-                <span class="kp-pill kp-pill-loc">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
-                  {{ event.get_location_type_display }}
-                </span>
-                {% if event.is_paid %}
-                  <span class="kp-pill kp-pill-price">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
-                    {{ event.formatted_price }}
-                  </span>
+        {# Avatar + name block #}
+        <div class="mb-8">
+          <div class="mb-5 flex items-center md:block">
+            {# Avatar with spinning ring #}
+            <div class="relative inline-block mr-4 md:mr-0 md:mb-5">
+              <div class="kairos-avatar-ring absolute inset-0 rounded-full"
+                   style="margin: -4px; background: conic-gradient(from 0deg, #0d9488, #2dd4bf, #0d9488); border-radius: 9999px; animation: spin 4s linear infinite; opacity: 0.9;"></div>
+              <div class="relative" style="padding: 3px;">
+                {% if host.avatar %}
+                  <img src="{{ host.avatar.url }}"
+                       alt="{{ host.display_name|default:host.email }}"
+                       class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover relative z-10 block"
+                       style="box-shadow: 0 0 0 3px #0a1412;">
+                {% else %}
+                  <div class="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-2xl font-black relative z-10"
+                       style="background: linear-gradient(135deg, #134e4a, #0d9488); color: #ccfbf1; box-shadow: 0 0 0 3px #0a1412;">
+                    {{ host.display_name|default:host.email|make_list|first|upper|default:"K" }}
+                  </div>
                 {% endif %}
               </div>
             </div>
 
-            {# Arrow #}
-            <div class="kp-card-arrow">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            {# Mobile: name inline with avatar #}
+            <div class="md:hidden">
+              <p class="text-xs font-bold uppercase tracking-[0.16em] mb-0.5" style="color: #2dd4bf;">Schedule a meeting</p>
+              <h1 class="text-lg font-black leading-tight text-white">{{ host.display_name|default:host.email }}</h1>
             </div>
+          </div>
 
-          </a>
-        {% endfor %}
-
-      {% else %}
-        <div class="kp-empty">
-          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto; opacity:0.4;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <h2>No event types yet</h2>
-          <p>This person hasn't published any events yet. Check back soon.</p>
+          {# Desktop: name below avatar #}
+          <div class="hidden md:block">
+            <p class="text-xs font-bold uppercase tracking-[0.16em] mb-2" style="color: #2dd4bf;">Schedule a meeting</p>
+            <h1 class="text-3xl font-black leading-tight text-white mb-1">{{ host.display_name|default:host.email }}</h1>
+          </div>
         </div>
-      {% endif %}
+
+        {# Bio #}
+        {% if host.bio %}
+          <div class="border-t pt-5" style="border-color: rgba(255,255,255,0.07);">
+            <p class="text-sm leading-relaxed" style="color: #94a3b8;">{{ host.bio }}</p>
+          </div>
+        {% endif %}
+
+        {# Bottom branding #}
+        <div class="mt-auto pt-6">
+          <p class="text-xs font-semibold" style="color: rgba(45,212,191,0.35); letter-spacing: 0.1em; text-transform: uppercase;">
+            Powered by Kairos
+          </p>
+        </div>
+
+      </div>
     </div>
 
+    {# ══ RIGHT: Event list (2/3) ══ #}
+    <div class="relative flex w-full flex-col bg-white p-6 md:w-2/3 md:p-8 lg:p-10">
+
+      {# Section heading #}
+      <div class="mb-6 border-b border-surface-200 pb-6">
+        <p class="text-xs font-bold uppercase tracking-[0.18em] text-brand-600 mb-1.5">Available</p>
+        <h2 class="text-xl font-bold text-surface-900">
+          Choose an event type
+        </h2>
+        <p class="text-sm text-surface-500 mt-1">
+          {{ host.public_event_types|length }} event type{{ host.public_event_types|length|pluralize }} — select one to see available times.
+        </p>
+      </div>
+
+      {# Event cards #}
+      {% if host.public_event_types %}
+        <div class="flex flex-col gap-3">
+          {% for event in host.public_event_types %}
+            <a href="{% url 'bookings:public_profile' slug=host.slug %}{{ event.slug }}/"
+               class="kp-event-card"
+               style="animation-delay: {{ forloop.counter0 }}00ms;"
+               aria-label="Book: {{ event.title }}">
+
+              {# Left teal strip #}
+              <div class="kp-card-strip"></div>
+
+              {# Card body #}
+              <div class="flex-1 min-w-0 p-5">
+                <h3 class="text-base font-bold text-surface-900 mb-1 truncate">{{ event.title }}</h3>
+                {% if event.description %}
+                  <p class="text-sm text-surface-500 leading-relaxed mb-3 line-clamp-2">{{ event.description }}</p>
+                {% else %}
+                  <p class="text-sm mb-3" style="color: #d1d5db;">No description provided.</p>
+                {% endif %}
+
+                {# Meta pills #}
+                <div class="flex flex-wrap items-center gap-2">
+                  {# Duration #}
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                        style="background: rgba(13,148,136,0.08); color: #0d9488; border: 1px solid rgba(13,148,136,0.18);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    {{ event.duration_minutes }} min
+                  </span>
+
+                  {# Location #}
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                        style="background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+                    {{ event.get_location_type_display }}
+                  </span>
+
+                  {# Price (if paid) #}
+                  {% if event.is_paid %}
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                          style="background: rgba(16,185,129,0.08); color: #059669; border: 1px solid rgba(16,185,129,0.18);">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                      {{ event.formatted_price }}
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+
+              {# Right chevron #}
+              <div class="kp-card-arrow">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+
+            </a>
+          {% endfor %}
+        </div>
+
+      {% else %}
+        {# Empty state #}
+        <div class="flex flex-col items-center justify-center flex-1 py-16 text-center">
+          <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4" style="background: #f1f5f9;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <h3 class="text-base font-semibold text-surface-700 mb-1">No events available</h3>
+          <p class="text-sm text-surface-400 max-w-xs">This person hasn't published any event types yet. Check back soon.</p>
+        </div>
+      {% endif %}
+
+    </div>
   </div>
 </div>
 {% endblock %}
