@@ -94,8 +94,12 @@ def test_send_kairos_email_attaches_ics():
     # Text body
     assert "Test" in msg.body
     
-    # HTML alternative and ICS attachment
-    assert len(msg.alternatives) == 1
+    # HTML alternative and ICS alternative
+    assert len(msg.alternatives) == 2
+    assert msg.alternatives[1][0] == "BEGIN:VCALENDAR...END:VCALENDAR"
+    assert msg.alternatives[1][1] == "text/calendar; method=REQUEST"
+    
+    # And as a direct attachment
     assert len(msg.attachments) == 1
     assert msg.attachments[0][0] == "invite.ics"
     assert msg.attachments[0][1] == "BEGIN:VCALENDAR...END:VCALENDAR"

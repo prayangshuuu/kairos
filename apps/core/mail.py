@@ -58,6 +58,9 @@ def send_kairos_email(
     msg.attach_alternative(html_content, "text/html")
     
     if ics_data:
+        # Attaching as an alternative with method=REQUEST tells Gmail/Outlook to show the native calendar widget
+        msg.attach_alternative(ics_data, "text/calendar; method=REQUEST")
+        # Also attach as a file for older clients
         msg.attach("invite.ics", ics_data, "text/calendar")
         
     if attachments:
