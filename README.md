@@ -35,6 +35,7 @@ To create a quick test user for testing the dashboard and onboarding flows, run 
 
 ```python
 from apps.accounts.models import User
+
 user = User.objects.create_user(email="test@joinkairos.tech", password="password")
 ```
 

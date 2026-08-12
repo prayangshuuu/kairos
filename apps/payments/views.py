@@ -4,7 +4,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, HttpResponseBadRequest
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -30,25 +30,25 @@ class StripeConnectOnboardView(LoginRequiredMixin, View):
         provider = StripeConnectProvider()
 
         payment_account = PaymentAccount.objects.filter(
-            user=request.user, provider='stripe_connect'
+            user=request.user, provider="stripe_connect"
         ).first()
 
         if not payment_account:
             account_id = provider.create_connected_account(request.user)
             payment_account = PaymentAccount.objects.create(
                 user=request.user,
-                provider='stripe_connect',
+                provider="stripe_connect",
                 external_account_id=account_id,
             )
         elif not payment_account.external_account_id:
             account_id = provider.create_connected_account(request.user)
             payment_account.external_account_id = account_id
-            payment_account.save(update_fields=['external_account_id', 'updated_at'])
-        
+            payment_account.save(update_fields=["external_account_id", "updated_at"])
+
         account_id = payment_account.external_account_id
 
-        return_url = settings.WEBHOOK_BASE_URL + reverse('payments:stripe_connect_return')
-        refresh_url = settings.WEBHOOK_BASE_URL + reverse('payments:stripe_connect_refresh')
+        return_url = settings.WEBHOOK_BASE_URL + reverse("payments:stripe_connect_return")
+        refresh_url = settings.WEBHOOK_BASE_URL + reverse("payments:stripe_connect_refresh")
 
         link_url = provider.create_account_link(account_id, return_url, refresh_url)
         return redirect(link_url)
@@ -63,11 +63,11 @@ class StripeConnectReturnView(LoginRequiredMixin, View):
 
     def get(self, request):
         payment_account = PaymentAccount.objects.filter(
-            user=request.user, provider='stripe_connect'
+            user=request.user, provider="stripe_connect"
         ).first()
 
         if not payment_account or not payment_account.external_account_id:
-            return redirect('payments:stripe_connect_onboard')
+            return redirect("payments:stripe_connect_onboard")
 
         # Retrieve fresh account data from Stripe and sync locally
         provider = StripeConnectProvider()
@@ -80,7 +80,7 @@ class StripeConnectReturnView(LoginRequiredMixin, View):
         except Exception as e:
             logger.error(f"Failed to sync account on return: {e}")
 
-        return redirect('payments:connect_dashboard')
+        return redirect("payments:connect_dashboard")
 
 
 class StripeConnectRefreshView(LoginRequiredMixin, View):
@@ -92,15 +92,15 @@ class StripeConnectRefreshView(LoginRequiredMixin, View):
 
     def get(self, request):
         payment_account = PaymentAccount.objects.filter(
-            user=request.user, provider='stripe_connect'
+            user=request.user, provider="stripe_connect"
         ).first()
 
         if not payment_account or not payment_account.external_account_id:
-            return redirect('payments:stripe_connect_onboard')
+            return redirect("payments:stripe_connect_onboard")
 
         provider = StripeConnectProvider()
-        return_url = settings.WEBHOOK_BASE_URL + reverse('payments:stripe_connect_return')
-        refresh_url = settings.WEBHOOK_BASE_URL + reverse('payments:stripe_connect_refresh')
+        return_url = settings.WEBHOOK_BASE_URL + reverse("payments:stripe_connect_return")
+        refresh_url = settings.WEBHOOK_BASE_URL + reverse("payments:stripe_connect_refresh")
 
         link_url = provider.create_account_link(
             payment_account.external_account_id, return_url, refresh_url
@@ -118,13 +118,13 @@ def stripe_connect_webhook(request):
     disabled by Stripe.
     """
     payload = request.body
-    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
 
     if not sig_header:
         logger.warning("Stripe webhook received without signature header.")
         return HttpResponseBadRequest("Missing signature")
 
-    webhook_secret = getattr(settings, 'STRIPE_CONNECT_WEBHOOK_SECRET', '')
+    webhook_secret = getattr(settings, "STRIPE_CONNECT_WEBHOOK_SECRET", "")
     provider = StripeConnectProvider()
 
     try:
@@ -133,9 +133,9 @@ def stripe_connect_webhook(request):
         logger.warning("Stripe webhook signature verification failed.")
         return HttpResponseBadRequest("Invalid signature")
 
-    event_id = event.get('id', '')
-    event_type = event.get('type', '')
-    connected_account = event.get('account', '')
+    event_id = event.get("id", "")
+    event_type = event.get("type", "")
+    event.get("account", "")
 
     # Idempotency: Stripe retries for days, assume duplicates
     if ProcessedWebhook.objects.filter(event_id=event_id).exists():
@@ -143,14 +143,14 @@ def stripe_connect_webhook(request):
 
     ProcessedWebhook.objects.create(
         event_id=event_id,
-        provider='stripe_connect',
+        provider="stripe_connect",
         event_type=event_type,
     )
 
     # Serialize the event data for Celery.
     # Real Stripe Event objects support dict-style access and can be converted
     # via json.dumps. Plain dicts (in tests) serialize directly.
-    if hasattr(event, 'to_dict_recursive'):
+    if hasattr(event, "to_dict_recursive"):
         event_data = event.to_dict_recursive()
     elif isinstance(event, dict):
         event_data = event
@@ -166,15 +166,15 @@ def stripe_connect_webhook(request):
         process_dispute_created,
     )
 
-    if event_type == 'checkout.session.completed':
+    if event_type == "checkout.session.completed":
         process_checkout_completed.delay(event_data)
-    elif event_type == 'checkout.session.expired':
+    elif event_type == "checkout.session.expired":
         process_checkout_expired.delay(event_data)
-    elif event_type == 'charge.refunded':
+    elif event_type == "charge.refunded":
         process_charge_refunded.delay(event_data)
-    elif event_type == 'charge.dispute.created':
+    elif event_type == "charge.dispute.created":
         process_dispute_created.delay(event_data)
-    elif event_type == 'account.updated':
+    elif event_type == "account.updated":
         process_account_updated.delay(event_data)
     else:
         logger.info(f"Unhandled Stripe webhook event type: {event_type}")
@@ -191,8 +191,8 @@ class PaymentReturnView(View):
     """
 
     def get(self, request):
-        session_id = request.GET.get('session_id', '')
-        invoice_number = request.GET.get('invoice_number', '')
+        session_id = request.GET.get("session_id", "")
+        invoice_number = request.GET.get("invoice_number", "")
 
         payment = None
         if session_id:
@@ -201,26 +201,37 @@ class PaymentReturnView(View):
             payment = Payment.objects.filter(invoice_number=invoice_number).first()
 
         if not payment:
-            logger.warning(f"No payment found for session_id={session_id}, invoice_number={invoice_number}")
+            logger.warning(
+                f"No payment found for session_id={session_id}, invoice_number={invoice_number}"
+            )
             return HttpResponseBadRequest("Payment not found")
 
-        status_param = request.GET.get('status', '').lower()
-        message_param = request.GET.get('message', '')
+        status_param = request.GET.get("status", "").lower()
+        message_param = request.GET.get("message", "")
 
         # Check if payment failed or was cancelled
-        if status_param in ['failed', 'cancel', 'cancelled', 'error'] or 'invalid' in message_param.lower() or 'fail' in message_param.lower():
-            logger.info(f"Payment {payment.uid} failed/cancelled via return URL: status={status_param}, msg={message_param}")
+        if (
+            status_param in ["failed", "cancel", "cancelled", "error"]
+            or "invalid" in message_param.lower()
+            or "fail" in message_param.lower()
+        ):
+            logger.info(
+                f"Payment {payment.uid} failed/cancelled via return URL: status={status_param}, msg={message_param}"
+            )
             if payment.status == Payment.STATUS_PENDING:
                 expire_payment(payment_uid=str(payment.uid))
 
             host_slug = payment.booking.event_type.owner.slug
             event_slug = payment.booking.event_type.slug
-            return redirect(f"/{host_slug}/{event_slug}/?payment_error={message_param or 'Payment was not completed'}")
+            return redirect(
+                f"/{host_slug}/{event_slug}/?payment_error={message_param or 'Payment was not completed'}"
+            )
 
         confirm_payment(payment_uid=str(payment.uid))
 
         # Redirect to the booking confirmation page
         from apps.bookings.tokens import make_manage_token
+
         token = make_manage_token(payment.booking)
         return redirect(f"/booking/{payment.booking.uid}/?t={token}")
 
@@ -229,8 +240,8 @@ class PaymentCancelView(View):
     """Customer cancelled checkout."""
 
     def get(self, request):
-        payment_uid = request.GET.get('payment_uid', '')
-        invoice_number = request.GET.get('invoice_number', '')
+        payment_uid = request.GET.get("payment_uid", "")
+        invoice_number = request.GET.get("invoice_number", "")
 
         payment = None
         if payment_uid:
@@ -239,12 +250,14 @@ class PaymentCancelView(View):
             payment = Payment.objects.filter(invoice_number=invoice_number).first()
 
         if not payment:
-            return redirect('/')
+            return redirect("/")
 
         if payment.status == Payment.STATUS_PENDING:
             expire_payment(payment_uid=str(payment.uid))
 
-        return redirect(f"/{payment.booking.event_type.owner.slug}/{payment.booking.event_type.slug}/?payment_cancelled=1")
+        return redirect(
+            f"/{payment.booking.event_type.owner.slug}/{payment.booking.event_type.slug}/?payment_cancelled=1"
+        )
 
 
 class ConnectDashboardView(LoginRequiredMixin, View):
@@ -257,16 +270,20 @@ class ConnectDashboardView(LoginRequiredMixin, View):
 
     def get(self, request):
         payment_account = PaymentAccount.objects.filter(
-            user=request.user, provider='stripe_connect'
+            user=request.user, provider="stripe_connect"
         ).first()
-        
+
         paystation_account = PaymentAccount.objects.filter(
-            user=request.user, provider='paystation'
+            user=request.user, provider="paystation"
         ).first()
 
         express_dashboard_url = None
 
-        if payment_account and payment_account.external_account_id and payment_account.charges_enabled:
+        if (
+            payment_account
+            and payment_account.external_account_id
+            and payment_account.charges_enabled
+        ):
             provider = StripeConnectProvider()
             try:
                 express_dashboard_url = provider.create_express_login_link(
@@ -276,17 +293,18 @@ class ConnectDashboardView(LoginRequiredMixin, View):
                 logger.error(f"Failed to create Express dashboard link: {e}")
 
         from apps.payments.models import HostPaymentTerms
+
         has_accepted_terms = HostPaymentTerms.objects.filter(user=request.user).exists()
 
         context = {
-            'account': payment_account,
-            'paystation_account': paystation_account,
-            'express_dashboard_url': express_dashboard_url,
-            'enable_paystation': getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', True),
-            'platform_fee_percent': getattr(settings, 'KAIROS_PLATFORM_FEE_PERCENT', 5.0),
-            'has_accepted_terms': has_accepted_terms,
+            "account": payment_account,
+            "paystation_account": paystation_account,
+            "express_dashboard_url": express_dashboard_url,
+            "enable_paystation": getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True),
+            "platform_fee_percent": getattr(settings, "KAIROS_PLATFORM_FEE_PERCENT", 5.0),
+            "has_accepted_terms": has_accepted_terms,
         }
-        return render(request, 'payments/connect_dashboard.html', context)
+        return render(request, "payments/connect_dashboard.html", context)
 
 
 class FeeCalculatorView(LoginRequiredMixin, View):
@@ -297,98 +315,107 @@ class FeeCalculatorView(LoginRequiredMixin, View):
 
     def get(self, request):
         try:
-            amount_cents = int(request.GET.get('amount_cents', 0))
+            amount_cents = int(request.GET.get("amount_cents", 0))
         except (ValueError, TypeError):
             amount_cents = 0
 
-        currency = request.GET.get('currency', 'USD').upper()
+        currency = request.GET.get("currency", "USD").upper()
 
         if amount_cents <= 0:
-            return render(request, 'payments/partials/fee_breakdown.html', {'breakdown': None})
+            return render(request, "payments/partials/fee_breakdown.html", {"breakdown": None})
 
         fee_data = compute_platform_fee(amount_cents)
-        breakdown = compute_fee_breakdown(amount_cents, fee_data['fee_amount_cents'], currency)
+        breakdown = compute_fee_breakdown(amount_cents, fee_data["fee_amount_cents"], currency)
 
-        return render(request, 'payments/partials/fee_breakdown.html', {'breakdown': breakdown})
+        return render(request, "payments/partials/fee_breakdown.html", {"breakdown": breakdown})
 
 
 class EnablePaystationView(LoginRequiredMixin, View):
     """Enable Paystation route for the host after accepting terms."""
+
     def post(self, request):
-        if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', True):
+        if not getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True):
             return HttpResponseBadRequest("Paystation is not enabled.")
-            
+
         from apps.payments.models import HostPaymentTerms
-        
+
         # Get client IP
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
         if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0].strip()
+            ip = x_forwarded_for.split(",")[0].strip()
         else:
-            ip = request.META.get('REMOTE_ADDR')
-            
+            ip = request.META.get("REMOTE_ADDR")
+
         # Record terms acceptance
         HostPaymentTerms.objects.get_or_create(
-            user=request.user,
-            terms_version="1.0",
-            defaults={'ip_address': ip}
+            user=request.user, terms_version="1.0", defaults={"ip_address": ip}
         )
 
         PaymentAccount.objects.get_or_create(
             user=request.user,
-            provider='paystation',
+            provider="paystation",
             defaults={
-                'external_account_id': f"internal_{request.user.id}",
-                'charges_enabled': True,
-                'payouts_enabled': True,
-                'default_currency': 'BDT',
-                'country': 'BD',
-                'is_active': True,
-            }
+                "external_account_id": f"internal_{request.user.id}",
+                "charges_enabled": True,
+                "payouts_enabled": True,
+                "default_currency": "BDT",
+                "country": "BD",
+                "is_active": True,
+            },
         )
-        return redirect('payments:connect_dashboard')
+        return redirect("payments:connect_dashboard")
 
 
 class HostLedgerView(LoginRequiredMixin, View):
     """View statement/ledger for PayStation route."""
+
     def get(self, request):
-        if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', True):
-            return redirect('payments:connect_dashboard')
-            
-        from apps.payments.models import HostLedger, Payout
+        if not getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True):
+            return redirect("payments:connect_dashboard")
+
         from django.db.models import Sum
-        
-        entries = HostLedger.objects.filter(host=request.user).order_by('-created_at')
-        balance = entries.aggregate(Sum('amount_cents'))['amount_cents__sum'] or 0
-        payouts = Payout.objects.filter(host=request.user).order_by('-initiated_at')
-        
+
+        from apps.payments.models import HostLedger, Payout
+
+        entries = HostLedger.objects.filter(host=request.user).order_by("-created_at")
+        balance = entries.aggregate(Sum("amount_cents"))["amount_cents__sum"] or 0
+        payouts = Payout.objects.filter(host=request.user).order_by("-initiated_at")
+
         context = {
-            'entries': entries,
-            'balance': balance,
-            'payouts': payouts,
-            'min_threshold_cents': getattr(settings, 'PAYSTATION_MIN_PAYOUT_THRESHOLD_CENTS', 100000),
+            "entries": entries,
+            "balance": balance,
+            "payouts": payouts,
+            "min_threshold_cents": getattr(
+                settings, "PAYSTATION_MIN_PAYOUT_THRESHOLD_CENTS", 100000
+            ),
         }
-        return render(request, 'payments/host_ledger.html', context)
+        return render(request, "payments/host_ledger.html", context)
 
 
 class GeneratePayoutView(LoginRequiredMixin, View):
     """Host/Admin triggers payout generation for a period."""
+
     def post(self, request):
-        from apps.payments.services import generate_payout
-        from django.contrib import messages
         from datetime import timedelta
-        
+
+        from django.contrib import messages
+
+        from apps.payments.services import generate_payout
+
         period_end = timezone.now()
         period_start = period_end - timedelta(days=30)
-        
+
         try:
-            payout = generate_payout(host=request.user, period_start=period_start, period_end=period_end)
+            payout = generate_payout(
+                host=request.user, period_start=period_start, period_end=period_end
+            )
             if payout:
-                messages.success(request, f"Payout #{payout.id} generated for ৳{payout.net_cents/100:.2f}.")
+                messages.success(
+                    request, f"Payout #{payout.id} generated for ৳{payout.net_cents / 100:.2f}."
+                )
             else:
                 messages.error(request, "No positive balance available for payout.")
         except ValueError as e:
             messages.error(request, str(e))
-            
-        return redirect('payments:host_ledger')
 
+        return redirect("payments:host_ledger")

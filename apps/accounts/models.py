@@ -1,17 +1,19 @@
 import zoneinfo
 from zoneinfo import ZoneInfo
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from .validators import validate_timezone, validate_slug
+from .validators import validate_slug, validate_timezone
+
 
 class UserManager(BaseUserManager):
     use_in_migrations = True
 
     def _create_user(self, email, password, **extra_fields):
         if not email:
-            raise ValueError('The given email must be set')
+            raise ValueError("The given email must be set")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -19,18 +21,18 @@ class UserManager(BaseUserManager):
         return user
 
     def create_user(self, email, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', False)
-        extra_fields.setdefault('is_superuser', False)
+        extra_fields.setdefault("is_staff", False)
+        extra_fields.setdefault("is_superuser", False)
         return self._create_user(email, password, **extra_fields)
 
     def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
 
         return self._create_user(email, password, **extra_fields)
 
@@ -50,21 +52,27 @@ class User(AbstractUser):
         SUNDAY = 6, "Sunday"
 
     username = None
-    email = models.EmailField(_('email address'), unique=True)
-    slug = models.SlugField(max_length=40, unique=True, null=True, blank=True, validators=[validate_slug])
+    email = models.EmailField(_("email address"), unique=True)
+    slug = models.SlugField(
+        max_length=40, unique=True, null=True, blank=True, validators=[validate_slug]
+    )
     display_name = models.CharField(max_length=100, blank=True)
     bio = models.TextField(blank=True)
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     timezone = models.CharField(max_length=64, default="UTC", validators=[validate_timezone])
     locale = models.CharField(max_length=10, default="en")
-    time_format = models.CharField(max_length=2, choices=TimeFormatChoices.choices, default=TimeFormatChoices.H12)
-    week_start = models.IntegerField(choices=WeekStartChoices.choices, default=WeekStartChoices.MONDAY)
+    time_format = models.CharField(
+        max_length=2, choices=TimeFormatChoices.choices, default=TimeFormatChoices.H12
+    )
+    week_start = models.IntegerField(
+        choices=WeekStartChoices.choices, default=WeekStartChoices.MONDAY
+    )
     brand_color = models.CharField(max_length=7, default="#000000")
     hide_branding = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    USERNAME_FIELD = 'email'
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
     objects = UserManager()
@@ -91,15 +99,14 @@ class User(AbstractUser):
         return self.email
 
     def get_default_schedule(self):
-        from apps.scheduling.models import Schedule, AvailabilityRule
         import datetime
-        
+
+        from apps.scheduling.models import AvailabilityRule
+
         schedule = self.schedules.filter(is_default=True).first()
         if not schedule:
             schedule = self.schedules.create(
-                name="Working Hours",
-                timezone=self.timezone,
-                is_default=True
+                name="Working Hours", timezone=self.timezone, is_default=True
             )
             # Create Mon-Fri 09:00-17:00
             rules = []
@@ -109,20 +116,24 @@ class User(AbstractUser):
                         schedule=schedule,
                         weekday=weekday,
                         start_time=datetime.time(9, 0),
-                        end_time=datetime.time(17, 0)
+                        end_time=datetime.time(17, 0),
                     )
                 )
             AvailabilityRule.objects.bulk_create(rules)
-            
+
         return schedule
+
 
 class UserSlugHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="slug_history")
     old_slug = models.SlugField(max_length=40, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+
 class UserNotificationPreference(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="notification_preferences")
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="notification_preferences"
+    )
     new_booking = models.BooleanField(default=True)
     reschedule = models.BooleanField(default=True)
     pending_reminder = models.BooleanField(default=True)

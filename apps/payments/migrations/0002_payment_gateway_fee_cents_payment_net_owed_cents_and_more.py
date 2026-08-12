@@ -6,52 +6,117 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('payments', '0001_initial'),
+        ("payments", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='payment',
-            name='gateway_fee_cents',
+            model_name="payment",
+            name="gateway_fee_cents",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='payment',
-            name='net_owed_cents',
+            model_name="payment",
+            name="net_owed_cents",
             field=models.IntegerField(default=0),
         ),
         migrations.CreateModel(
-            name='Payout',
+            name="Payout",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('period_start', models.DateTimeField()),
-                ('period_end', models.DateTimeField()),
-                ('gross_cents', models.PositiveIntegerField(default=0)),
-                ('fees_cents', models.PositiveIntegerField(default=0)),
-                ('net_cents', models.IntegerField(default=0)),
-                ('status', models.CharField(choices=[('PENDING', 'Pending'), ('COMPLETED', 'Completed'), ('FAILED', 'Failed')], default='PENDING', max_length=30)),
-                ('reference', models.CharField(blank=True, max_length=100)),
-                ('initiated_at', models.DateTimeField(auto_now_add=True)),
-                ('completed_at', models.DateTimeField(blank=True, null=True)),
-                ('notes', models.TextField(blank=True)),
-                ('host', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='payouts', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("period_start", models.DateTimeField()),
+                ("period_end", models.DateTimeField()),
+                ("gross_cents", models.PositiveIntegerField(default=0)),
+                ("fees_cents", models.PositiveIntegerField(default=0)),
+                ("net_cents", models.IntegerField(default=0)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("PENDING", "Pending"),
+                            ("COMPLETED", "Completed"),
+                            ("FAILED", "Failed"),
+                        ],
+                        default="PENDING",
+                        max_length=30,
+                    ),
+                ),
+                ("reference", models.CharField(blank=True, max_length=100)),
+                ("initiated_at", models.DateTimeField(auto_now_add=True)),
+                ("completed_at", models.DateTimeField(blank=True, null=True)),
+                ("notes", models.TextField(blank=True)),
+                (
+                    "host",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="payouts",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='HostLedger',
+            name="HostLedger",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('entry_type', models.CharField(choices=[('charge', 'Charge'), ('platform_fee', 'Platform Fee'), ('gateway_fee', 'Gateway Fee'), ('refund', 'Refund'), ('payout', 'Payout'), ('adjustment', 'Adjustment')], max_length=30)),
-                ('amount_cents', models.IntegerField()),
-                ('currency', models.CharField(default='BDT', max_length=3)),
-                ('description', models.CharField(max_length=255)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('host', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='ledger_entries', to=settings.AUTH_USER_MODEL)),
-                ('payment', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='ledger_entries', to='payments.payment')),
-                ('payout', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='ledger_entries', to='payments.payout')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "entry_type",
+                    models.CharField(
+                        choices=[
+                            ("charge", "Charge"),
+                            ("platform_fee", "Platform Fee"),
+                            ("gateway_fee", "Gateway Fee"),
+                            ("refund", "Refund"),
+                            ("payout", "Payout"),
+                            ("adjustment", "Adjustment"),
+                        ],
+                        max_length=30,
+                    ),
+                ),
+                ("amount_cents", models.IntegerField()),
+                ("currency", models.CharField(default="BDT", max_length=3)),
+                ("description", models.CharField(max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "host",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="ledger_entries",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "payment",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="ledger_entries",
+                        to="payments.payment",
+                    ),
+                ),
+                (
+                    "payout",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="ledger_entries",
+                        to="payments.payout",
+                    ),
+                ),
             ],
         ),
     ]

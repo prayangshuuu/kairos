@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('scheduling', '0005_eventtype_reschedule_cutoff_hours'),
+        ("scheduling", "0005_eventtype_reschedule_cutoff_hours"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventtype',
-            name='confirmation_deadline_hours',
+            model_name="eventtype",
+            name="confirmation_deadline_hours",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
     ]

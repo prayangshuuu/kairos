@@ -5,34 +5,45 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='BouncedEmail',
+            name="BouncedEmail",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('email', models.EmailField(max_length=254, unique=True)),
-                ('reason', models.CharField(blank=True, max_length=255)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("email", models.EmailField(max_length=254, unique=True)),
+                ("reason", models.CharField(blank=True, max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.CreateModel(
-            name='EmailEvent',
+            name="EmailEvent",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('recipient', models.EmailField(db_index=True, max_length=254)),
-                ('event_type', models.CharField(db_index=True, max_length=50)),
-                ('message_id', models.CharField(blank=True, db_index=True, max_length=255, null=True)),
-                ('payload', models.JSONField(default=dict)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("recipient", models.EmailField(db_index=True, max_length=254)),
+                ("event_type", models.CharField(db_index=True, max_length=50)),
+                (
+                    "message_id",
+                    models.CharField(blank=True, db_index=True, max_length=255, null=True),
+                ),
+                ("payload", models.JSONField(default=dict)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
             ],
             options={
-                'ordering': ['-created_at'],
+                "ordering": ["-created_at"],
             },
         ),
     ]

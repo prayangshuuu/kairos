@@ -1,8 +1,8 @@
+from datetime import timedelta
+
 import pytest
 from django.template.loader import render_to_string
 from django.utils import timezone
-from datetime import timedelta
-import re
 
 TEMPLATES = [
     "booking_confirmed_invitee",
@@ -26,12 +26,13 @@ TEMPLATES = [
     "account_welcome",
 ]
 
+
 @pytest.fixture
 def dummy_context():
     now = timezone.now()
     start_at = now + timedelta(days=2)
     end_at = start_at + timedelta(minutes=30)
-    
+
     return {
         "booking_uid": "test-uid-1234",
         "host_name": "Prayangshu Host",
@@ -59,56 +60,67 @@ def dummy_context():
         "user_name": "Test User",
     }
 
+
 @pytest.mark.parametrize("template_name", TEMPLATES)
 def test_templates_render_without_error(template_name, dummy_context):
     html_content = render_to_string(f"emails/{template_name}.html", dummy_context)
     txt_content = render_to_string(f"emails/{template_name}.txt", dummy_context)
-    
+
     assert html_content
     assert txt_content
+
 
 @pytest.mark.parametrize("template_name", TEMPLATES)
 def test_templates_no_style_blocks_or_flexbox(template_name, dummy_context):
     html_content = render_to_string(f"emails/{template_name}.html", dummy_context).lower()
-    
+
     # We must not have <style> tags anywhere in the body because clients strip them
     # Ensure there's no <style> except maybe if we allow it in head, but prompt says "no template contains a <style> block"
     assert "<style>" not in html_content
     assert "display: flex" not in html_content
     assert "display: grid" not in html_content
 
+
 @pytest.mark.django_db
 def test_send_kairos_email_attaches_ics():
-    from apps.core.mail import send_kairos_email
     from django.core import mail
-    
-    context = {"host_name": "Test", "invitee_name": "Test", "start_at": timezone.now(), "end_at": timezone.now()}
-    
+
+    from apps.core.mail import send_kairos_email
+
+    context = {
+        "host_name": "Test",
+        "invitee_name": "Test",
+        "start_at": timezone.now(),
+        "end_at": timezone.now(),
+    }
+
     send_kairos_email(
         to_email="test@example.com",
         subject="Test with ICS",
         template_name="booking_confirmed_invitee",
         context=context,
-        ics_data="BEGIN:VCALENDAR...END:VCALENDAR"
+        ics_data="BEGIN:VCALENDAR...END:VCALENDAR",
     )
-    
+
     assert len(mail.outbox) == 1
     msg = mail.outbox[0]
-    
+
     # Text body
     assert "Test" in msg.body
-    
+
     # HTML alternative and ICS alternative
     assert len(msg.alternatives) == 2
     assert msg.alternatives[1][0] == "BEGIN:VCALENDAR...END:VCALENDAR"
     assert msg.alternatives[1][1] == "text/calendar; method=REQUEST"
-    
+
     # No direct attachment
     assert len(msg.attachments) == 0
+
 
 @pytest.mark.django_db
 def test_timezone_rendering():
     from django.template.loader import render_to_string
+
     context = {
         "host_name": "Test",
         "invitee_name": "Test",
@@ -116,9 +128,9 @@ def test_timezone_rendering():
         "end_at": timezone.now(),
         "invitee_tz": "Europe/London",
         "host_tz": "America/New_York",
-        "event_title": "Test event"
+        "event_title": "Test event",
     }
-    
+
     html = render_to_string("emails/booking_approved.html", context)
     txt = render_to_string("emails/booking_approved.txt", context)
     assert "Europe/London" in html, f"Actual output: {html}"

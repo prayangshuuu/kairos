@@ -1,13 +1,17 @@
 from django.contrib import admin
-from .models import Booking, Attendee, NotificationLog
+
+from .models import Attendee, Booking, NotificationLog
+
 
 class AttendeeInline(admin.TabularInline):
     model = Attendee
     extra = 0
 
+
 class NotificationLogInline(admin.TabularInline):
     model = NotificationLog
     extra = 0
+
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):

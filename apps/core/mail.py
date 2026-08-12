@@ -1,13 +1,16 @@
 import logging
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
-from django.conf import settings
-from apps.bookings.models import NotificationLog
-from apps.core.models import BouncedEmail
-from django.utils import timezone
 import os
 
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils import timezone
+
+from apps.bookings.models import NotificationLog
+from apps.core.models import BouncedEmail
+
 logger = logging.getLogger(__name__)
+
 
 def send_kairos_email(
     to_email: str,
@@ -19,7 +22,7 @@ def send_kairos_email(
     notification_kind: str = None,
     ics_data: str = None,
     is_transactional: bool = True,
-    attachments: list = None
+    attachments: list = None,
 ):
     """
     Central wrapper for all outbound email in Kairos.
@@ -31,14 +34,14 @@ def send_kairos_email(
     if BouncedEmail.objects.filter(email=to_email).exists():
         logger.warning(f"Suppressed email to {to_email} (on bounce list).")
         return False
-        
+
     # Idempotency check
     if booking and notification_kind:
         if NotificationLog.objects.filter(booking=booking, kind=notification_kind).exists():
             logger.info(f"Skipping {notification_kind} for booking {booking.uid}: already sent.")
             return False
 
-    recipient_timezone = context.get('timezone')
+    recipient_timezone = context.get("timezone")
     if recipient_timezone:
         timezone.activate(recipient_timezone)
 
@@ -60,7 +63,7 @@ def send_kairos_email(
     if not is_transactional:
         # Example header for non-transactional mail, could be enhanced with real unsubscribe URL
         headers["List-Unsubscribe"] = f"<mailto:{settings.DEFAULT_FROM_EMAIL}?subject=unsubscribe>"
-        
+
     reply_to_list = [reply_to] if reply_to else []
 
     msg = EmailMultiAlternatives(
@@ -72,11 +75,11 @@ def send_kairos_email(
         headers=headers,
     )
     msg.attach_alternative(html_content, "text/html")
-    
+
     if ics_data:
         # Attaching as an alternative with method=REQUEST tells Gmail/Outlook to show the native calendar widget
         msg.attach_alternative(ics_data, "text/calendar; method=REQUEST")
-        
+
     if attachments:
         for attachment in attachments:
             # attachment is a tuple of (filename, content, mimetype)
@@ -84,17 +87,17 @@ def send_kairos_email(
 
     try:
         msg.send(fail_silently=False)
-        
+
         # Log success
         if booking and notification_kind:
             NotificationLog.objects.create(booking=booking, kind=notification_kind)
-            
+
         # In dev, dump HTML to local file
         if settings.DEBUG:
-            dump_dir = os.path.join(settings.BASE_DIR, 'tmp', 'emails')
+            dump_dir = os.path.join(settings.BASE_DIR, "tmp", "emails")
             os.makedirs(dump_dir, exist_ok=True)
             filename = f"{timezone.now().strftime('%Y%m%d_%H%M%S')}_{template_name}_{to_email}.html"
-            with open(os.path.join(dump_dir, filename), 'w') as f:
+            with open(os.path.join(dump_dir, filename), "w") as f:
                 f.write(html_content)
 
         return True

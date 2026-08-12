@@ -2,6 +2,7 @@
 
 from django.db import migrations
 
+
 def create_default_event_types(apps, schema_editor):
     User = apps.get_model("accounts", "User")
     EventType = apps.get_model("scheduling", "EventType")
@@ -29,21 +30,22 @@ def create_default_event_types(apps, schema_editor):
                 allow_cancellation=True,
                 price_cents=0,
                 currency="USD",
-                assignment_strategy="single"
+                assignment_strategy="single",
             )
         )
-    
+
     EventType.objects.bulk_create(event_types)
+
 
 def reverse_default_event_types(apps, schema_editor):
     EventType = apps.get_model("scheduling", "EventType")
     EventType.objects.filter(slug="30-minute-meeting", title="30 Minute Meeting").delete()
 
-class Migration(migrations.Migration):
 
+class Migration(migrations.Migration):
     dependencies = [
-        ('scheduling', '0002_eventtype_bookingquestion_and_more'),
-        ('accounts', '0001_initial'),
+        ("scheduling", "0002_eventtype_bookingquestion_and_more"),
+        ("accounts", "0001_initial"),
     ]
 
     operations = [

@@ -1,22 +1,21 @@
-import pytest
-from decimal import Decimal
 from datetime import timedelta
+from decimal import Decimal
+
+import pytest
 from django.utils import timezone
-from django.conf import settings
 
 from apps.accounts.models import User
 from apps.bookings.models import Booking
-from apps.payments.models import Payment, PaymentAccount, HostPaymentTerms, HostLedger, Payout
-from apps.payments.routing import select_provider, is_paystation_eligible, is_stripe_eligible
+from apps.payments.models import HostLedger, HostPaymentTerms, Payment, PaymentAccount
+from apps.payments.routing import is_paystation_eligible, select_provider
 from apps.payments.services import (
     compute_paystation_service_fee,
-    create_payment_for_booking,
     confirm_payment,
-    handle_refund,
+    create_payment_for_booking,
     generate_payout,
-    PAYSTATION_SERVICE_FEE_PERCENT,
+    handle_refund,
 )
-from apps.scheduling.models import EventType, Schedule, AvailabilityRule
+from apps.scheduling.models import AvailabilityRule, EventType, Schedule
 
 
 @pytest.fixture
@@ -73,6 +72,7 @@ def usd_event_type(host):
 
 def create_test_booking(event_type, offset_days=1):
     from psycopg.types.range import Range
+
     start = timezone.now() + timedelta(days=offset_days)
     end = start + timedelta(minutes=30)
     return Booking.objects.create(
@@ -91,11 +91,14 @@ def create_test_booking(event_type, offset_days=1):
 
 @pytest.mark.django_db
 class TestTask36ProviderRouting:
-
     def test_routing_prefers_stripe_when_connected(self, host, bdt_event_type):
         """Routing prefers Stripe when host connected Stripe and charges are enabled."""
         PaymentAccount.objects.create(
-            user=host, provider="stripe_connect", charges_enabled=True, is_active=True, external_account_id="acct_stripe_1"
+            user=host,
+            provider="stripe_connect",
+            charges_enabled=True,
+            is_active=True,
+            external_account_id="acct_stripe_1",
         )
         HostPaymentTerms.objects.create(user=host, terms_version="1.0")
 
@@ -137,7 +140,6 @@ class TestTask36ProviderRouting:
 
 @pytest.mark.django_db
 class TestTask36ServiceFeeArithmetic:
-
     def test_service_fee_exactness_and_rounding(self):
         """
         Verify exactness of 3% service fee calculation with Decimal ROUND_HALF_UP:
@@ -173,7 +175,6 @@ class TestTask36ServiceFeeArithmetic:
 
 @pytest.mark.django_db
 class TestTask36LedgerAndRefunds:
-
     def test_ledger_lifecycle_charge_fee_refund_fee_reversal(self, host, bdt_event_type):
         """
         Verify ledger entries across booking confirmation and full refund:
@@ -200,7 +201,8 @@ class TestTask36LedgerAndRefunds:
         assert fee_entry.amount_cents == -3000
 
         from django.db.models import Sum
-        balance_before = entries.aggregate(Sum('amount_cents'))['amount_cents__sum']
+
+        balance_before = entries.aggregate(Sum("amount_cents"))["amount_cents__sum"]
         assert balance_before == 97000
 
         # Refund booking
@@ -215,7 +217,7 @@ class TestTask36LedgerAndRefunds:
         reversal_entry = entries.get(entry_type="refund_fee_reversal")
         assert reversal_entry.amount_cents == 3000
 
-        balance_after = entries.aggregate(Sum('amount_cents'))['amount_cents__sum']
+        balance_after = entries.aggregate(Sum("amount_cents"))["amount_cents__sum"]
         assert balance_after == 0
 
     def test_refund_after_payout_produces_negative_balance_not_payout(self, host, bdt_event_type):
@@ -224,11 +226,11 @@ class TestTask36LedgerAndRefunds:
         and generate_payout refuses to create a payout for a negative balance.
         """
         HostPaymentTerms.objects.create(user=host, terms_version="1.0")
-        
+
         # Use price high enough to meet min payout threshold (৳2000)
         bdt_event_type.price_cents = 200000
         bdt_event_type.save()
-        
+
         booking = create_test_booking(bdt_event_type)
 
         payment = create_payment_for_booking(booking=booking)
@@ -241,13 +243,18 @@ class TestTask36LedgerAndRefunds:
         assert payout.net_cents == 194000  # 200,000 - 6,000 fee
 
         from django.db.models import Sum
-        balance_after_payout = HostLedger.objects.filter(host=host).aggregate(Sum('amount_cents'))['amount_cents__sum']
+
+        balance_after_payout = HostLedger.objects.filter(host=host).aggregate(Sum("amount_cents"))[
+            "amount_cents__sum"
+        ]
         assert balance_after_payout == 0
 
         # Refund booking after payout was disbursed
         handle_refund(payment=payment, amount_cents=200000)
 
-        balance_after_refund = HostLedger.objects.filter(host=host).aggregate(Sum('amount_cents'))['amount_cents__sum']
+        balance_after_refund = HostLedger.objects.filter(host=host).aggregate(Sum("amount_cents"))[
+            "amount_cents__sum"
+        ]
         assert balance_after_refund == -194000  # Host owes ৳1940
 
         # Attempting to generate payout now must fail with ValueError
@@ -257,7 +264,6 @@ class TestTask36LedgerAndRefunds:
 
 @pytest.mark.django_db
 class TestTask36FullHostStatementScenario:
-
     def test_full_host_statement_four_bookings_one_refund_one_payout(self, host, bdt_event_type):
         """
         Full Scenario Demonstration required by prompt:
@@ -276,20 +282,25 @@ class TestTask36FullHostStatementScenario:
 
         # Create and confirm 4 bookings
         for i in range(4):
-            b = create_test_booking(bdt_event_type, offset_days=i+1)
+            b = create_test_booking(bdt_event_type, offset_days=i + 1)
             p = create_payment_for_booking(booking=b)
             confirm_payment(payment_uid=str(p.uid))
             bookings.append(b)
             payments.append(p)
 
         from django.db.models import Sum
-        bal1 = HostLedger.objects.filter(host=host).aggregate(Sum('amount_cents'))['amount_cents__sum']
+
+        bal1 = HostLedger.objects.filter(host=host).aggregate(Sum("amount_cents"))[
+            "amount_cents__sum"
+        ]
         assert bal1 == 388000  # 4 * 97000
 
         # 1 Refund on Booking 4
         handle_refund(payment=payments[3], amount_cents=100000)
 
-        bal2 = HostLedger.objects.filter(host=host).aggregate(Sum('amount_cents'))['amount_cents__sum']
+        bal2 = HostLedger.objects.filter(host=host).aggregate(Sum("amount_cents"))[
+            "amount_cents__sum"
+        ]
         assert bal2 == 291000  # 3 * 97000
 
         # 1 Payout
@@ -299,8 +310,66 @@ class TestTask36FullHostStatementScenario:
 
         assert payout is not None
         assert payout.gross_cents == 400000  # 4 total charges of 100,000
-        assert payout.net_cents == 291000    # ৳2910 net payout
+        assert payout.net_cents == 291000  # ৳2910 net payout
 
-        closing_balance = HostLedger.objects.filter(host=host).aggregate(Sum('amount_cents'))['amount_cents__sum']
+        closing_balance = HostLedger.objects.filter(host=host).aggregate(Sum("amount_cents"))[
+            "amount_cents__sum"
+        ]
         assert closing_balance == 0
 
+
+@pytest.mark.django_db
+class TestTask36ProviderSwitchingAndSafety:
+    def test_provider_switching_retains_original_provider_on_existing_payments(
+        self, host, bdt_event_type
+    ):
+        """
+        A host using PayStation fallback later connects Stripe.
+        New bookings use Stripe, existing paid bookings retain PayStation so refunds route correctly.
+        """
+        HostPaymentTerms.objects.create(user=host, terms_version="1.0")
+
+        # Booking 1 created on PayStation route
+        booking1 = create_test_booking(bdt_event_type, offset_days=1)
+        payment1 = create_payment_for_booking(booking=booking1)
+        confirm_payment(payment_uid=str(payment1.uid))
+        assert payment1.provider == "paystation"
+
+        # Host connects Stripe
+        PaymentAccount.objects.create(
+            user=host,
+            provider="stripe_connect",
+            charges_enabled=True,
+            is_active=True,
+            external_account_id="acct_switch_1",
+        )
+
+        # Booking 2 created after Stripe connection
+        booking2 = create_test_booking(bdt_event_type, offset_days=2)
+        payment2 = create_payment_for_booking(booking=booking2)
+        assert payment2.provider == "stripe_connect"
+
+        # Refund on Booking 1 routes through PayStation and updates HostLedger
+        handle_refund(payment=payment1, amount_cents=100000)
+        payment1.refresh_from_db()
+        assert payment1.status == Payment.STATUS_REFUNDED
+        assert HostLedger.objects.filter(payment=payment1, entry_type="refund").exists()
+
+    def test_host_ledger_append_only_invariant(self, host, bdt_event_type):
+        """HostLedger entries cannot be updated or deleted."""
+        HostPaymentTerms.objects.create(user=host, terms_version="1.0")
+        booking = create_test_booking(bdt_event_type)
+        payment = create_payment_for_booking(booking=booking)
+        confirm_payment(payment_uid=str(payment.uid))
+
+        entry = HostLedger.objects.filter(host=host).first()
+        assert entry is not None
+
+        # Updating entry must raise ValueError
+        entry.amount_cents = 99999
+        with pytest.raises(ValueError, match="append-only"):
+            entry.save()
+
+        # Deleting entry must raise ValueError
+        with pytest.raises(ValueError, match="append-only"):
+            entry.delete()

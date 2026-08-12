@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -15,33 +14,85 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Subscription',
+            name="Subscription",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('plan_code', models.CharField(default='free', max_length=30)),
-                ('provider', models.CharField(choices=[('none', 'None'), ('stripe_billing', 'Stripe Billing'), ('paystation', 'PayStation')], default='none', max_length=30)),
-                ('status', models.CharField(choices=[('trialing', 'Trialing'), ('active', 'Active'), ('past_due', 'Past Due'), ('grace_period', 'Grace Period'), ('cancelled', 'Cancelled'), ('expired', 'Expired')], default='active', max_length=30)),
-                ('current_period_start', models.DateTimeField(blank=True, null=True)),
-                ('current_period_end', models.DateTimeField(blank=True, null=True)),
-                ('cancel_at_period_end', models.BooleanField(default=False)),
-                ('trial_ends_at', models.DateTimeField(blank=True, null=True)),
-                ('external_subscription_id', models.CharField(blank=True, db_index=True, max_length=255)),
-                ('external_customer_id', models.CharField(blank=True, max_length=255)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='subscription', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("plan_code", models.CharField(default="free", max_length=30)),
+                (
+                    "provider",
+                    models.CharField(
+                        choices=[
+                            ("none", "None"),
+                            ("stripe_billing", "Stripe Billing"),
+                            ("paystation", "PayStation"),
+                        ],
+                        default="none",
+                        max_length=30,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("trialing", "Trialing"),
+                            ("active", "Active"),
+                            ("past_due", "Past Due"),
+                            ("grace_period", "Grace Period"),
+                            ("cancelled", "Cancelled"),
+                            ("expired", "Expired"),
+                        ],
+                        default="active",
+                        max_length=30,
+                    ),
+                ),
+                ("current_period_start", models.DateTimeField(blank=True, null=True)),
+                ("current_period_end", models.DateTimeField(blank=True, null=True)),
+                ("cancel_at_period_end", models.BooleanField(default=False)),
+                ("trial_ends_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "external_subscription_id",
+                    models.CharField(blank=True, db_index=True, max_length=255),
+                ),
+                ("external_customer_id", models.CharField(blank=True, max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="subscription",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='SubscriptionEvent',
+            name="SubscriptionEvent",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('event_type', models.CharField(max_length=100)),
-                ('previous_status', models.CharField(blank=True, max_length=30)),
-                ('new_status', models.CharField(blank=True, max_length=30)),
-                ('payload', models.JSONField(blank=True, default=dict)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('subscription', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='events', to='subscriptions.subscription')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("event_type", models.CharField(max_length=100)),
+                ("previous_status", models.CharField(blank=True, max_length=30)),
+                ("new_status", models.CharField(blank=True, max_length=30)),
+                ("payload", models.JSONField(blank=True, default=dict)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "subscription",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="events",
+                        to="subscriptions.subscription",
+                    ),
+                ),
             ],
         ),
     ]

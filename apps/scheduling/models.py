@@ -1,22 +1,22 @@
-import datetime
 from zoneinfo import ZoneInfo
-from django.db import models, transaction
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db.models import Q, JSONField
-from apps.teams.models import Team
+from django.db import models, transaction
+from django.db.models import JSONField, Q
+
 from apps.accounts.validators import validate_timezone
+from apps.teams.models import Team
 
 # Availability rules are stored as NAIVE LOCAL TIMES plus a timezone on the parent Schedule.
-# They are NOT stored in UTC. This is deliberate. "I work 9am to 5pm" must remain 9am-to-5pm 
-# through daylight saving transitions. Conversion to UTC happens later in the slot engine, 
+# They are NOT stored in UTC. This is deliberate. "I work 9am to 5pm" must remain 9am-to-5pm
+# through daylight saving transitions. Conversion to UTC happens later in the slot engine,
 # per concrete date. Do not change this to store UTC!
+
 
 class Schedule(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="schedules"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="schedules"
     )
     name = models.CharField(max_length=100)
     timezone = models.CharField(max_length=64, validators=[validate_timezone])
@@ -29,7 +29,7 @@ class Schedule(models.Model):
             models.UniqueConstraint(
                 fields=["user"],
                 condition=Q(is_default=True),
-                name="unique_default_schedule_per_user"
+                name="unique_default_schedule_per_user",
             )
         ]
 
@@ -39,7 +39,9 @@ class Schedule(models.Model):
 
         if self.is_default:
             with transaction.atomic():
-                Schedule.objects.filter(user=self.user, is_default=True).exclude(pk=self.pk).update(is_default=False)
+                Schedule.objects.filter(user=self.user, is_default=True).exclude(pk=self.pk).update(
+                    is_default=False
+                )
                 super().save(*args, **kwargs)
         else:
             super().save(*args, **kwargs)
@@ -52,14 +54,19 @@ class Schedule(models.Model):
         super().clean()
         if self.pk is None:
             from apps.subscriptions.entitlements import within_limit
+
             count = Schedule.objects.filter(user=self.user).count()
-            if not within_limit(self.user, 'max_schedules', count):
+            if not within_limit(self.user, "max_schedules", count):
                 from django.core.exceptions import ValidationError
-                raise ValidationError({"name": "You have reached your plan limit for schedules. Upgrade to Pro for unlimited schedules."})
+
+                raise ValidationError(
+                    {
+                        "name": "You have reached your plan limit for schedules. Upgrade to Pro for unlimited schedules."
+                    }
+                )
 
     def __str__(self):
         return self.name
-
 
 
 class AvailabilityRule(models.Model):
@@ -72,11 +79,7 @@ class AvailabilityRule(models.Model):
         SATURDAY = 5, "Saturday"
         SUNDAY = 6, "Sunday"
 
-    schedule = models.ForeignKey(
-        Schedule,
-        on_delete=models.CASCADE,
-        related_name="rules"
-    )
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE, related_name="rules")
     # Weekday 0-6 where 0 is Monday, matching Python's date.weekday()
     weekday = models.IntegerField(choices=WeekdayChoices.choices)
     start_time = models.TimeField()
@@ -86,8 +89,7 @@ class AvailabilityRule(models.Model):
         ordering = ["weekday", "start_time"]
         constraints = [
             models.CheckConstraint(
-                condition=Q(end_time__gt=models.F("start_time")),
-                name="rule_end_time_gt_start_time"
+                condition=Q(end_time__gt=models.F("start_time")), name="rule_end_time_gt_start_time"
             )
         ]
         # Limitation: A rule cannot cross midnight. A shift like 22:00-02:00 must be entered as two rules on adjacent days.
@@ -97,11 +99,7 @@ class AvailabilityRule(models.Model):
 
 
 class DateOverride(models.Model):
-    schedule = models.ForeignKey(
-        Schedule,
-        on_delete=models.CASCADE,
-        related_name="overrides"
-    )
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE, related_name="overrides")
     date = models.DateField()
     is_unavailable = models.BooleanField(default=False)
     start_time = models.TimeField(null=True, blank=True)
@@ -112,17 +110,24 @@ class DateOverride(models.Model):
         constraints = [
             models.CheckConstraint(
                 condition=(
-                    Q(is_unavailable=True, start_time__isnull=True, end_time__isnull=True) |
-                    Q(is_unavailable=False, start_time__isnull=False, end_time__isnull=False, end_time__gt=models.F("start_time"))
+                    Q(is_unavailable=True, start_time__isnull=True, end_time__isnull=True)
+                    | Q(
+                        is_unavailable=False,
+                        start_time__isnull=False,
+                        end_time__isnull=False,
+                        end_time__gt=models.F("start_time"),
+                    )
                 ),
-                name="override_valid_times"
+                name="override_valid_times",
             )
         ]
 
     def __str__(self):
         if self.is_unavailable:
             return f"{self.date} (Unavailable)"
-        return f"{self.date} {self.start_time.strftime('%H:%M')} - {self.end_time.strftime('%H:%M')}"
+        return (
+            f"{self.date} {self.start_time.strftime('%H:%M')} - {self.end_time.strftime('%H:%M')}"
+        )
 
 
 class EventType(models.Model):
@@ -147,7 +152,9 @@ class EventType(models.Model):
         COLLECTIVE = "collective", "Collective"
         ROUND_ROBIN = "round_robin", "Round Robin"
 
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="event_types")
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="event_types"
+    )
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True)
     slug = models.SlugField(max_length=60)
     title = models.CharField(max_length=120)
@@ -162,7 +169,9 @@ class EventType(models.Model):
     buffer_after_minutes = models.PositiveIntegerField(default=0)
     minimum_notice_minutes = models.PositiveIntegerField(default=0)
 
-    window_type = models.CharField(max_length=30, choices=WindowTypeChoices.choices, default=WindowTypeChoices.ROLLING)
+    window_type = models.CharField(
+        max_length=30, choices=WindowTypeChoices.choices, default=WindowTypeChoices.ROLLING
+    )
     rolling_days = models.PositiveIntegerField(default=60)
     rolling_business_days_only = models.BooleanField(default=False)
     range_start = models.DateField(null=True, blank=True)
@@ -170,7 +179,9 @@ class EventType(models.Model):
 
     schedule = models.ForeignKey(Schedule, on_delete=models.SET_NULL, null=True, blank=True)
 
-    location_type = models.CharField(max_length=30, choices=LocationTypeChoices.choices, default=LocationTypeChoices.GOOGLE_MEET)
+    location_type = models.CharField(
+        max_length=30, choices=LocationTypeChoices.choices, default=LocationTypeChoices.GOOGLE_MEET
+    )
     location_value = models.CharField(max_length=500, blank=True)
 
     max_bookings_per_day = models.PositiveIntegerField(null=True, blank=True)
@@ -191,33 +202,43 @@ class EventType(models.Model):
 
     price_cents = models.PositiveIntegerField(default=0)
     currency = models.CharField(max_length=3, default="USD")
-    
+
     PAYMENT_PROVIDER_CHOICES = [
         ("stripe_connect", "Stripe Connect"),
         ("paystation", "PayStation"),
     ]
-    payment_provider = models.CharField(max_length=30, choices=PAYMENT_PROVIDER_CHOICES, null=True, blank=True)
+    payment_provider = models.CharField(
+        max_length=30, choices=PAYMENT_PROVIDER_CHOICES, null=True, blank=True
+    )
 
     resource_id = models.UUIDField(null=True, blank=True)
-    assignment_strategy = models.CharField(max_length=20, choices=AssignmentStrategyChoices.choices, default=AssignmentStrategyChoices.SINGLE)
+    assignment_strategy = models.CharField(
+        max_length=20,
+        choices=AssignmentStrategyChoices.choices,
+        default=AssignmentStrategyChoices.SINGLE,
+    )
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["owner", "slug"], name="unique_event_type_slug_per_owner"),
+            models.UniqueConstraint(
+                fields=["owner", "slug"], name="unique_event_type_slug_per_owner"
+            ),
             models.CheckConstraint(
-                condition=(
-                    Q(duration_minutes__gte=5, duration_minutes__lte=1440)
-                ),
-                name="event_type_valid_duration"
+                condition=(Q(duration_minutes__gte=5, duration_minutes__lte=1440)),
+                name="event_type_valid_duration",
             ),
             models.CheckConstraint(
                 condition=(
-                    Q(window_type="rolling", rolling_days__isnull=False) |
-                    Q(window_type="fixed_range", range_start__isnull=False, range_end__isnull=False) |
-                    Q(window_type="indefinite")
+                    Q(window_type="rolling", rolling_days__isnull=False)
+                    | Q(
+                        window_type="fixed_range",
+                        range_start__isnull=False,
+                        range_end__isnull=False,
+                    )
+                    | Q(window_type="indefinite")
                 ),
-                name="event_type_valid_window"
-            )
+                name="event_type_valid_window",
+            ),
         ]
 
     @property
@@ -245,10 +266,7 @@ class EventType(models.Model):
 
     @property
     def formatted_price(self):
-        if self.currency.upper() == "BDT":
-            amount = self.price_cents
-        else:
-            amount = self.price_cents / 100
+        amount = self.price_cents if self.currency.upper() == "BDT" else self.price_cents / 100
         formatted_amount = f"{int(amount):,}" if amount == int(amount) else f"{amount:,.2f}"
 
         if self.currency_symbol:
@@ -263,41 +281,60 @@ class EventType(models.Model):
 
     def clean(self):
         super().clean()
-        from apps.subscriptions.entitlements import within_limit, has_feature
+        from apps.subscriptions.entitlements import has_feature, within_limit
 
         if self.pk is None and self.is_active:
             active_count = EventType.objects.filter(owner=self.owner, is_active=True).count()
-            if not within_limit(self.owner, 'max_event_types', active_count):
+            if not within_limit(self.owner, "max_event_types", active_count):
                 from django.core.exceptions import ValidationError
-                raise ValidationError({"title": "You have reached your plan limit for active event types. Upgrade to Pro for unlimited event types."})
 
-        if self.is_paid and not has_feature(self.owner, 'paid_bookings'):
+                raise ValidationError(
+                    {
+                        "title": "You have reached your plan limit for active event types. Upgrade to Pro for unlimited event types."
+                    }
+                )
+
+        if self.is_paid and not has_feature(self.owner, "paid_bookings"):
             from django.core.exceptions import ValidationError
-            raise ValidationError({"price_cents": "Paid bookings require a Pro subscription. Upgrade to Pro to charge for meetings."})
+
+            raise ValidationError(
+                {
+                    "price_cents": "Paid bookings require a Pro subscription. Upgrade to Pro to charge for meetings."
+                }
+            )
 
         if self.payment_provider == "paystation":
             if self.currency.upper() != "BDT":
                 from django.core.exceptions import ValidationError
-                raise ValidationError({"payment_provider": "PayStation is only available for BDT currency."})
-            
+
+                raise ValidationError(
+                    {"payment_provider": "PayStation is only available for BDT currency."}
+                )
+
             from django.conf import settings
-            if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', True):
+
+            if not getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True):
                 from django.core.exceptions import ValidationError
-                raise ValidationError({"payment_provider": "PayStation is not enabled on this server."})
+
+                raise ValidationError(
+                    {"payment_provider": "PayStation is not enabled on this server."}
+                )
 
         if self.is_paid:
             from apps.payments.routing import select_provider
+
             provider = select_provider(self)
             if not provider:
                 from django.core.exceptions import ValidationError
-                raise ValidationError({
-                    "price_cents": (
-                        "No valid payment provider is available for this event type/currency. "
-                        "Please connect your Stripe account or accept Kairos PayStation terms for BDT bookings."
-                    )
-                })
 
-
+                raise ValidationError(
+                    {
+                        "price_cents": (
+                            "No valid payment provider is available for this event type/currency. "
+                            "Please connect your Stripe account or accept Kairos PayStation terms for BDT bookings."
+                        )
+                    }
+                )
 
     def __str__(self):
         return f"{self.title} ({self.duration_minutes} min)"
@@ -319,7 +356,9 @@ class BookingQuestion(models.Model):
     event_type = models.ForeignKey(EventType, on_delete=models.CASCADE, related_name="questions")
     label = models.CharField(max_length=200)
     help_text = models.CharField(max_length=300, blank=True)
-    field_type = models.CharField(max_length=20, choices=FieldTypeChoices.choices, default=FieldTypeChoices.TEXT)
+    field_type = models.CharField(
+        max_length=20, choices=FieldTypeChoices.choices, default=FieldTypeChoices.TEXT
+    )
     options = JSONField(default=list, blank=True)
     is_required = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=0)
@@ -329,12 +368,24 @@ class BookingQuestion(models.Model):
 
     def clean(self):
         super().clean()
-        if self.field_type in [self.FieldTypeChoices.SELECT, self.FieldTypeChoices.MULTISELECT, self.FieldTypeChoices.RADIO]:
+        if self.field_type in [
+            self.FieldTypeChoices.SELECT,
+            self.FieldTypeChoices.MULTISELECT,
+            self.FieldTypeChoices.RADIO,
+        ]:
             if not isinstance(self.options, list) or len(self.options) < 2:
-                raise ValidationError({"options": "Select, multiselect, and radio fields require at least two options."})
+                raise ValidationError(
+                    {
+                        "options": "Select, multiselect, and radio fields require at least two options."
+                    }
+                )
         else:
             if self.options and len(self.options) > 0:
-                raise ValidationError({"options": f"Field type {self.get_field_type_display()} does not support options."})
+                raise ValidationError(
+                    {
+                        "options": f"Field type {self.get_field_type_display()} does not support options."
+                    }
+                )
 
     def __str__(self):
         return self.label

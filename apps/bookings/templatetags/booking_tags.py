@@ -1,21 +1,24 @@
-from django import template
 import zoneinfo
 from datetime import datetime
+
+from django import template
 from django.utils import timezone as django_timezone
 
 register = template.Library()
+
 
 @register.filter
 def astimezone(value, tz_name):
     if not isinstance(value, datetime):
         return value
     if not tz_name:
-        tz_name = 'UTC'
+        tz_name = "UTC"
     try:
         tz = zoneinfo.ZoneInfo(tz_name)
         return value.astimezone(tz)
     except Exception:
         return value
+
 
 @register.filter
 def relative_time(value):
@@ -41,6 +44,7 @@ def relative_time(value):
             return "yesterday"
         else:
             return f"{diff.days} days ago"
+
 
 @register.filter
 def split(value, arg):

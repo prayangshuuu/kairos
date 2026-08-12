@@ -1,20 +1,17 @@
 from datetime import timedelta
-from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import ValidationError
-from django.test import RequestFactory
 from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.scheduling.models import EventType, Schedule
 from apps.subscriptions.entitlements import (
-    get_user_subscription,
     has_feature,
     within_limit,
 )
-from apps.subscriptions.models import Subscription, SubscriptionEvent
+from apps.subscriptions.models import Subscription
 from apps.subscriptions.services import (
     check_and_process_paystation_renewals_and_grace,
     process_stripe_subscription_webhook,
@@ -43,8 +40,7 @@ def user(db):
 @pytest.fixture
 def free_subscription(user):
     sub, _ = Subscription.objects.get_or_create(
-        user=user,
-        defaults={'plan_code': 'free', 'status': Subscription.STATUS_ACTIVE}
+        user=user, defaults={"plan_code": "free", "status": Subscription.STATUS_ACTIVE}
     )
     return sub
 
@@ -52,7 +48,7 @@ def free_subscription(user):
 @pytest.fixture
 def pro_subscription(user):
     sub, _ = Subscription.objects.get_or_create(user=user)
-    sub.plan_code = 'pro'
+    sub.plan_code = "pro"
     sub.status = Subscription.STATUS_ACTIVE
     sub.current_period_start = timezone.now()
     sub.current_period_end = timezone.now() + timedelta(days=30)
@@ -62,7 +58,6 @@ def pro_subscription(user):
 
 @pytest.mark.django_db
 class TestServiceLayerEnforcement:
-
     def test_free_user_cannot_create_second_event_type(self, user, free_subscription):
         """Free user cannot create a second active event type via model/clean (service layer)."""
         # First event type: valid
@@ -102,17 +97,13 @@ class TestServiceLayerEnforcement:
 
         assert "Paid bookings require a Pro subscription" in str(exc_info.value)
 
-    def test_pro_user_can_create_multiple_event_types_and_paid_bookings(self, user, pro_subscription):
+    def test_pro_user_can_create_multiple_event_types_and_paid_bookings(
+        self, user, pro_subscription
+    ):
         """Pro user can create unlimited event types and paid bookings."""
-        et1 = EventType.objects.create(
-            owner=user, title="Event 1", slug="event-1", duration_minutes=30
-        )
-        et2 = EventType.objects.create(
-            owner=user, title="Event 2", slug="event-2", duration_minutes=30
-        )
-        et3 = EventType(
-            owner=user, title="Event 3", slug="event-3", duration_minutes=30
-        )
+        EventType.objects.create(owner=user, title="Event 1", slug="event-1", duration_minutes=30)
+        EventType.objects.create(owner=user, title="Event 2", slug="event-2", duration_minutes=30)
+        et3 = EventType(owner=user, title="Event 3", slug="event-3", duration_minutes=30)
         et3.clean()
         et3.save()
 
@@ -121,8 +112,9 @@ class TestServiceLayerEnforcement:
 
 @pytest.mark.django_db
 class TestGrandfathering:
-
-    def test_lapsed_subscription_hides_extra_event_types_without_deleting(self, user, pro_subscription):
+    def test_lapsed_subscription_hides_extra_event_types_without_deleting(
+        self, user, pro_subscription
+    ):
         """
         A lapsed subscription hides extra event types (is_active=False) beyond free limit,
         without deleting them from the database.
@@ -137,7 +129,7 @@ class TestGrandfathering:
         assert EventType.objects.filter(owner=user, is_active=True).count() == 3
 
         # Lapse subscription to Free
-        pro_subscription.plan_code = 'free'
+        pro_subscription.plan_code = "free"
         pro_subscription.status = Subscription.STATUS_EXPIRED
         pro_subscription.save()
 
@@ -171,20 +163,19 @@ class TestGrandfathering:
 
 @pytest.mark.django_db
 class TestStripeDunning:
-
     def test_failed_stripe_payment_marks_past_due_without_downgrading(self, user, pro_subscription):
         """
         On Stripe invoice.payment_failed:
         Mark status as past_due, do NOT downgrade plan_code immediately.
         Downgrade only when customer.subscription.deleted is received.
         """
-        pro_subscription.external_customer_id = 'cus_test123'
+        pro_subscription.external_customer_id = "cus_test123"
         pro_subscription.save()
 
         event_data = {
-            'id': 'evt_failed_1',
-            'type': 'invoice.payment_failed',
-            'data': {'object': {'customer': 'cus_test123'}}
+            "id": "evt_failed_1",
+            "type": "invoice.payment_failed",
+            "data": {"object": {"customer": "cus_test123"}},
         }
 
         with patch("apps.core.mail.send_kairos_email"):
@@ -192,46 +183,46 @@ class TestStripeDunning:
 
         pro_subscription.refresh_from_db()
         assert pro_subscription.status == Subscription.STATUS_PAST_DUE
-        assert pro_subscription.plan_code == 'pro'  # Kept Pro during dunning
-        assert pro_subscription.effective_plan_code == 'pro'
+        assert pro_subscription.plan_code == "pro"  # Kept Pro during dunning
+        assert pro_subscription.effective_plan_code == "pro"
 
         # Now simulate Stripe cancelling subscription after retries exhaust
         deleted_event_data = {
-            'id': 'evt_deleted_1',
-            'type': 'customer.subscription.deleted',
-            'data': {'object': {'customer': 'cus_test123'}}
+            "id": "evt_deleted_1",
+            "type": "customer.subscription.deleted",
+            "data": {"object": {"customer": "cus_test123"}},
         }
         process_stripe_subscription_webhook(deleted_event_data)
 
         pro_subscription.refresh_from_db()
         assert pro_subscription.status == Subscription.STATUS_EXPIRED
-        assert pro_subscription.plan_code == 'free'
-        assert pro_subscription.effective_plan_code == 'free'
+        assert pro_subscription.plan_code == "free"
+        assert pro_subscription.effective_plan_code == "free"
 
 
 @pytest.mark.django_db
 class TestEntitlementCaching:
-
-    def test_entitlement_checks_are_cached_per_user_instance(self, user, free_subscription, django_assert_num_queries):
+    def test_entitlement_checks_are_cached_per_user_instance(
+        self, user, free_subscription, django_assert_num_queries
+    ):
         """Entitlement checks cache user._cached_subscription to prevent repeated DB queries."""
         # Reset cache if any
-        if hasattr(user, '_cached_subscription'):
-            delattr(user, '_cached_subscription')
+        if hasattr(user, "_cached_subscription"):
+            delattr(user, "_cached_subscription")
 
         # First call loads subscription from DB (1 query)
         with django_assert_num_queries(1):
-            assert has_feature(user, 'paid_bookings') is False
+            assert has_feature(user, "paid_bookings") is False
 
         # Subsequent 5 calls use cached subscription (0 queries)
         with django_assert_num_queries(0):
             for _ in range(5):
-                has_feature(user, 'paid_bookings')
-                within_limit(user, 'max_event_types', 0)
+                has_feature(user, "paid_bookings")
+                within_limit(user, "max_event_types", 0)
 
 
 @pytest.mark.django_db
 class TestPayStationGracePeriod:
-
     def test_paystation_grace_period_and_expiration(self, user):
         """
         A BDT PayStation subscription past period_end enters a 7-day grace period.
@@ -247,14 +238,14 @@ class TestPayStationGracePeriod:
 
         # Check entitlement during grace period: valid & active
         assert sub.is_valid_or_active() is True
-        assert has_feature(user, 'paid_bookings') is True
+        assert has_feature(user, "paid_bookings") is True
 
         # Process Celery task -> status transitions to STATUS_GRACE_PERIOD
         check_and_process_paystation_renewals_and_grace()
 
         sub.refresh_from_db()
         assert sub.status == Subscription.STATUS_GRACE_PERIOD
-        assert sub.effective_plan_code == 'pro'
+        assert sub.effective_plan_code == "pro"
 
         # Advance period_end to 8 days ago (beyond 7-day grace)
         sub.current_period_end = now - timedelta(days=8)
@@ -267,5 +258,5 @@ class TestPayStationGracePeriod:
 
         sub.refresh_from_db()
         assert sub.status == Subscription.STATUS_EXPIRED
-        assert sub.plan_code == 'free'
-        assert sub.effective_plan_code == 'free'
+        assert sub.plan_code == "free"
+        assert sub.effective_plan_code == "free"

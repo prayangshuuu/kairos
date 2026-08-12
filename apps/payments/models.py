@@ -1,10 +1,14 @@
 import uuid
-from django.db import models
+
 from django.conf import settings
+from django.db import models
+
 
 class PaymentAccount(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payment_accounts')
-    provider = models.CharField(max_length=30, default='stripe_connect')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payment_accounts"
+    )
+    provider = models.CharField(max_length=30, default="stripe_connect")
     external_account_id = models.CharField(max_length=255, unique=True, db_index=True)
     charges_enabled = models.BooleanField(default=False)
     payouts_enabled = models.BooleanField(default=False)
@@ -19,32 +23,39 @@ class PaymentAccount(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['user', 'provider'], name='unique_payment_account_per_user_provider')
+            models.UniqueConstraint(
+                fields=["user", "provider"], name="unique_payment_account_per_user_provider"
+            )
         ]
 
     def __str__(self):
         return f"{self.user.email} ({self.provider}:{self.external_account_id})"
 
+
 class Payment(models.Model):
-    STATUS_PENDING = 'PENDING'
-    STATUS_COMPLETED = 'COMPLETED'
-    STATUS_FAILED = 'FAILED'
-    STATUS_REFUNDED = 'REFUNDED'
-    STATUS_PARTIALLY_REFUNDED = 'PARTIALLY_REFUNDED'
-    STATUS_DISPUTED = 'DISPUTED'
+    STATUS_PENDING = "PENDING"
+    STATUS_COMPLETED = "COMPLETED"
+    STATUS_FAILED = "FAILED"
+    STATUS_REFUNDED = "REFUNDED"
+    STATUS_PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED"
+    STATUS_DISPUTED = "DISPUTED"
 
     STATUS_CHOICES = [
-        (STATUS_PENDING, 'Pending'),
-        (STATUS_COMPLETED, 'Completed'),
-        (STATUS_FAILED, 'Failed'),
-        (STATUS_REFUNDED, 'Refunded'),
-        (STATUS_PARTIALLY_REFUNDED, 'Partially Refunded'),
-        (STATUS_DISPUTED, 'Disputed'),
+        (STATUS_PENDING, "Pending"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_REFUNDED, "Refunded"),
+        (STATUS_PARTIALLY_REFUNDED, "Partially Refunded"),
+        (STATUS_DISPUTED, "Disputed"),
     ]
 
     uid = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
-    booking = models.ForeignKey('bookings.Booking', on_delete=models.PROTECT, related_name='payments')
-    payment_account = models.ForeignKey(PaymentAccount, on_delete=models.PROTECT, null=True, blank=True)
+    booking = models.ForeignKey(
+        "bookings.Booking", on_delete=models.PROTECT, related_name="payments"
+    )
+    payment_account = models.ForeignKey(
+        PaymentAccount, on_delete=models.PROTECT, null=True, blank=True
+    )
     provider = models.CharField(max_length=30)
     invoice_number = models.CharField(max_length=100, unique=True, db_index=True)
     amount_cents = models.PositiveIntegerField()
@@ -66,10 +77,13 @@ class Payment(models.Model):
     def __str__(self):
         return f"Payment {self.uid} ({self.status})"
 
+
 class SlotHold(models.Model):
     uid = models.UUIDField(default=uuid.uuid4, unique=True)
-    booking = models.OneToOneField('bookings.Booking', on_delete=models.CASCADE, related_name='slot_hold')
-    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, related_name='slot_holds')
+    booking = models.OneToOneField(
+        "bookings.Booking", on_delete=models.CASCADE, related_name="slot_hold"
+    )
+    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, related_name="slot_holds")
     expires_at = models.DateTimeField(db_index=True)
     is_released = models.BooleanField(default=False)
     released_at = models.DateTimeField(null=True, blank=True)
@@ -78,6 +92,7 @@ class SlotHold(models.Model):
 
     def __str__(self):
         return f"Hold {self.uid} for booking {self.booking_id}"
+
 
 class ProcessedWebhook(models.Model):
     event_id = models.CharField(max_length=255, unique=True, db_index=True)
@@ -88,39 +103,51 @@ class ProcessedWebhook(models.Model):
     def __str__(self):
         return f"{self.provider}:{self.event_id}"
 
+
 class ReconciliationFlag(models.Model):
-    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, related_name='reconciliation_flags')
+    payment = models.ForeignKey(
+        Payment, on_delete=models.CASCADE, related_name="reconciliation_flags"
+    )
     flag_type = models.CharField(max_length=50)
     description = models.TextField()
     local_state = models.JSONField(default=dict)
     remote_state = models.JSONField(default=dict)
     resolved = models.BooleanField(default=False)
     resolved_at = models.DateTimeField(null=True, blank=True)
-    resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Reconciliation: {self.flag_type} for Payment {self.payment.uid}"
 
+
 # IMPORTANT NOTICE REGARDING PAYSTATION FALLBACK ROUTE:
-# Operating this PayStation fallback route at scale involves money-transmission and regulatory licensing 
+# Operating this PayStation fallback route at scale involves money-transmission and regulatory licensing
 # questions because Kairos collects funds into its own merchant account on behalf of hosts.
 # Before operating this route in production, the legal position must be confirmed with a qualified professional.
 # This codebase assumes, but does not establish, that this regulatory position is settled.
 
+
 class HostPaymentTerms(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payment_terms_accepted')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payment_terms_accepted"
+    )
     terms_version = models.CharField(max_length=20, default="1.0")
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     accepted_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['user', 'terms_version'], name='unique_host_terms_version')
+            models.UniqueConstraint(
+                fields=["user", "terms_version"], name="unique_host_terms_version"
+            )
         ]
 
     def __str__(self):
         return f"{self.user.email} accepted terms v{self.terms_version} on {self.accepted_at}"
+
 
 class Payout(models.Model):
     STATUS_CHOICES = [
@@ -129,7 +156,9 @@ class Payout(models.Model):
         ("FAILED", "Failed"),
     ]
 
-    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payouts')
+    host = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payouts"
+    )
     period_start = models.DateTimeField()
     period_end = models.DateTimeField()
     gross_cents = models.PositiveIntegerField(default=0)
@@ -144,6 +173,7 @@ class Payout(models.Model):
     def __str__(self):
         return f"Payout {self.id} for {self.host.email} ({self.status})"
 
+
 class HostLedger(models.Model):
     ENTRY_TYPES = [
         ("charge", "Charge"),
@@ -156,15 +186,30 @@ class HostLedger(models.Model):
         ("adjustment", "Adjustment"),
     ]
 
-    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ledger_entries')
-    payment = models.ForeignKey('Payment', on_delete=models.PROTECT, null=True, blank=True, related_name='ledger_entries')
-    payout = models.ForeignKey(Payout, on_delete=models.PROTECT, null=True, blank=True, related_name='ledger_entries')
+    host = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="ledger_entries"
+    )
+    payment = models.ForeignKey(
+        "Payment", on_delete=models.PROTECT, null=True, blank=True, related_name="ledger_entries"
+    )
+    payout = models.ForeignKey(
+        Payout, on_delete=models.PROTECT, null=True, blank=True, related_name="ledger_entries"
+    )
     entry_type = models.CharField(max_length=30, choices=ENTRY_TYPES)
-    amount_cents = models.IntegerField()  # Negative for fees, payouts, and refunds; positive for charges and fee reversals
+    amount_cents = (
+        models.IntegerField()
+    )  # Negative for fees, payouts, and refunds; positive for charges and fee reversals
     currency = models.CharField(max_length=3, default="BDT")
     description = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            raise ValueError("HostLedger is append-only. Existing entries cannot be updated.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("HostLedger is append-only. Existing entries cannot be deleted.")
+
     def __str__(self):
         return f"{self.entry_type} {self.amount_cents} {self.currency} (Host: {self.host.email})"
-

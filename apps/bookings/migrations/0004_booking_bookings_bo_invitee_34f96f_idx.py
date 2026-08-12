@@ -5,17 +5,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bookings', '0003_booking_approved_at_booking_approved_by_and_more'),
-        ('scheduling', '0006_eventtype_confirmation_deadline_hours'),
-        ('teams', '0001_initial'),
+        ("bookings", "0003_booking_approved_at_booking_approved_by_and_more"),
+        ("scheduling", "0006_eventtype_confirmation_deadline_hours"),
+        ("teams", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='booking',
-            index=models.Index(fields=['invitee_name'], name='bookings_bo_invitee_34f96f_idx'),
+            model_name="booking",
+            index=models.Index(fields=["invitee_name"], name="bookings_bo_invitee_34f96f_idx"),
         ),
     ]

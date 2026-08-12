@@ -1,9 +1,18 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
 
 class PageView(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="page_views")
-    event_type = models.ForeignKey("scheduling.EventType", on_delete=models.CASCADE, null=True, blank=True, related_name="page_views")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="page_views"
+    )
+    event_type = models.ForeignKey(
+        "scheduling.EventType",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="page_views",
+    )
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
     referrer = models.CharField(max_length=500, blank=True)
 

@@ -10,14 +10,14 @@ All Stripe API calls are mocked. These tests verify:
   6. Refunds also refund the application fee proportionally
   7. Event type currency validation against connected account
 """
+
 import json
-import uuid
 from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 import pytest
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import override_settings
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -98,7 +98,6 @@ def payment_account(host):
 @pytest.fixture
 def booking_with_payment(paid_event_type, payment_account):
     """Create a booking in pending_payment state with a Payment and SlotHold."""
-    from psycopg.types.range import Range
 
     start = timezone.now() + timedelta(days=1)
     end = start + timedelta(minutes=30)
@@ -159,22 +158,22 @@ class TestWebhookSignatureRejection:
         )
         assert ProcessedWebhook.objects.count() == 0
 
-    def test_invalid_signature_does_not_confirm_booking(
-        self, client, booking_with_payment
-    ):
+    def test_invalid_signature_does_not_confirm_booking(self, client, booking_with_payment):
         """An invalid webhook does not confirm any booking."""
         booking, payment = booking_with_payment
 
-        payload = json.dumps({
-            "id": "evt_test123",
-            "type": "checkout.session.completed",
-            "data": {
-                "object": {
-                    "client_reference_id": str(payment.uid),
-                    "payment_intent": "pi_test123",
-                }
-            },
-        })
+        payload = json.dumps(
+            {
+                "id": "evt_test123",
+                "type": "checkout.session.completed",
+                "data": {
+                    "object": {
+                        "client_reference_id": str(payment.uid),
+                        "payment_intent": "pi_test123",
+                    }
+                },
+            }
+        )
 
         client.post(
             "/payments/webhooks/stripe-connect/",
@@ -195,9 +194,7 @@ class TestWebhookSignatureRejection:
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestWebhookRedirectOrdering:
-    def test_webhook_first_then_redirect_produces_one_confirmation(
-        self, booking_with_payment
-    ):
+    def test_webhook_first_then_redirect_produces_one_confirmation(self, booking_with_payment):
         """Webhook arrives first, then browser redirect — exactly one confirmation."""
         booking, payment = booking_with_payment
 
@@ -216,9 +213,7 @@ class TestWebhookRedirectOrdering:
         booking.refresh_from_db()
         assert booking.status == Booking.StatusChoices.CONFIRMED
 
-    def test_redirect_first_then_webhook_produces_one_confirmation(
-        self, booking_with_payment
-    ):
+    def test_redirect_first_then_webhook_produces_one_confirmation(self, booking_with_payment):
         """Browser redirect arrives first, then webhook — exactly one confirmation."""
         booking, payment = booking_with_payment
 
@@ -315,11 +310,8 @@ class TestPlatformFeeFreezing:
         KAIROS_PLATFORM_FEE_FIXED_CENTS=0,
         KAIROS_PLATFORM_FEE_MIN_CENTS=50,
     )
-    def test_fee_does_not_change_when_settings_change(
-        self, paid_event_type, payment_account
-    ):
+    def test_fee_does_not_change_when_settings_change(self, paid_event_type, payment_account):
         """Platform fee stored on Payment does not change when fee setting changes."""
-        from psycopg.types.range import Range
 
         start = timezone.now() + timedelta(days=1)
         end = start + timedelta(minutes=30)
@@ -413,11 +405,10 @@ class TestCheckoutExpiration:
         hold = SlotHold.objects.get(payment=payment)
 
         # Backdate the hold to be expired
-        SlotHold.objects.filter(pk=hold.pk).update(
-            expires_at=timezone.now() - timedelta(minutes=1)
-        )
+        SlotHold.objects.filter(pk=hold.pk).update(expires_at=timezone.now() - timedelta(minutes=1))
 
         from apps.payments.tasks import release_expired_slot_holds
+
         release_expired_slot_holds()
 
         hold.refresh_from_db()
@@ -452,7 +443,8 @@ class TestRefundWithFee:
         mock_stripe.Refund.create.return_value = mock_refund
 
         from apps.payments.services import handle_refund
-        result = handle_refund(payment=payment)
+
+        handle_refund(payment=payment)
 
         # Verify refund_application_fee=True was passed
         mock_stripe.Refund.create.assert_called_once_with(
@@ -482,7 +474,8 @@ class TestRefundWithFee:
         mock_stripe.Refund.create.return_value = mock_refund
 
         from apps.payments.services import handle_refund
-        result = handle_refund(payment=payment, amount_cents=2500)
+
+        handle_refund(payment=payment, amount_cents=2500)
 
         payment.refresh_from_db()
         assert payment.status == Payment.STATUS_PARTIALLY_REFUNDED
@@ -610,6 +603,7 @@ class TestDisputeHandling:
         confirm_payment(payment_uid=str(payment.uid))
 
         from apps.payments.services import handle_dispute
+
         dispute_data = {
             "id": "dp_test123",
             "charge": "ch_test123",
@@ -707,8 +701,10 @@ class TestProviderCheckout:
 
         # Verify direct charge: stripe_account passed
         call_kwargs = mock_stripe.checkout.Session.create.call_args
-        assert call_kwargs.kwargs.get('stripe_account') == "acct_test123" or \
-               call_kwargs[1].get('stripe_account') == "acct_test123"
+        assert (
+            call_kwargs.kwargs.get("stripe_account") == "acct_test123"
+            or call_kwargs[1].get("stripe_account") == "acct_test123"
+        )
 
     @patch("apps.payments.providers.stripe")
     def test_create_checkout_sets_application_fee(self, mock_stripe, booking_with_payment):
@@ -730,8 +726,8 @@ class TestProviderCheckout:
 
         call_kwargs = mock_stripe.checkout.Session.create.call_args
         all_kwargs = call_kwargs.kwargs if call_kwargs.kwargs else call_kwargs[1]
-        pid = all_kwargs.get('payment_intent_data', {})
-        assert pid.get('application_fee_amount') == payment.fee_amount_cents
+        pid = all_kwargs.get("payment_intent_data", {})
+        assert pid.get("application_fee_amount") == payment.fee_amount_cents
 
     @patch("apps.payments.providers.stripe")
     def test_create_checkout_sets_idempotency_key(self, mock_stripe, booking_with_payment):
@@ -753,4 +749,4 @@ class TestProviderCheckout:
 
         call_kwargs = mock_stripe.checkout.Session.create.call_args
         all_kwargs = call_kwargs.kwargs if call_kwargs.kwargs else call_kwargs[1]
-        assert all_kwargs.get('idempotency_key') == f"checkout_{payment.invoice_number}"
+        assert all_kwargs.get("idempotency_key") == f"checkout_{payment.invoice_number}"

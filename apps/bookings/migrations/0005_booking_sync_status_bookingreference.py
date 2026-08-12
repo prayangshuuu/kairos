@@ -5,33 +5,74 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bookings', '0004_booking_bookings_bo_invitee_34f96f_idx'),
-        ('integrations', '0003_selectedcalendar_busyblock_and_more'),
+        ("bookings", "0004_booking_bookings_bo_invitee_34f96f_idx"),
+        ("integrations", "0003_selectedcalendar_busyblock_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='booking',
-            name='sync_status',
-            field=models.CharField(choices=[('pending', 'Pending'), ('synced', 'Synced'), ('failed', 'Failed'), ('not_applicable', 'Not Applicable')], default='not_applicable', max_length=20),
+            model_name="booking",
+            name="sync_status",
+            field=models.CharField(
+                choices=[
+                    ("pending", "Pending"),
+                    ("synced", "Synced"),
+                    ("failed", "Failed"),
+                    ("not_applicable", "Not Applicable"),
+                ],
+                default="not_applicable",
+                max_length=20,
+            ),
         ),
         migrations.CreateModel(
-            name='BookingReference',
+            name="BookingReference",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('external_event_id', models.CharField(max_length=255)),
-                ('external_calendar_id', models.CharField(max_length=255)),
-                ('meeting_url', models.URLField(blank=True)),
-                ('kind', models.CharField(choices=[('calendar_event', 'Calendar Event'), ('video_conference', 'Video Conference')], max_length=50)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('booking', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='references', to='bookings.booking')),
-                ('connection', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='integrations.calendarconnection')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("external_event_id", models.CharField(max_length=255)),
+                ("external_calendar_id", models.CharField(max_length=255)),
+                ("meeting_url", models.URLField(blank=True)),
+                (
+                    "kind",
+                    models.CharField(
+                        choices=[
+                            ("calendar_event", "Calendar Event"),
+                            ("video_conference", "Video Conference"),
+                        ],
+                        max_length=50,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "booking",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="references",
+                        to="bookings.booking",
+                    ),
+                ),
+                (
+                    "connection",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="integrations.calendarconnection",
+                    ),
+                ),
             ],
             options={
-                'constraints': [models.UniqueConstraint(fields=('booking', 'kind'), name='unique_booking_reference_kind')],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("booking", "kind"), name="unique_booking_reference_kind"
+                    )
+                ],
             },
         ),
     ]

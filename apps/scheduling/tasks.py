@@ -1,10 +1,13 @@
+import logging
+from datetime import timedelta
+
 from celery import shared_task
 from django.utils import timezone
-from datetime import timedelta
+
 from apps.scheduling.models import DateOverride
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 @shared_task
 def auto_delete_expired_date_overrides():

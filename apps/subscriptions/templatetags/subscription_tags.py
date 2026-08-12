@@ -1,5 +1,6 @@
 from django import template
-from apps.subscriptions.entitlements import has_feature, within_limit, get_effective_plan_code
+
+from apps.subscriptions.entitlements import get_effective_plan_code, has_feature, within_limit
 from apps.subscriptions.plans import get_plan
 
 register = template.Library()

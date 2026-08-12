@@ -5,22 +5,38 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('integrations', '0001_initial'),
+        ("integrations", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='NotificationLog',
+            name="NotificationLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('kind', models.CharField(max_length=100)),
-                ('sent_at', models.DateTimeField(auto_now_add=True)),
-                ('connection', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to='integrations.calendarconnection')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("kind", models.CharField(max_length=100)),
+                ("sent_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "connection",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="notifications",
+                        to="integrations.calendarconnection",
+                    ),
+                ),
             ],
             options={
-                'constraints': [models.UniqueConstraint(fields=('connection', 'kind'), name='unique_notification_kind_per_connection')],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("connection", "kind"),
+                        name="unique_notification_kind_per_connection",
+                    )
+                ],
             },
         ),
     ]

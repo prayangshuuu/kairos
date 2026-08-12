@@ -28,12 +28,12 @@ def process_checkout_completed(event_data: dict):
     The same confirm_payment() function is called by the browser redirect
     return view. Whichever arrives second is a no-op.
     """
-    session = event_data.get('data', {}).get('object', {})
-    payment_uid = session.get('client_reference_id')
+    session = event_data.get("data", {}).get("object", {})
+    payment_uid = session.get("client_reference_id")
 
     if not payment_uid:
         # Also check metadata as fallback
-        payment_uid = session.get('metadata', {}).get('payment_uid')
+        payment_uid = session.get("metadata", {}).get("payment_uid")
 
     if not payment_uid:
         logger.error(
@@ -43,13 +43,13 @@ def process_checkout_completed(event_data: dict):
         return
 
     try:
-        payment = confirm_payment(payment_uid=payment_uid)
+        confirm_payment(payment_uid=payment_uid)
 
         # Store the external IDs if not already set
-        if session.get('payment_intent'):
+        if session.get("payment_intent"):
             Payment.objects.filter(uid=payment_uid).update(
-                external_payment_intent_id=session['payment_intent'],
-                external_session_id=session.get('id', ''),
+                external_payment_intent_id=session["payment_intent"],
+                external_session_id=session.get("id", ""),
             )
 
         logger.info(f"checkout.session.completed processed for payment {payment_uid}")
@@ -63,8 +63,10 @@ def process_checkout_completed(event_data: dict):
 @shared_task
 def process_checkout_expired(event_data: dict):
     """Handle checkout.session.expired — release the SlotHold."""
-    session = event_data.get('data', {}).get('object', {})
-    payment_uid = session.get('client_reference_id') or session.get('metadata', {}).get('payment_uid')
+    session = event_data.get("data", {}).get("object", {})
+    payment_uid = session.get("client_reference_id") or session.get("metadata", {}).get(
+        "payment_uid"
+    )
 
     if not payment_uid:
         logger.error(
@@ -86,9 +88,9 @@ def process_checkout_expired(event_data: dict):
 @shared_task
 def process_charge_refunded(event_data: dict):
     """Handle charge.refunded — update Payment status."""
-    charge = event_data.get('data', {}).get('object', {})
-    charge_id = charge.get('id', '')
-    payment_intent_id = charge.get('payment_intent', '')
+    charge = event_data.get("data", {}).get("object", {})
+    charge_id = charge.get("id", "")
+    payment_intent_id = charge.get("payment_intent", "")
 
     payment = None
     if charge_id:
@@ -102,8 +104,8 @@ def process_charge_refunded(event_data: dict):
         )
         return
 
-    refunded_amount = charge.get('amount_refunded', 0)
-    total_amount = charge.get('amount', 0)
+    refunded_amount = charge.get("amount_refunded", 0)
+    total_amount = charge.get("amount", 0)
 
     if refunded_amount >= total_amount:
         payment.status = Payment.STATUS_REFUNDED
@@ -111,7 +113,7 @@ def process_charge_refunded(event_data: dict):
         payment.status = Payment.STATUS_PARTIALLY_REFUNDED
 
     payment.refund_amount_cents = refunded_amount
-    payment.save(update_fields=['status', 'refund_amount_cents', 'updated_at'])
+    payment.save(update_fields=["status", "refund_amount_cents", "updated_at"])
     logger.info(f"charge.refunded: Payment {payment.uid} -> {payment.status}")
 
 
@@ -122,19 +124,25 @@ def process_dispute_created(event_data: dict):
     The host is merchant of record on direct charges. They handle the dispute,
     NOT Kairos.
     """
-    dispute = event_data.get('data', {}).get('object', {})
-    charge_id = dispute.get('charge', '')
+    dispute = event_data.get("data", {}).get("object", {})
+    charge_id = dispute.get("charge", "")
 
     if not charge_id:
         logger.error("charge.dispute.created: no charge_id in dispute data")
         return
 
-    payment = Payment.objects.filter(external_charge_id=charge_id).select_related('booking__host').first()
+    payment = (
+        Payment.objects.filter(external_charge_id=charge_id).select_related("booking__host").first()
+    )
     if not payment:
         # Try via payment_intent
-        pi = dispute.get('payment_intent', '')
+        pi = dispute.get("payment_intent", "")
         if pi:
-            payment = Payment.objects.filter(external_payment_intent_id=pi).select_related('booking__host').first()
+            payment = (
+                Payment.objects.filter(external_payment_intent_id=pi)
+                .select_related("booking__host")
+                .first()
+            )
 
     if not payment:
         logger.error(f"charge.dispute.created: Payment not found for charge {charge_id}")
@@ -142,7 +150,7 @@ def process_dispute_created(event_data: dict):
 
     handle_dispute(payment=payment, dispute_data=dispute)
 
-    deadline = dispute.get('evidence_details', {}).get('due_by')
+    deadline = dispute.get("evidence_details", {}).get("due_by")
     booking = payment.booking
     logger.warning(
         f"DISPUTE on payment {payment.uid}, booking {booking.uid}. "
@@ -157,16 +165,14 @@ def process_account_updated(event_data: dict):
 
     This is how we learn that onboarding completed or capabilities were revoked.
     """
-    account_data = event_data.get('data', {}).get('object', {})
-    external_account_id = account_data.get('id', '')
+    account_data = event_data.get("data", {}).get("object", {})
+    external_account_id = account_data.get("id", "")
 
     if not external_account_id:
         logger.error("account.updated: no account id in event data")
         return
 
-    payment_account = PaymentAccount.objects.filter(
-        external_account_id=external_account_id
-    ).first()
+    payment_account = PaymentAccount.objects.filter(external_account_id=external_account_id).first()
 
     if not payment_account:
         logger.error(f"account.updated: PaymentAccount not found for {external_account_id}")
@@ -189,7 +195,7 @@ def release_expired_slot_holds():
     expired_holds = SlotHold.objects.filter(
         expires_at__lte=now,
         is_released=False,
-    ).select_related('payment')
+    ).select_related("payment")
 
     count = 0
     for hold in expired_holds:
@@ -218,8 +224,8 @@ def reconcile_payments():
             Payment.STATUS_PARTIALLY_REFUNDED,
         ],
         created_at__gte=three_days_ago,
-        provider='stripe_connect',
-    ).select_related('payment_account')
+        provider="stripe_connect",
+    ).select_related("payment_account")
 
     provider = StripeConnectProvider()
     checked = 0
@@ -229,9 +235,7 @@ def reconcile_payments():
         checked += 1
         try:
             connected_account_id = (
-                payment.payment_account.external_account_id
-                if payment.payment_account
-                else None
+                payment.payment_account.external_account_id if payment.payment_account else None
             )
 
             if payment.external_session_id:
@@ -239,18 +243,18 @@ def reconcile_payments():
                     payment.external_session_id,
                     connected_account_id=connected_account_id,
                 )
-                remote_payment_status = session_status.get('payment_status', '')
+                remote_payment_status = session_status.get("payment_status", "")
 
                 # Detect mismatch: we say COMPLETED but Stripe says unpaid
-                if remote_payment_status == 'unpaid' and payment.status == Payment.STATUS_COMPLETED:
+                if remote_payment_status == "unpaid" and payment.status == Payment.STATUS_COMPLETED:
                     ReconciliationFlag.objects.create(
                         payment=payment,
-                        flag_type='status_mismatch',
+                        flag_type="status_mismatch",
                         description=(
                             f"Local status is {payment.status} but Stripe session "
                             f"payment_status is '{remote_payment_status}'."
                         ),
-                        local_state={'status': payment.status},
+                        local_state={"status": payment.status},
                         remote_state=session_status,
                     )
                     mismatches += 1

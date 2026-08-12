@@ -1,17 +1,18 @@
-import uuid
 import datetime
-from django.db import models
+import uuid
+
 from django.conf import settings
-from django.db.models import Q
-from django.contrib.postgres.fields import DateTimeRangeField
 from django.contrib.postgres.constraints import ExclusionConstraint
-from django.contrib.postgres.fields import RangeOperators
+from django.contrib.postgres.fields import DateTimeRangeField, RangeOperators
+from django.db import models
+from django.db.models import Q
 from psycopg.types.range import Range
 
-from apps.teams.models import Team
 from apps.scheduling.models import EventType
+from apps.teams.models import Team
 
 BLOCKING_STATUSES = ("pending", "pending_payment", "confirmed")
+
 
 class Booking(models.Model):
     class StatusChoices(models.TextChoices):
@@ -32,7 +33,7 @@ class Booking(models.Model):
         HOST = "host", "Host"
         INVITEE = "invitee", "Invitee"
         SYSTEM = "system", "System"
-        
+
     class LocationTypeChoices(models.TextChoices):
         GOOGLE_MEET = "google_meet", "Google Meet"
         ZOOM = "zoom", "Zoom"
@@ -45,9 +46,11 @@ class Booking(models.Model):
 
     uid = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
     event_type = models.ForeignKey(EventType, on_delete=models.PROTECT, related_name="bookings")
-    
+
     # 2. People & Identity
-    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="hosted_bookings")
+    host = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="hosted_bookings"
+    )
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True)
     resource_id = models.UUIDField(null=True, blank=True)
     client_id = models.UUIDField(null=True, blank=True)
@@ -57,7 +60,9 @@ class Booking(models.Model):
     buffered_period = DateTimeRangeField()
     invitee_timezone = models.CharField(max_length=64)
 
-    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.CONFIRMED)
+    status = models.CharField(
+        max_length=20, choices=StatusChoices.choices, default=StatusChoices.CONFIRMED
+    )
 
     invitee_name = models.CharField(max_length=150)
     invitee_email = models.EmailField(db_index=True)
@@ -71,16 +76,24 @@ class Booking(models.Model):
     cancellation_reason = models.TextField(blank=True)
     cancelled_by = models.CharField(max_length=20, choices=CancelledByChoices.choices, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
-    rescheduled_from = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="rescheduled_to")
-    
-    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    rescheduled_from = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="rescheduled_to"
+    )
+
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
     approved_at = models.DateTimeField(null=True, blank=True)
-    rejected_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    rejected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
     rejected_at = models.DateTimeField(null=True, blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    sync_status = models.CharField(max_length=20, choices=SyncStatusChoices.choices, default=SyncStatusChoices.NOT_APPLICABLE)
+    sync_status = models.CharField(
+        max_length=20, choices=SyncStatusChoices.choices, default=SyncStatusChoices.NOT_APPLICABLE
+    )
 
     class Meta:
         indexes = [
@@ -89,10 +102,9 @@ class Booking(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                condition=Q(end_at__gt=models.F("start_at")),
-                name="booking_end_time_gt_start_time"
+                condition=Q(end_at__gt=models.F("start_at")), name="booking_end_time_gt_start_time"
             ),
-            # Note: This constraint prevents double-booking for the host. 
+            # Note: This constraint prevents double-booking for the host.
             # Group events with seats_per_slot > 1 will need different handling later.
             ExclusionConstraint(
                 name="no_overlapping_bookings_per_host",
@@ -100,8 +112,8 @@ class Booking(models.Model):
                     ("host", RangeOperators.EQUAL),
                     ("buffered_period", RangeOperators.OVERLAPS),
                 ],
-                condition=Q(status__in=BLOCKING_STATUSES)
-            )
+                condition=Q(status__in=BLOCKING_STATUSES),
+            ),
         ]
 
     def save(self, *args, **kwargs):
@@ -111,19 +123,17 @@ class Booking(models.Model):
                 et = self.event_type
                 buffer_before = datetime.timedelta(minutes=et.buffer_before_minutes)
                 buffer_after = datetime.timedelta(minutes=et.buffer_after_minutes)
-                
+
                 # Use half-open range '[)'
                 self.buffered_period = Range(
-                    self.start_at - buffer_before,
-                    self.end_at + buffer_after,
-                    bounds="[)"
+                    self.start_at - buffer_before, self.end_at + buffer_after, bounds="[)"
                 )
             except EventType.DoesNotExist:
                 # Fallback if somehow event_type is not available in memory and we can't fetch it
                 self.buffered_period = Range(self.start_at, self.end_at, bounds="[)")
         elif self.start_at and self.end_at:
-             self.buffered_period = Range(self.start_at, self.end_at, bounds="[)")
-             
+            self.buffered_period = Range(self.start_at, self.end_at, bounds="[)")
+
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -160,26 +170,36 @@ class NotificationLog(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["booking", "kind"], name="unique_notification_kind_per_booking")
+            models.UniqueConstraint(
+                fields=["booking", "kind"], name="unique_notification_kind_per_booking"
+            )
         ]
 
     def __str__(self):
         return f"{self.kind} for {self.booking_id}"
 
+
 class BookingReference(models.Model):
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="references")
-    connection = models.ForeignKey("integrations.CalendarConnection", on_delete=models.SET_NULL, null=True, blank=True)
+    connection = models.ForeignKey(
+        "integrations.CalendarConnection", on_delete=models.SET_NULL, null=True, blank=True
+    )
     external_event_id = models.CharField(max_length=255)
     external_calendar_id = models.CharField(max_length=255)
     meeting_url = models.URLField(blank=True)
-    kind = models.CharField(max_length=50, choices=(("calendar_event", "Calendar Event"), ("video_conference", "Video Conference")))
-    
+    kind = models.CharField(
+        max_length=50,
+        choices=(("calendar_event", "Calendar Event"), ("video_conference", "Video Conference")),
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["booking", "kind"], name="unique_booking_reference_kind")
+            models.UniqueConstraint(
+                fields=["booking", "kind"], name="unique_booking_reference_kind"
+            )
         ]
 
     def __str__(self):

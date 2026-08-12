@@ -1,15 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
 from dataclasses import dataclass
+
 from apps.bookings.models import Booking, BookingReference
+
 
 @dataclass
 class MeetingDetails:
     url: str
     id: str
     provider_name: str
-    password: Optional[str] = None
-    dial_in_numbers: Optional[list[str]] = None
+    password: str | None = None
+    dial_in_numbers: list[str] | None = None
+
 
 class ConferenceProvider(ABC):
     @abstractmethod

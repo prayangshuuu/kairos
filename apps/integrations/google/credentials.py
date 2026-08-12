@@ -1,24 +1,26 @@
 import datetime
 import logging
-from django.utils import timezone
-from django.db import transaction
+
 from django.conf import settings
-from google.oauth2.credentials import Credentials
+from django.db import transaction
+from django.utils import timezone
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from requests.exceptions import RequestException
 
-from apps.integrations.models import CalendarConnection
 from apps.integrations.google.exceptions import TerminalGoogleApiError, TransientGoogleApiError
+from apps.integrations.models import CalendarConnection
 
 logger = logging.getLogger(__name__)
+
 
 # CRITICAL: Never construct Credentials anywhere else in the codebase.
 # Every Google API call must go through this function to ensure token lifecycle is managed properly.
 def get_valid_credentials(connection: CalendarConnection) -> Credentials:
     """
     Returns valid Google API credentials for the given CalendarConnection.
-    
+
     If the access token expires in more than 5 minutes, it is returned unchanged.
     Otherwise, it is refreshed using the stored refresh token.
     The new access token and expiry are persisted immediately in a transaction.
@@ -43,7 +45,7 @@ def get_valid_credentials(connection: CalendarConnection) -> Credentials:
         with transaction.atomic():
             # Re-fetch connection with a lock
             locked_conn = CalendarConnection.objects.select_for_update().get(id=connection.id)
-            
+
             # Check again in case another thread just refreshed it
             if locked_conn.access_token and locked_conn.token_expires_at:
                 margin = datetime.timedelta(minutes=5)
@@ -85,20 +87,24 @@ def get_valid_credentials(connection: CalendarConnection) -> Credentials:
 
             # Update and save the tokens
             locked_conn.access_token = creds.token
-            locked_conn.token_expires_at = creds.expiry.replace(tzinfo=datetime.timezone.utc) if creds.expiry else None
-            
+            locked_conn.token_expires_at = (
+                creds.expiry.replace(tzinfo=datetime.UTC) if creds.expiry else None
+            )
+
             if creds.refresh_token and creds.refresh_token != locked_conn.refresh_token:
                 locked_conn.refresh_token = creds.refresh_token
-                
-            locked_conn.save(update_fields=['access_token', 'token_expires_at', 'refresh_token', 'updated_at'])
-            
+
+            locked_conn.save(
+                update_fields=["access_token", "token_expires_at", "refresh_token", "updated_at"]
+            )
+
             connection.access_token = locked_conn.access_token
             connection.token_expires_at = locked_conn.token_expires_at
             connection.refresh_token = locked_conn.refresh_token
-            
+
             return creds
     except TerminalGoogleApiError as e:
         from apps.integrations.tasks import handle_terminal_connection_error
+
         handle_terminal_connection_error(connection.id, str(e))
         raise
-

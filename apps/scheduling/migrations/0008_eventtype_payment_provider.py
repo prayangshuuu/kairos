@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('scheduling', '0007_alter_eventtype_location_type'),
+        ("scheduling", "0007_alter_eventtype_location_type"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='eventtype',
-            name='payment_provider',
-            field=models.CharField(blank=True, choices=[('stripe_connect', 'Stripe Connect'), ('paystation', 'PayStation')], max_length=30, null=True),
+            model_name="eventtype",
+            name="payment_provider",
+            field=models.CharField(
+                blank=True,
+                choices=[("stripe_connect", "Stripe Connect"), ("paystation", "PayStation")],
+                max_length=30,
+                null=True,
+            ),
         ),
     ]
