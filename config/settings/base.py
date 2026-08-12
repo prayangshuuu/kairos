@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "apps.teams.apps.TeamsConfig",
     "apps.analytics.apps.AnalyticsConfig",
     "apps.subscriptions.apps.SubscriptionsConfig",
+    "apps.workflows.apps.WorkflowsConfig",
 ]
 
 

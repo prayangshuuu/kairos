@@ -25,4 +25,8 @@ app.conf.beat_schedule = {
         "task": "apps.payments.tasks.reconcile_payments",
         "schedule": crontab(hour=3, minute=0),  # daily at 3 AM
     },
+    "process_due_workflow_executions": {
+        "task": "apps.workflows.tasks.process_due_workflow_executions",
+        "schedule": crontab(),  # every minute
+    },
 }

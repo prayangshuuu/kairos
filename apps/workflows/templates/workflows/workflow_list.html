@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Workflows & Reminders — Kairos{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto py-8 px-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Workflows & Automated Reminders</h1>
+            <p class="text-gray-600 text-sm mt-1">Configure automated email, SMS, and notification sequences before and after meetings.</p>
+        </div>
+        <div>
+            <a href="{% url 'workflows:create' %}" class="inline-flex items-center px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 shadow-sm transition-all">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Create Workflow
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Workflows Grid -->
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Your Workflows</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        {% for wf in workflows %}
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow relative flex flex-col justify-between">
+            <div>
+                <div class="flex items-start justify-between gap-2 mb-3">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h3 class="font-bold text-gray-900 text-base">{{ wf.name }}</h3>
+                            {% if wf.is_default %}
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-medium">Default</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Trigger: <span class="font-medium text-gray-700">{{ wf.get_trigger_display }}</span> |
+                            Offset: <span class="font-medium text-gray-700">{% if wf.offset_minutes < 0 %}{{ wf.offset_minutes|abs }} mins before{% elif wf.offset_minutes > 0 %}{{ wf.offset_minutes }} mins after{% else %}Immediately{% endif %}</span>
+                        </p>
+                    </div>
+
+                    <!-- Active Toggle Switch -->
+                    <form action="{% url 'workflows:toggle' wf.id %}" method="post" hx-post="{% url 'workflows:toggle' wf.id %}" hx-swap="outerHTML">
+                        {% csrf_token %}
+                        <button type="submit" class="focus:outline-none">
+                            {% if wf.is_active %}
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium uppercase bg-green-100 text-green-800">Active</span>
+                            {% else %}
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium uppercase bg-gray-100 text-gray-600">Inactive</span>
+                            {% endif %}
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Steps preview -->
+                <div class="space-y-2 mt-4 pt-3 border-t border-gray-100 text-xs text-gray-600">
+                    {% for step in wf.steps.all %}
+                    <div class="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-100">
+                        <span class="font-medium text-gray-800">{{ step.get_channel_display }} to {{ step.get_recipient_display }}</span>
+                        <span class="text-gray-500 font-mono italic text-[11px] truncate max-w-[200px]">{{ step.subject_template|default:"(No subject)" }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Actions Footer -->
+            <div class="mt-5 pt-3 border-t border-gray-100 flex items-center justify-end space-x-3 text-xs">
+                <a href="{% url 'workflows:edit' wf.id %}" class="text-teal-600 hover:text-teal-800 font-medium">Edit</a>
+                <form action="{% url 'workflows:duplicate' wf.id %}" method="post" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-gray-600 hover:text-gray-900 font-medium">Duplicate</button>
+                </form>
+                {% if not wf.is_default %}
+                <form action="{% url 'workflows:delete' wf.id %}" method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete this workflow?');">
+                    {% csrf_token %}
+                    <button type="submit" class="text-red-600 hover:text-red-800 font-medium">Delete</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-2 bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
+            No workflows found. Click "Create Workflow" above to set up automated reminders.
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Execution Log Monitor -->
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Workflow Executions</h2>
+    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
+                <tr>
+                    <th class="py-3 px-4">Scheduled Time</th>
+                    <th class="py-3 px-4">Workflow</th>
+                    <th class="py-3 px-4">Invitee / Booking</th>
+                    <th class="py-3 px-4">Channel</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4 text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 text-gray-700">
+                {% for ex in executions %}
+                <tr>
+                    <td class="py-3 px-4 font-mono text-xs text-gray-500">{{ ex.scheduled_for|date:"Y-m-d H:i" }}</td>
+                    <td class="py-3 px-4 font-medium text-gray-900">{{ ex.workflow.name }}</td>
+                    <td class="py-3 px-4 text-xs">
+                        <div>{{ ex.booking.invitee_name }}</div>
+                        <div class="text-gray-400 font-mono">{{ ex.booking.event_type.title }}</div>
+                    </td>
+                    <td class="py-3 px-4 text-xs capitalize">{{ ex.step.channel }}</td>
+                    <td class="py-3 px-4 text-xs">
+                        {% if ex.status == 'sent' %}
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-800">Sent</span>
+                        {% elif ex.status == 'scheduled' %}
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">Scheduled</span>
+                        {% elif ex.status == 'skipped' %}
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">Skipped</span>
+                        {% elif ex.status == 'cancelled' %}
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Cancelled</span>
+                        {% else %}
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800" title="{{ ex.error }}">Failed</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4 text-right text-xs">
+                        {% if ex.status == 'failed' %}
+                        <form action="{% url 'workflows:retry_execution' ex.id %}" method="post" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100">Retry</button>
+                        </form>
+                        {% else %}
+                            <span class="text-gray-400">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="py-6 text-center text-gray-500 text-sm">No workflow executions recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

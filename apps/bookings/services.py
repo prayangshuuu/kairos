@@ -187,6 +187,10 @@ def reschedule_booking(
 
         # Copy Attendees
         from apps.bookings.models import Attendee
+        from apps.workflows.services import schedule_workflow_executions_for_booking
+
+        schedule_workflow_executions_for_booking(new_booking, now=now)
+        schedule_workflow_executions_for_booking(new_booking, trigger="on_booking_rescheduled", now=now)
 
         for attendee in booking.attendees.all():
             Attendee.objects.create(
@@ -201,7 +205,8 @@ def reschedule_booking(
         from apps.bookings.ics import generate_ics_for_booking
         from apps.core.tasks import send_email_async
 
-        ics_data = generate_ics_for_booking(new_booking).decode("utf-8")
+        ics_res = generate_ics_for_booking(new_booking)
+        ics_data = ics_res.decode("utf-8") if isinstance(ics_res, bytes) else ics_res
         host_tz = new_booking.host.timezone
         invitee_tz = new_booking.invitee_timezone or "UTC"
         context = {
@@ -287,6 +292,11 @@ def cancel_booking(
                 "updated_at",
             ]
         )
+
+        # Cancel pending workflow executions
+        from apps.workflows.services import cancel_workflow_executions_for_booking, schedule_workflow_executions_for_booking
+        cancel_workflow_executions_for_booking(booking)
+        schedule_workflow_executions_for_booking(booking, trigger="on_booking_cancelled", now=now)
 
         # [HOOK: Refund logic goes here in a later task]
         # [HOOK: Google Calendar event deletion goes here in a later task]
@@ -428,6 +438,10 @@ def create_booking(
                 Attendee.objects.create(
                     booking=booking, name=guest_email, email=guest_email, is_organizer=False
                 )
+
+            # Schedule Workflow Executions
+            from apps.workflows.services import schedule_workflow_executions_for_booking
+            schedule_workflow_executions_for_booking(booking, now=now)
 
             if status == Booking.StatusChoices.CONFIRMED:
                 from apps.bookings.tasks import process_booking_confirmation

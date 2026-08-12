@@ -1,0 +1,22 @@
+{% if error_message %}
+    <div class="text-red-600 bg-red-50 p-3 rounded border border-red-200 text-xs font-mono">
+        <strong>Error:</strong> {{ error_message }}
+    </div>
+{% else %}
+    {% if rendered_subject %}
+    <div class="mb-2 pb-2 border-b border-gray-200">
+        <span class="text-xs text-gray-500 font-medium uppercase block">Subject:</span>
+        <span class="font-semibold text-gray-900">{{ rendered_subject }}</span>
+    </div>
+    {% endif %}
+    {% if rendered_body %}
+    <div>
+        <span class="text-xs text-gray-500 font-medium uppercase block mb-1">Body Preview:</span>
+        <div class="whitespace-pre-line text-gray-800 bg-white p-3 rounded border border-gray-100 font-sans text-xs leading-relaxed">
+            {{ rendered_body }}
+        </div>
+    </div>
+    {% else %}
+    <p class="text-gray-400 italic">No body template content provided.</p>
+    {% endif %}
+{% endif %}
