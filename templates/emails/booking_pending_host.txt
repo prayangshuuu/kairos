@@ -9,5 +9,5 @@ WHAT: {{ event_title }}
 WHEN: {{ start_at|date:"l, j F Y" }} at {{ start_at|date:"g:i A" }} - {{ end_at|date:"g:i A" }} ({{ host_tz }})
       {{ invitee_name }}'s time: {{ start_at|date:"g:i A" }} ({{ invitee_tz }})
 
-Go to your dashboard to approve or reject: https://joinkairos.me/dashboard/bookings/
+Go to your dashboard to approve or reject: https://joinkairos.tech/dashboard/bookings/
 {% endblock %}

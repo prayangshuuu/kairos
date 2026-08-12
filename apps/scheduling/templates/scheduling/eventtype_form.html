@@ -99,7 +99,7 @@
                     <label for="id_slug" class="block text-sm font-medium text-gray-700">URL Slug <span class="text-red-500">*</span></label>
                     <div class="mt-1 flex rounded-md shadow-sm">
                         <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
-                            joinkairos.me/{{ request.user.slug|default:'u/'|add:request.user.id|stringformat:'s' }}/
+                            joinkairos.tech/{{ request.user.slug|default:'u/'|add:request.user.id|stringformat:'s' }}/
                         </span>
                         <input type="text" name="slug" id="id_slug" x-model="slug" required class="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                                hx-get="{% url 'scheduling:eventtype_check_slug' %}{% if object %}?exclude_id={{ object.id }}{% endif %}"

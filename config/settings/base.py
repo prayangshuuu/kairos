@@ -272,7 +272,7 @@ RATELIMIT_VIEW = 'apps.core.views.custom_bad_request'
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
 GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
 GOOGLE_OAUTH_REDIRECT_URI = env("GOOGLE_OAUTH_REDIRECT_URI", default="http://localhost:8000/dashboard/integrations/google/callback/")
-WEBHOOK_BASE_URL = env("WEBHOOK_BASE_URL", default="https://api.joinkairos.me")
+WEBHOOK_BASE_URL = env("WEBHOOK_BASE_URL", default="https://api.joinkairos.tech")
 
 # OAuth Token Encryption Key (32 url-safe base64-encoded bytes)
 # Note: Rotating this key invalidates EVERY stored token and requires all users to reconnect.
@@ -310,8 +310,8 @@ EMAIL_PORT = int(env("EMAIL_PORT", default="587"))
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="resend")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Kairos <hello@mail.joinkairos.me>")
-SERVER_EMAIL = env("SERVER_EMAIL", default="server@mail.joinkairos.me")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Kairos <hello@mail.joinkairos.tech>")
+SERVER_EMAIL = env("SERVER_EMAIL", default="server@mail.joinkairos.tech")
 
 if DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

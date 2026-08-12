@@ -32,7 +32,7 @@ def generate_ics_for_booking(booking: Booking) -> str:
         "CALSCALE:GREGORIAN",
         "METHOD:REQUEST",
         "BEGIN:VEVENT",
-        f"UID:{booking.uid}@joinkairos.me",
+        f"UID:{booking.uid}@joinkairos.tech",
         f"DTSTAMP:{dtstamp}",
         f"DTSTART:{dtstart}",
         f"DTEND:{dtend}",

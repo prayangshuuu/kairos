@@ -13,5 +13,5 @@ This cancellation was made by {{ host_name }}.
 Reason: "{{ reason }}"
 {% endif %}
 
-You can book a new time here: https://joinkairos.me/{{ host_name|slugify }}
+You can book a new time here: https://joinkairos.tech/{{ host_name|slugify }}
 {% endblock %}

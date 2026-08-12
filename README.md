@@ -35,11 +35,11 @@ To create a quick test user for testing the dashboard and onboarding flows, run 
 
 ```python
 from apps.accounts.models import User
-user = User.objects.create_user(email="test@joinkairos.me", password="password")
+user = User.objects.create_user(email="test@joinkairos.tech", password="password")
 ```
 
 You can then log in at `http://127.0.0.1:8000/accounts/login/` with:
-- **Email**: `test@joinkairos.me`
+- **Email**: `test@joinkairos.tech`
 - **Password**: `password`
 
 ## Local Google Calendar Webhooks
@@ -67,9 +67,12 @@ Google Calendar Push Notifications require a publicly accessible HTTPS endpoint 
 A default superuser has been created for accessing the Django admin interface at `http://127.0.0.1:8000/admin/`.
 
 You can log in with:
-- **Email**: `admin@joinkairos.me`
+- **Email**: `admin@joinkairos.tech`
 - **Password**: `adminpassword`
 
 
 ## Zoom Integration
 Note: The Zoom app is currently under review by Zoom. You can use it in development mode.
+
+---
+Footer: 2026 Prayangshu Biswas Hritwick (https://prayangshu.com) & Dwimik Software (https://www.dwimiksoftware.com)

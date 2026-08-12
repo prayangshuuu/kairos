@@ -317,7 +317,7 @@ def create_calendar_event(self, booking_id: int):
             },
             'source': {
                 'title': 'Kairos Booking',
-                'url': f"https://joinkairos.me/booking/{booking.uid}/" # Example URL
+                'url': f"https://joinkairos.tech/booking/{booking.uid}/" # Example URL
             }
         }
         
@@ -436,7 +436,7 @@ def register_watch(calendar_id: int):
     
     # We need a publicly reachable webhook URL.
     # For local dev, this must be an ngrok URL.
-    webhook_url = getattr(settings, 'WEBHOOK_BASE_URL', 'https://api.joinkairos.me') + "/webhook/google/calendar/"
+    webhook_url = getattr(settings, 'WEBHOOK_BASE_URL', 'https://api.joinkairos.tech') + "/webhook/google/calendar/"
     
     channel_id = str(uuid.uuid4())
     token = str(uuid.uuid4())

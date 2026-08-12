@@ -1,8 +1,8 @@
 # Kairos Email Deliverability Setup
 
-To ensure transactional emails (booking confirmations, etc.) land in users' inboxes and not their spam folders, you must configure DNS records for your domain (`joinkairos.me`). We use [Resend](https://resend.com) as our transactional email provider.
+To ensure transactional emails (booking confirmations, etc.) land in users' inboxes and not their spam folders, you must configure DNS records for your domain (`joinkairos.tech`). We use [Resend](https://resend.com) as our transactional email provider.
 
-We use a dedicated subdomain for sending emails (`mail.joinkairos.me`) to isolate transactional email reputation from the root domain.
+We use a dedicated subdomain for sending emails (`mail.joinkairos.tech`) to isolate transactional email reputation from the root domain.
 
 ## Required DNS Records
 
@@ -12,7 +12,7 @@ Please add the following records to your domain's DNS settings (e.g., Cloudflare
 **Why it matters:** SPF tells receiving mail servers which services are authorized to send email on behalf of your domain, preventing spoofing.
 
 * **Type:** `TXT` (or `MX` depending on Resend setup)
-* **Name:** `mail` (or `mail.joinkairos.me` depending on your DNS provider)
+* **Name:** `mail` (or `mail.joinkairos.tech` depending on your DNS provider)
 * **Value:** `v=spf1 include:amazonses.com ~all` *(Note: Follow Resend's exact instructions in the dashboard)*
 
 ### 2. DKIM (DomainKeys Identified Mail)
@@ -27,6 +27,6 @@ Please add the following records to your domain's DNS settings (e.g., Cloudflare
 
 * **Type:** `TXT`
 * **Name:** `_dmarc.mail`
-* **Value:** `v=DMARC1; p=none; rua=mailto:postmaster@joinkairos.me;`
+* **Value:** `v=DMARC1; p=none; rua=mailto:postmaster@joinkairos.tech;`
 
 *(Note: We start at `p=none` for monitoring. After a few weeks of monitoring reports, tighten to `p=quarantine` or `p=reject` to protect your domain.)*

@@ -1,7 +1,7 @@
 {% block content %}{% endblock %}
 
 --
-Powered by Kairos (https://joinkairos.me)
+Powered by Kairos (https://joinkairos.tech)
 {% if not is_transactional %}
 You can unsubscribe at any time.
 {% endif %}

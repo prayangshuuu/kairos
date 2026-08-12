@@ -7,5 +7,5 @@ We were unable to connect to your {{ provider }} calendar. This usually happens 
 
 To prevent double-booking and ensure new meetings are added to your calendar, please reconnect it as soon as possible.
 
-Reconnect your calendar: https://joinkairos.me/dashboard/integrations/
+Reconnect your calendar: https://joinkairos.tech/dashboard/integrations/
 {% endblock %}

@@ -7,5 +7,5 @@ Your payment of {{ currency }} {{ amount }} for "{{ event_title }}" with {{ host
 
 Because payment failed, this meeting has not been confirmed. Please try booking again with a different payment method.
 
-Book again: https://joinkairos.me/{{ host_slug }}
+Book again: https://joinkairos.tech/{{ host_slug }}
 {% endblock %}
