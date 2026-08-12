@@ -225,6 +225,28 @@ class EventType(models.Model):
         return self.price_cents > 0
 
     @property
+    def currency_symbol(self):
+        return {
+            "USD": "$",
+            "EUR": "€",
+            "GBP": "£",
+            "BDT": "৳",
+        }.get(self.currency.upper(), "")
+
+    @property
+    def formatted_price(self):
+        if self.currency.upper() == "BDT":
+            amount = self.price_cents
+            formatted_amount = f"{amount:,.2f}" if amount % 1 else f"{amount:,}"
+            return f"৳{formatted_amount} BDT"
+
+        amount = self.price_cents / 100
+        formatted_amount = f"{amount:,.2f}"
+        if self.currency_symbol:
+            return f"{self.currency_symbol}{formatted_amount} {self.currency.upper()}"
+        return f"{formatted_amount} {self.currency.upper()}"
+
+    @property
     def public_url(self):
         if self.owner.slug:
             return f"/{self.owner.slug}/{self.slug}"

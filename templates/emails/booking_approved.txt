@@ -1,0 +1,15 @@
+{% extends "emails/base.txt" %}
+{% load tz %}
+
+{% block content %}
+Request Approved
+
+Hi {{ invitee_name }},
+
+Your booking request for {{ event_title }} with {{ host_name }} has been approved.
+
+When: {% timezone invitee_tz %}{{ start_at|date:"l, F j, Y, g:i A" }}{% endtimezone %} ({{ invitee_tz }})
+Where: {{ location_type }}
+
+Join Meeting: {{ meeting_url }}
+{% endblock %}

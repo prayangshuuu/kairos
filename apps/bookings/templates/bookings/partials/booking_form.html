@@ -1,11 +1,11 @@
 {% load tz %}
-<div id="slots-partial" class="w-full flex flex-col h-full border-l border-surface-200 pl-4 sm:pl-6 md:ml-6" aria-live="polite">
+<div id="slots-partial" class="w-full flex flex-col h-full border-t border-surface-200 pt-6 md:border-l md:border-t-0 md:pl-6 md:pt-0" aria-live="polite">
   
   <div class="mb-6 sticky top-0 bg-white z-10 pb-4 border-b border-surface-100">
     <button hx-get="?partial=slots&tz={{ visitor_tz|urlencode }}&year={{ slot_time.year }}&month={{ slot_time.month }}&day={{ slot_time.day }}"
             hx-target="#slots-partial"
             hx-swap="outerHTML"
-            class="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center mb-4 transition-colors">
+            class="text-brand-600 hover:text-brand-700 font-medium text-sm flex items-center mb-4 transition-colors">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><polyline points="15 18 9 12 15 6"></polyline></svg>
       Back
     </button>
@@ -52,7 +52,7 @@
           <div x-data="{ emails: [], newEmail: '', addEmail() { if(this.newEmail && this.emails.length < 10 && this.newEmail.includes('@')) { this.emails.push(this.newEmail); this.newEmail = ''; } }, removeEmail(i) { this.emails.splice(i, 1); } }" x-init="if($el.querySelector('input[name=guest_emails]').value) { try { emails = JSON.parse($el.querySelector('input[name=guest_emails]').value); } catch(e){} }">
             <label class="block text-sm font-semibold text-surface-700 mb-1">Guest Emails</label>
             <div class="flex space-x-2 mb-3">
-              <input type="email" x-model="newEmail" @keydown.enter.prevent="addEmail()" class="block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" placeholder="Add guest email">
+              <input type="email" x-model="newEmail" @keydown.enter.prevent="addEmail()" class="block w-full rounded-md border-surface-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm" placeholder="Add guest email">
               <button type="button" @click="addEmail()" class="px-4 py-2 bg-surface-100 hover:bg-surface-200 text-surface-700 rounded-md text-sm font-medium transition-colors">Add</button>
             </div>
             <template x-for="(email, index) in emails" :key="index">
@@ -104,7 +104,7 @@
     
     <div class="pt-4 pb-12">
       <button type="submit" 
-              class="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-colors relative group"
+              class="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-50 transition-colors relative group"
               onclick="this.classList.add('pointer-events-none')">
         <span class="htmx-indicator absolute left-4">
           <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -113,9 +113,9 @@
           </svg>
         </span>
         {% if event.is_paid %}
-          Confirm and pay {{ event.price_cents|divisibleby:100|yesno:"0," }}{{ event.price_cents }} {{ event.currency }}
+          Schedule meeting and pay {{ event.formatted_price }}
         {% else %}
-          Confirm Booking
+          Schedule meeting
         {% endif %}
       </button>
     </div>

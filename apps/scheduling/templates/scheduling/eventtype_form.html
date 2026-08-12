@@ -24,10 +24,10 @@
                 Preview
             </a>
             {% endif %}
-            <button type="submit" form="event-type-form" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            <button type="submit" form="event-type-form" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
                     :disabled="isSubmitting"
-                    x-text="isSubmitting ? 'Saving...' : 'Save'">
-                Save
+                    x-text="isSubmitting ? 'Updating...' : '{% if object %}Update settings{% else %}Create event type{% endif %}'">
+                {% if object %}Update settings{% else %}Create event type{% endif %}
             </button>
         </div>
     </div>
@@ -64,7 +64,7 @@
     <form id="event-type-form" 
           method="POST" 
           hx-post="{% if object %}{% url 'scheduling:eventtype_edit' object.slug %}{% else %}{% url 'scheduling:eventtype_create' %}{% endif %}"
-          hx-swap="outerHTML" 
+          hx-swap="{% if object %}none{% else %}outerHTML{% endif %}" 
           @htmx:before-request="isSubmitting = true" 
           @htmx:after-request="isSubmitting = false; isDirty = false"
           @htmx:response-error="handleError($event)"
@@ -460,9 +460,9 @@
                     
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label for="id_price_cents" class="block text-sm font-medium text-gray-700">Price (in cents/poisha)</label>
+                            <label for="id_price_cents" class="block text-sm font-medium text-gray-700">Price</label>
                             <input type="number" name="price_cents" id="id_price_cents" value="{{ form.price_cents.value|default:0 }}" min="0" class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md shadow-sm">
-                            <p class="mt-1 text-xs text-gray-500">Set to 0 for free meetings. For ৳1000, enter 100000.</p>
+                            <p class="mt-1 text-xs text-gray-500">Set to 0 for free meetings. For BDT, enter the taka amount, e.g. 100 means ৳100.</p>
                             {% if form.price_cents.errors %}<p class="mt-1 text-sm text-red-600">{{ form.price_cents.errors.0 }}</p>{% endif %}
                         </div>
                         <div>
@@ -494,11 +494,13 @@
             </div>
         </div>
 
-        <div class="mt-8 pt-5 border-t border-gray-200 flex justify-end">
-            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        <div class="mt-8 pt-5 border-t border-gray-200 flex items-center justify-between">
+            <p class="text-sm text-gray-500" x-show="isDirty">You have unsaved changes.</p>
+            <span x-show="!isDirty"></span>
+            <button type="submit" class="inline-flex items-center px-5 py-2.5 border border-transparent shadow-sm text-sm font-semibold rounded-md text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
                     :disabled="isSubmitting"
-                    x-text="isSubmitting ? 'Saving...' : 'Save'">
-                Save
+                    x-text="isSubmitting ? 'Updating...' : '{% if object %}Update settings{% else %}Create event type{% endif %}'">
+                {% if object %}Update settings{% else %}Create event type{% endif %}
             </button>
         </div>
     </form>

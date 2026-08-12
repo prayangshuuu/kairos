@@ -1,0 +1,10 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Verify your email
+
+Hi there,
+
+Please verify your email address for Kairos by visiting the following link:
+{{ verification_url }}
+{% endblock %}

@@ -1,6 +1,6 @@
 {% load tz %}
 
-<div id="slots-partial" class="w-full h-full flex flex-col border-l border-surface-200 pl-4 sm:pl-6 md:ml-6" aria-live="polite">
+<div id="slots-partial" class="w-full h-full flex flex-col border-t border-surface-200 pt-6 md:border-l md:border-t-0 md:pl-6 md:pt-0" aria-live="polite">
   {% if error_message %}
     <div class="bg-red-50 text-red-800 p-4 mb-4 rounded-md text-sm font-medium">
       {{ error_message }}
@@ -8,7 +8,8 @@
   {% endif %}
 
   {% if selected_date %}
-    <h3 class="text-base font-medium text-surface-900 mb-6 sticky top-0 bg-surface-50 z-10">{{ selected_date|date:"l, F j" }}</h3>
+    <h3 class="text-base font-semibold text-surface-900 mb-2 sticky top-0 bg-white z-10">{{ selected_date|date:"l, F j" }}</h3>
+    <p class="mb-5 text-sm text-surface-500">Pick a start time to continue.</p>
     
     {% if day_slots %}
       <div class="flex-grow overflow-y-auto pr-2 space-y-3 pb-8">
@@ -25,7 +26,7 @@
               {% endif %}
               hx-target="#slots-partial"
               hx-swap="outerHTML"
-              class="w-full py-3.5 px-4 border border-primary-600 text-primary-700 rounded-lg text-sm font-semibold hover:border-primary-700 hover:bg-primary-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 flex justify-center items-center bg-white"
+              class="w-full py-3.5 px-4 border border-brand-600 text-brand-700 rounded-md text-sm font-semibold hover:border-brand-700 hover:bg-brand-50 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 flex justify-center items-center bg-white shadow-sm"
             >
               {{ slot|time:"g:i A" }}
             </button>

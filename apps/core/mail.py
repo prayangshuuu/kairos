@@ -4,6 +4,8 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from apps.bookings.models import NotificationLog
 from apps.core.models import BouncedEmail
+from django.utils import timezone
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +38,23 @@ def send_kairos_email(
             logger.info(f"Skipping {notification_kind} for booking {booking.uid}: already sent.")
             return False
 
+    recipient_timezone = context.get('timezone')
+    if recipient_timezone:
+        timezone.activate(recipient_timezone)
+
     # Render templates
-    html_content = render_to_string(f"emails/{template_name}.html", context)
-    text_content = render_to_string(f"emails/{template_name}.txt", context)
+    try:
+        html_content = render_to_string(f"emails/{template_name}.html", context)
+        text_content = render_to_string(f"emails/{template_name}.txt", context)
+    finally:
+        if recipient_timezone:
+            timezone.deactivate()
+
+    if booking and not reply_to:
+        if to_email == booking.invitee_email:
+            reply_to = booking.host.email
+        elif to_email == booking.host.email:
+            reply_to = booking.invitee_email
 
     headers = {}
     if not is_transactional:
@@ -73,6 +89,14 @@ def send_kairos_email(
         if booking and notification_kind:
             NotificationLog.objects.create(booking=booking, kind=notification_kind)
             
+        # In dev, dump HTML to local file
+        if settings.DEBUG:
+            dump_dir = os.path.join(settings.BASE_DIR, 'tmp', 'emails')
+            os.makedirs(dump_dir, exist_ok=True)
+            filename = f"{timezone.now().strftime('%Y%m%d_%H%M%S')}_{template_name}_{to_email}.html"
+            with open(os.path.join(dump_dir, filename), 'w') as f:
+                f.write(html_content)
+
         return True
     except Exception as e:
         # We don't catch transient errors completely here if we want celery to retry.

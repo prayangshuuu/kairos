@@ -20,6 +20,10 @@ TEMPLATES = [
     "refund_issued",
     "calendar_disconnected",
     "account_data_export",
+    "booking_approved",
+    "account_email_verification",
+    "account_password_reset",
+    "account_welcome",
 ]
 
 @pytest.fixture
@@ -101,3 +105,21 @@ def test_send_kairos_email_attaches_ics():
     
     # No direct attachment
     assert len(msg.attachments) == 0
+
+@pytest.mark.django_db
+def test_timezone_rendering():
+    from django.template.loader import render_to_string
+    context = {
+        "host_name": "Test",
+        "invitee_name": "Test",
+        "start_at": timezone.now(),
+        "end_at": timezone.now(),
+        "invitee_tz": "Europe/London",
+        "host_tz": "America/New_York",
+        "event_title": "Test event"
+    }
+    
+    html = render_to_string("emails/booking_approved.html", context)
+    txt = render_to_string("emails/booking_approved.txt", context)
+    assert "Europe/London" in html, f"Actual output: {html}"
+    assert "Europe/London" in txt

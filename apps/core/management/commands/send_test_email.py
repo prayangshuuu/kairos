@@ -59,6 +59,10 @@ class Command(BaseCommand):
             ("refund_issued", "Refund Issued"),
             ("calendar_disconnected", "Action Required: Reconnect your calendar"),
             ("account_data_export", "Your Data Export"),
+            ("booking_approved", f"Approved: {base_context['event_title']}"),
+            ("account_email_verification", "Verify your Kairos email address"),
+            ("account_password_reset", "Reset your Kairos password"),
+            ("account_welcome", "Welcome to Kairos!"),
         ]
         
         self.stdout.write(self.style.SUCCESS(f"Sending {len(templates)} test emails to {email}..."))

@@ -311,6 +311,11 @@ EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Kairos <hello@mail.joinkairos.me>")
 SERVER_EMAIL = env("SERVER_EMAIL", default="server@mail.joinkairos.me")
 
+if DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
 if DEBUG and env.bool("ENABLE_DEBUG_TOOLBAR", default=True):
     INSTALLED_APPS += ["debug_toolbar"]
     MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")

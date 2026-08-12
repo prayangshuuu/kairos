@@ -268,7 +268,7 @@ class PayStationProvider(PaymentProvider):
             guest_name = payment.slot.guest_name or guest_name
             guest_email = payment.slot.guest_email or guest_email
             
-        amount = payment.amount_cents / 100.0  # Amount is expected in primary unit (BDT) for PayStation
+        amount = payment.amount_cents
         
         # Paystation typically uses redirect or POST. The SDK returns payment_url for redirect.
         # Ensure success URL captures session properly

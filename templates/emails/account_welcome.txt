@@ -1,0 +1,9 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Welcome to Kairos!
+
+Hi there,
+
+We're excited to have you on board. Let us know if you need any help setting up your scheduling page.
+{% endblock %}
