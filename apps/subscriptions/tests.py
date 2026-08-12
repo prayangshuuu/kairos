@@ -109,6 +109,48 @@ class TestServiceLayerEnforcement:
 
         assert EventType.objects.filter(owner=user, is_active=True).count() == 3
 
+    def test_free_user_cannot_create_second_event_type_via_direct_post(
+        self, client, user, free_subscription
+    ):
+        """Free user cannot create a second active event type via a direct HTTP POST."""
+        from django.urls import reverse
+
+        EventType.objects.create(
+            owner=user, title="First Event", slug="first-event", duration_minutes=30
+        )
+        client.force_login(user)
+
+        client.post(
+            reverse("scheduling:eventtype_create"),
+            {
+                "title": "Second Event",
+                "slug": "second-event",
+                "duration_minutes": 30,
+                "window_type": "rolling",
+                "rolling_days": 60,
+                "location_type": "google_meet",
+            },
+        )
+        assert EventType.objects.filter(owner=user).count() == 1
+
+    def test_free_user_cannot_duplicate_event_type_via_post(
+        self, client, user, free_subscription
+    ):
+        """Free user cannot duplicate an event type via POST when at limit."""
+        from django.urls import reverse
+
+        et = EventType.objects.create(
+            owner=user, title="First Event", slug="first-event", duration_minutes=30
+        )
+        client.force_login(user)
+
+        response = client.post(
+            reverse("scheduling:eventtype_duplicate", kwargs={"slug": et.slug})
+        )
+        assert EventType.objects.filter(owner=user).count() == 1
+        assert response.status_code == 302
+        assert "pricing" in response.url
+
 
 @pytest.mark.django_db
 class TestGrandfathering:

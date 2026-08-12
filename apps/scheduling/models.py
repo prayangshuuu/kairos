@@ -33,6 +33,16 @@ class Schedule(models.Model):
             )
         ]
 
+    def clean(self):
+        super().clean()
+        if self.pk is None and self.user_id:
+            from apps.subscriptions.entitlements import within_limit
+            count = Schedule.objects.filter(user=self.user).count()
+            if not within_limit(self.user, "max_schedules", count):
+                raise ValidationError(
+                    {"name": "You have reached your plan limit for availability schedules. Upgrade to Pro for unlimited schedules."}
+                )
+
     def save(self, *args, **kwargs):
         if not self.timezone and self.user_id:
             self.timezone = self.user.timezone
