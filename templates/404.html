@@ -3,12 +3,18 @@
 {% block title %}Page Not Found - Kairos{% endblock %}
 
 {% block public_content %}
-<div class="text-center">
-    <h1 class="text-9xl font-bold text-brand-600">404</h1>
-    <h2 class="mt-4 text-3xl font-semibold text-surface-900">Page not found</h2>
-    <p class="mt-2 text-surface-600">Sorry, we couldn't find the page you're looking for.</p>
-    <div class="mt-8">
-        <a href="/" class="btn btn-primary">Go back home</a>
+{% include "partials/_auth_styles.html" %}
+
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-icon-warning">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
     </div>
+    <span class="auth-eyebrow">Error 404</span>
+    <h1 class="auth-heading">Page not found</h1>
+    <p class="auth-subtext">Sorry, we couldn't find the page you're looking for. It might have been moved or doesn't exist.</p>
+
+    <a href="/" class="auth-btn-primary">Go back home</a>
+  </div>
 </div>
 {% endblock %}

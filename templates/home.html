@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static booking_tags %}
 
 {% block title %}Kairos — Free Scheduling for Everyone, Forever{% endblock %}
 {% block meta_description %}Kairos is a 100% free scheduling platform for individuals, teams, and large companies. No credit card. No limits. No restrictions. Ever.{% endblock %}
@@ -49,47 +49,7 @@
     100% { transform: translateX(-50%); }
   }
 
-  /* ─── Navbar ────────────────────────────────────── */
-  .nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 5%; height: 68px;
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border-bottom: 1px solid rgba(226,232,240,0.8);
-    transition: box-shadow 0.25s;
-  }
-  .nav.scrolled { box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
-  .nav-logo {
-    font-size: 1.4rem; font-weight: 900; color: var(--teal-600);
-    letter-spacing: -0.05em; text-decoration: none;
-    display: flex; align-items: center; gap: 0.5rem;
-  }
-  .nav-logo-icon {
-    width: 32px; height: 32px; border-radius: 9px;
-    background: var(--teal-600);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .nav-links { display: flex; align-items: center; gap: 0.25rem; }
-  .nav-link {
-    font-size: 0.875rem; font-weight: 600; color: #64748b;
-    text-decoration: none; padding: 0.45rem 0.75rem; border-radius: 8px;
-    transition: color 0.15s, background 0.15s;
-  }
-  .nav-link:hover { color: var(--teal-700); background: var(--teal-50); }
-  .nav-divider { width: 1px; height: 22px; background: #e2e8f0; margin: 0 0.5rem; }
-  .nav-cta {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.55rem 1.2rem; border-radius: 10px;
-    font-size: 0.875rem; font-weight: 700; letter-spacing: -0.01em;
-    background: var(--teal-600); color: #fff;
-    text-decoration: none; border: none;
-    transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 1px 4px rgba(13,148,136,0.25);
-  }
-  .nav-cta:hover { background: var(--teal-700); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13,148,136,0.3); }
+
 
   /* ─── Hero ──────────────────────────────────────── */
   .hero {
@@ -122,7 +82,7 @@
   }
   .hero-h1 em { font-style: normal; color: var(--teal-600); }
   .hero-sub {
-    font-size: 1.05rem; font-weight: 400; line-height: 1.75; color: #64748b;
+    font-size: 1.05rem; font-weight: 400; line-height: 1.75; color: #475569;
     max-width: 420px; margin-bottom: 2rem;
   }
   .hero-actions {
@@ -152,7 +112,7 @@
 
   .hero-note {
     margin-top: 1rem;
-    font-size: 0.8rem; font-weight: 600; color: #94a3b8;
+    font-size: 0.8rem; font-weight: 600; color: #64748b;
     animation: fadeUp 0.55s 0.2s ease both;
   }
   .hero-note span { color: var(--teal-600); }
@@ -230,7 +190,7 @@
   .ticker-item {
     display: inline-flex; align-items: center; gap: 0.5rem;
     padding: 0 2.5rem;
-    font-size: 0.8rem; font-weight: 700; color: #94a3b8;
+    font-size: 0.8rem; font-weight: 700; color: #64748b;
     white-space: nowrap;
   }
   .ticker-item svg { color: var(--teal-500); flex-shrink: 0; }
@@ -265,113 +225,340 @@
   }
   .free-h2 em { font-style: normal; color: var(--teal-400); }
   .free-sub {
-    font-size: 1.1rem; color: #94a3b8; max-width: 480px; margin: 0 auto 2.5rem;
+    font-size: 1.1rem; color: #cbd5e1; max-width: 480px; margin: 0 auto 2.5rem;
     line-height: 1.7; position: relative; z-index: 1;
   }
-  .free-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1px; max-width: 860px; margin: 0 auto 2.5rem;
-    background: rgba(255,255,255,0.06); border-radius: 1.25rem; overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.07);
-    position: relative; z-index: 1;
-  }
-  .free-item {
-    padding: 1.75rem 1.5rem; text-align: center;
-    background: rgba(255,255,255,0.03);
-    transition: background 0.2s;
-  }
-  .free-item:hover { background: rgba(13,148,136,0.08); }
-  .free-item-icon {
-    width: 44px; height: 44px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 0.85rem;
-    background: rgba(13,148,136,0.15); border: 1px solid rgba(45,212,191,0.15);
-  }
-  .free-item-title { font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 0.3rem; }
-  .free-item-desc  { font-size: 0.78rem; color: #64748b; line-height: 1.5; }
-
-  /* ─── Features ──────────────────────────────────── */
-  .features { padding: 6rem 5%; max-width: 1100px; margin: 0 auto; }
-  .section-label {
-    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--teal-600); margin-bottom: 0.6rem;
-  }
-  .section-h2 {
-    font-size: clamp(1.75rem, 4vw, 2.75rem);
-    font-weight: 900; letter-spacing: -0.03em; color: #0a0f0e;
-    margin-bottom: 0.75rem;
-  }
-  .section-sub { font-size: 1rem; color: #64748b; line-height: 1.7; max-width: 480px; }
-  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-top: 3.5rem; }
-  .feat-card {
-    padding: 1.75rem; border-radius: 1.25rem;
-    border: 1.5px solid #e2e8f0; background: #fff;
-    transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
-  }
-  .feat-card:hover { border-color: var(--teal-400); box-shadow: 0 8px 30px rgba(13,148,136,0.1); transform: translateY(-3px); }
-  .feat-icon {
-    width: 44px; height: 44px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;
-    background: var(--teal-50); border: 1px solid var(--teal-100);
-  }
-  .feat-title { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; }
-  .feat-desc  { font-size: 0.875rem; color: #64748b; line-height: 1.65; }
-
-
-
-  /* ─── CTA section ───────────────────────────────── */
-  .cta-section {
-    padding: 7rem 5%; text-align: center;
-    background: radial-gradient(ellipse 70% 50% at 50% 100%, rgba(13,148,136,0.07) 0%, transparent 70%);
-  }
-  .cta-h2 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; letter-spacing: -0.04em; color: #0a0f0e; margin-bottom: 1rem; }
-  .cta-h2 em { font-style: normal; color: var(--teal-600); }
-  .cta-sub  { font-size: 1.05rem; color: #64748b; max-width: 420px; margin: 0 auto 2.5rem; line-height: 1.7; }
-
-  /* ─── Footer ────────────────────────────────────── */
-  .footer {
-    background: var(--dark);
-    border-top: 1px solid rgba(45,212,191,0.08);
-    padding: 4rem 5% 2rem;
-  }
-  .footer-grid {
+  /* ─── Free Banner Bento Grid System ───────────────────── */
+  .free-bento-grid {
     display: grid;
-    grid-template-columns: 1.6fr 1fr 1fr;
-    gap: 3rem;
-    padding-bottom: 3rem;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.5rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    text-align: left;
+    position: relative;
+    z-index: 1;
   }
-  @media (max-width: 700px) {
-    .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
-    .footer-brand { grid-column: 1 / -1; }
+
+  .free-bento-card {
+    position: relative;
+    padding: 2.25rem;
+    border-radius: 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .footer-logo {
-    display: flex; align-items: center; gap: 0.5rem;
-    font-size: 1.2rem; font-weight: 900; color: var(--teal-400);
-    letter-spacing: -0.05em; text-decoration: none; margin-bottom: 0.75rem;
+  .free-bento-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--teal-400), var(--teal-600));
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
-  .footer-logo-icon {
-    width: 26px; height: 26px; border-radius: 7px;
-    background: var(--teal-700);
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  .free-bento-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(45, 212, 191, 0.35);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 0 30px rgba(13, 148, 136, 0.15);
   }
-  .footer-tagline { font-size: 0.83rem; color: #475569; line-height: 1.65; max-width: 240px; }
-  .footer-col-label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #334155; margin-bottom: 1rem; }
-  .footer-col-links { display: flex; flex-direction: column; gap: 0.6rem; }
-  .footer-link { font-size: 0.83rem; font-weight: 500; color: #475569; text-decoration: none; transition: color 0.15s; }
-  .footer-link:hover { color: var(--teal-400); }
-  .footer-bottom {
-    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-    gap: 1rem; padding-top: 1.75rem;
+  .free-bento-card:hover::before { opacity: 1; }
+
+  .free-bento-icon-wrapper {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(13, 148, 136, 0.18);
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+    color: var(--teal-300);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, background 0.3s ease, color 0.3s ease;
   }
-  .footer-copy { font-size: 0.75rem; color: #334155; }
-  .footer-legal { display: flex; gap: 1.25rem; }
-  .footer-legal a { font-size: 0.75rem; color: #334155; text-decoration: none; transition: color 0.15s; }
-  .footer-legal a:hover { color: var(--teal-400); }
+  .free-bento-card:hover .free-bento-icon-wrapper {
+    transform: scale(1.08) rotate(-3deg);
+    background: var(--teal-600);
+    color: #ffffff;
+    border-color: transparent;
+  }
+
+  .free-bento-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.6rem;
+    line-height: 1.3;
+  }
+  .free-bento-desc {
+    font-size: 0.95rem;
+    color: #cbd5e1;
+    line-height: 1.65;
+  }
+
+  .free-bento-widget {
+    margin-top: 1.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    transition: all 0.2s ease;
+  }
+  .free-bento-card:hover .free-bento-widget {
+    border-color: rgba(45, 212, 191, 0.25);
+    background: rgba(13, 148, 136, 0.12);
+  }
+
+  /* Bento Spans */
+  .free-bento-span-7 { grid-column: span 7; }
+  .free-bento-span-5 { grid-column: span 5; }
+
+  @media (max-width: 1024px) {
+    .free-bento-span-7, .free-bento-span-5 { grid-column: span 12; }
+  }
+
+  /* ─── Features Bento Grid Section (10M$ SaaS Grade) ─── */
+  .features {
+    padding: 5rem 5% 5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .features-header {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto 3.5rem;
+  }
+  .features-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 1.1rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: rgba(13, 148, 136, 0.08);
+    color: var(--teal-700);
+    border: 1px solid rgba(13, 148, 136, 0.22);
+    margin-bottom: 1.25rem;
+    box-shadow: 0 2px 10px rgba(13, 148, 136, 0.06);
+  }
+  .features-pill svg { color: var(--teal-600); }
+  .features-h2 {
+    font-size: clamp(2.1rem, 4.5vw, 3.25rem);
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.035em;
+    color: #0f172a;
+    margin-bottom: 1.25rem;
+  }
+  .features-h2 em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--teal-600) 0%, #0d9488 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .features-sub {
+    font-size: 1.08rem;
+    color: #64748b;
+    line-height: 1.75;
+    font-weight: 450;
+  }
+
+  /* Bento Grid */
+  .features-bento-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.5rem;
+  }
+
+  .bento-card {
+    position: relative;
+    padding: 2.25rem;
+    border-radius: 1.5rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .bento-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--teal-400), var(--teal-600));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .bento-card:hover {
+    border-color: rgba(13, 148, 136, 0.4);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px -15px rgba(13, 148, 136, 0.14), 0 8px 16px -4px rgba(0, 0, 0, 0.04);
+  }
+  .bento-card:hover::before { opacity: 1; }
+
+  /* Spans */
+  .bento-span-7 { grid-column: span 7; }
+  .bento-span-5 { grid-column: span 5; }
+  .bento-span-4 { grid-column: span 4; }
+  .bento-span-12 { grid-column: span 12; }
+
+  @media (max-width: 1024px) {
+    .bento-span-7, .bento-span-5, .bento-span-4 { grid-column: span 6; }
+    .bento-span-12 { grid-column: span 12; }
+  }
+  @media (max-width: 640px) {
+    .bento-span-7, .bento-span-5, .bento-span-4, .bento-span-12 { grid-column: span 12; }
+  }
+
+  .bento-icon-wrapper {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--teal-50) 0%, #ccfbf1 100%);
+    border: 1px solid rgba(45, 212, 191, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+    color: var(--teal-600);
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.08);
+    transition: transform 0.3s ease, background 0.3s ease, color 0.3s ease;
+  }
+  .bento-card:hover .bento-icon-wrapper {
+    transform: scale(1.08) rotate(-3deg);
+    background: linear-gradient(135deg, var(--teal-600) 0%, var(--teal-700) 100%);
+    color: #ffffff;
+    border-color: transparent;
+  }
+
+  .bento-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.6rem;
+    line-height: 1.3;
+  }
+  .bento-desc {
+    font-size: 0.95rem;
+    color: #475569;
+    line-height: 1.65;
+  }
+
+  /* Bento UI Widget elements */
+  .bento-widget-link {
+    margin-top: 1.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    transition: all 0.2s ease;
+  }
+  .bento-card:hover .bento-widget-link {
+    background: var(--teal-50);
+    border-color: rgba(13, 148, 136, 0.25);
+  }
+
+  .bento-preview-text {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bento-preview-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: #ffffff;
+    color: var(--teal-700);
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    flex-shrink: 0;
+  }
+  .bento-dot-live {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+    display: inline-block;
+  }
+
+  /* Full-width Bento Banner Card */
+  .bento-banner {
+    background: linear-gradient(135deg, #060d0c 0%, #0f1f1c 60%, #091210 100%);
+    color: #ffffff;
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: center;
+  }
+  .bento-banner .bento-title { color: #ffffff; font-size: 1.45rem; }
+  .bento-banner .bento-desc { color: #cbd5e1; }
+  .bento-code-box {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 1.25rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.825rem;
+    color: #5eead4;
+    line-height: 1.6;
+  }
+  .bento-code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+  @media (max-width: 768px) {
+    .bento-banner { grid-template-columns: 1fr; }
+  }
+
+
+
+
+
+
 
   /* ─── Responsive ────────────────────────────────── */
   @media (max-width: 640px) {
-    .nav-links .nav-link { display: none; }
     .mockup-sidebar { width: 140px; }
     .mockup-name { font-size: 0.7rem; }
   }
@@ -380,32 +567,7 @@
 
 {% block content %}
 
-{# ── NAVBAR ─────────────────────────────────── #}
-<nav class="nav" id="kairos-nav">
-  <a href="/" class="nav-logo">
-    <span class="nav-logo-icon">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    </span>
-    Kairos
-  </a>
-  <div class="nav-links">
-    <a href="#features" class="nav-link">Features</a>
-    <div class="nav-divider"></div>
-    <a href="{% url 'account_login' %}" class="nav-link">Log in</a>
-    <a href="{% url 'account_signup' %}" class="nav-cta">
-      Get started free
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    </a>
-  </div>
-</nav>
-
-<script>
-  // Add .scrolled class on scroll for nav shadow
-  const kairosNav = document.getElementById('kairos-nav');
-  window.addEventListener('scroll', () => {
-    kairosNav.classList.toggle('scrolled', window.scrollY > 8);
-  }, { passive: true });
-</script>
+{% include "partials/_navbar.html" %}
 
 {# ── HERO ───────────────────────────────────── #}
 <section class="hero">
@@ -413,12 +575,11 @@
 
     {# ── Left: text + CTA ── #}
     <div class="hero-text">
-      <p class="hero-eyebrow">Free scheduling platform</p>
       <h1 class="hero-h1">
-        Scheduling that's<br><em>always free</em><br>for everyone
+        Scheduling without limits
       </h1>
       <p class="hero-sub">
-        Kairos is built for individuals, startups, and large enterprises alike. No tiers. No caps. No hidden costs. Just scheduling.
+        Kairos gives individuals, teams, and businesses a simple way to manage appointments without complicated plans or artificial limits. No tiers. No per-seat fees. No feature paywalls. Just powerful scheduling.
       </p>
       <div class="hero-actions">
         <a href="{% url 'account_signup' %}" class="btn-primary">
@@ -427,7 +588,7 @@
         </a>
         <a href="{% url 'account_login' %}" class="btn-secondary">Log in</a>
       </div>
-      <p class="hero-note">No credit card required · <span>Free forever</span> · Setup in 60 seconds</p>
+      <p class="hero-note">Free forever · No credit card required · Ready in minutes</p>
     </div>
 
     {# ── Right: product mockup ── #}
@@ -436,9 +597,9 @@
         {# Dark sidebar #}
         <div class="mockup-sidebar">
           <div class="mockup-blob" style="width:110px;height:110px;top:-25px;left:-25px;background:radial-gradient(circle,#0d9488 0%,transparent 70%);opacity:0.25;"></div>
-          <div class="mockup-avatar">J</div>
+          <div class="mockup-avatar">P</div>
           <div class="mockup-label">Schedule with</div>
-          <div class="mockup-name">Jamie Rivera</div>
+          <div class="mockup-name">Prayangshu</div>
           <div class="mockup-pill">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             30 min · Free
@@ -476,18 +637,18 @@
 <div class="ticker-wrap">
   <div class="ticker-inner">
     {% with items="Unlimited bookings,No credit card,Free for large teams,Custom booking links,Calendar sync,Automated emails,Zero fees,Enterprise ready,Built-in timezone detection,HTMX powered,Open for everyone,No seat limits" %}
-    {% for item in items.split %}
+    {% for item in items|split:"," %}
       <span class="ticker-item">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        {{ item|cut:"," }}
+        {{ item }}
       </span>
       <span class="ticker-item ticker-sep">·</span>
     {% endfor %}
     {# Duplicate for seamless loop #}
-    {% for item in items.split %}
+    {% for item in items|split:"," %}
       <span class="ticker-item">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        {{ item|cut:"," }}
+        {{ item }}
       </span>
       <span class="ticker-item ticker-sep">·</span>
     {% endfor %}
@@ -497,161 +658,224 @@
 
 {# ── FREE BANNER ────────────────────────────── #}
 <section class="free-banner">
-  <div class="free-tag">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-    Always free · No exceptions
-  </div>
-  <h2 class="free-h2">Free for <em>everyone</em>.<br>Even large companies.</h2>
-  <p class="free-sub">Most scheduling tools charge per seat. Kairos doesn't. Use it for your solo side project or your 10,000-person company — it's the same: free.</p>
 
-  <div class="free-grid">
-    <div class="free-item">
-      <div class="free-item-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+  <h2 class="free-h2">One platform.<br>No limits.</h2>
+  <p class="free-sub">Whether you're scheduling a few appointments a week or managing thousands of bookings across your organization, Kairos gives you everything you need from day one.</p>
+
+  <div class="free-bento-grid">
+
+    {# Bento 1: Unlimited Team Members (Span 7) #}
+    <div class="free-bento-card free-bento-span-7">
+      <div>
+        <div class="free-bento-icon-wrapper">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3 class="free-bento-title">Unlimited team members</h3>
+        <p class="free-bento-desc">Invite your entire team without worrying about per-user or per-seat charges.</p>
       </div>
-      <div class="free-item-title">Unlimited team members</div>
-      <div class="free-item-desc">Add your entire org. No per-seat pricing, ever.</div>
-    </div>
-    <div class="free-item">
-      <div class="free-item-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+
+      <div class="free-bento-widget">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div style="display:flex; margin-right:0.25rem;">
+            <div style="width:28px; height:28px; border-radius:50%; background:#0d9488; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.75rem; border:2px solid #0f1f1c;">A</div>
+            <div style="width:28px; height:28px; border-radius:50%; background:#0284c7; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.75rem; border:2px solid #0f1f1c; margin-left:-8px;">M</div>
+            <div style="width:28px; height:28px; border-radius:50%; background:#7c3aed; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.75rem; border:2px solid #0f1f1c; margin-left:-8px;">K</div>
+            <div style="width:28px; height:28px; border-radius:50%; background:#14b8a6; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.65rem; border:2px solid #0f1f1c; margin-left:-8px;">+50</div>
+          </div>
+          <span style="font-size:0.85rem; font-weight:700; color:#e2e8f0;">Entire Organization</span>
+        </div>
+        <span style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.3rem 0.65rem; border-radius:8px; font-size:0.72rem; font-weight:700; background:rgba(45,212,191,0.15); color:#5eead4; border:1px solid rgba(45,212,191,0.3); flex-shrink:0;">
+          <span style="width:6px; height:6px; border-radius:50%; background:#2dd4bf; display:inline-block;"></span> $0 / seat
+        </span>
       </div>
-      <div class="free-item-title">Unlimited bookings</div>
-      <div class="free-item-desc">Book as many meetings as you need, forever.</div>
     </div>
-    <div class="free-item">
-      <div class="free-item-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+
+    {# Bento 2: Unlimited Bookings (Span 5) #}
+    <div class="free-bento-card free-bento-span-5">
+      <div>
+        <div class="free-bento-icon-wrapper">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M12 14l2 2 4-4"/></svg>
+        </div>
+        <h3 class="free-bento-title">Unlimited bookings</h3>
+        <p class="free-bento-desc">Accept as many appointments as you need. No monthly booking caps.</p>
       </div>
-      <div class="free-item-title">All features included</div>
-      <div class="free-item-desc">No feature gating. Everything, for everyone.</div>
-    </div>
-    <div class="free-item">
-      <div class="free-item-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+
+      <div class="free-bento-widget">
+        <div style="display:flex; align-items:center; gap:0.5rem; overflow:hidden;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span style="font-family:ui-monospace, monospace; font-size:0.85rem; font-weight:700; color:#f8fafc;">∞ Unlimited</span>
+        </div>
+        <span style="padding:0.3rem 0.65rem; border-radius:8px; font-size:0.72rem; font-weight:700; background:rgba(255,255,255,0.08); color:#94a3b8; border:1px solid rgba(255,255,255,0.12); flex-shrink:0;">
+          No Monthly Caps
+        </span>
       </div>
-      <div class="free-item-title">No restrictions</div>
-      <div class="free-item-desc">No rate limits, no approval needed, no fine print.</div>
     </div>
+
+    {# Bento 3: Every Feature Included (Span 5) #}
+    <div class="free-bento-card free-bento-span-5">
+      <div>
+        <div class="free-bento-icon-wrapper">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+        <h3 class="free-bento-title">Every feature included</h3>
+        <p class="free-bento-desc">Access the complete Kairos experience without locking essential features behind paid plans.</p>
+      </div>
+
+      <div class="free-bento-widget">
+        <div style="display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center;">
+          <span style="font-size:0.72rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:6px; background:rgba(45,212,191,0.15); color:#2dd4bf; border:1px solid rgba(45,212,191,0.25);">✓ Sync</span>
+          <span style="font-size:0.72rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:6px; background:rgba(45,212,191,0.15); color:#2dd4bf; border:1px solid rgba(45,212,191,0.25);">✓ Rules</span>
+          <span style="font-size:0.72rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:6px; background:rgba(45,212,191,0.15); color:#2dd4bf; border:1px solid rgba(45,212,191,0.25);">✓ Webhooks</span>
+        </div>
+        <span style="padding:0.3rem 0.65rem; border-radius:8px; font-size:0.72rem; font-weight:700; background:rgba(255,255,255,0.08); color:#f8fafc; border:1px solid rgba(255,255,255,0.15); flex-shrink:0;">
+          100% Free
+        </span>
+      </div>
+    </div>
+
+    {# Bento 4: Built to Scale (Span 7) #}
+    <div class="free-bento-card free-bento-span-7">
+      <div>
+        <div class="free-bento-icon-wrapper">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3 class="free-bento-title">Built to scale</h3>
+        <p class="free-bento-desc">Start as an individual and grow into a team or enterprise without changing platforms.</p>
+      </div>
+
+      <div class="free-bento-widget">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <span style="font-size:0.75rem; font-weight:700; color:#94a3b8;">Individual</span>
+          <span style="font-size:0.75rem; font-weight:900; color:#2dd4bf;">➔</span>
+          <span style="font-size:0.75rem; font-weight:700; color:#94a3b8;">Team</span>
+          <span style="font-size:0.75rem; font-weight:900; color:#2dd4bf;">➔</span>
+          <span style="font-size:0.75rem; font-weight:800; color:#ffffff;">Enterprise</span>
+        </div>
+        <span style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.3rem 0.65rem; border-radius:8px; font-size:0.72rem; font-weight:700; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); flex-shrink:0;">
+          <span style="width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block;"></span> 99.99% Uptime
+        </span>
+      </div>
+    </div>
+
   </div>
 
-  <a href="{% url 'account_signup' %}" class="btn-primary" style="position:relative;z-index:1;">
-    Get started — it's completely free
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-  </a>
 </section>
 
 {# ── FEATURES ───────────────────────────────── #}
 <section class="features" id="features">
-  <div>
-    <div class="section-label">Features</div>
-    <h2 class="section-h2">Everything you need to schedule</h2>
-    <p class="section-sub">A full-featured scheduling platform. No compromises because it's free.</p>
+  <div class="features-header">
+    <h2 class="features-h2">Everything you need to <em>manage your time</em></h2>
+    <p class="features-sub">From personal booking pages to payments and calendar synchronization, Kairos brings your entire scheduling workflow together in one place.</p>
   </div>
 
-  <div class="features-grid">
-    <div class="feat-card">
-      <div class="feat-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  <div class="features-bento-grid">
+    {# Bento 1: Personal Booking Pages (Span 7) #}
+    <div class="bento-card bento-span-7">
+      <div>
+        <div class="bento-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <h3 class="bento-title">Personal booking pages</h3>
+        <p class="bento-desc">Create a customized, ultra-fast booking page with your custom Kairos link. Share your link in emails, bio, or messages to accept bookings instantly.</p>
       </div>
-      <div class="feat-title">Custom booking links</div>
-      <div class="feat-desc">Share your personal link like <strong>kairos.app/yourname</strong>. Professional, memorable, and yours.</div>
+      <div class="bento-widget-link">
+        <div style="display:flex; align-items:center; gap:0.6rem; overflow:hidden;">
+          <div style="width:28px; height:28px; border-radius:50%; background:#0d9488; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.75rem; flex-shrink:0;">P</div>
+          <span class="bento-preview-text">joinkairos.me/prayangshuuu</span>
+        </div>
+        <span class="bento-preview-tag"><span class="bento-dot-live"></span> Live Page</span>
+      </div>
     </div>
-    <div class="feat-card">
-      <div class="feat-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+
+    {# Bento 2: Calendar Synchronization (Span 5) #}
+    <div class="bento-card bento-span-5">
+      <div>
+        <div class="bento-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M12 14l2 2 4-4"/></svg>
+        </div>
+        <h3 class="bento-title">Calendar synchronization</h3>
+        <p class="bento-desc">Seamless 2-way sync with Google Calendar & Outlook. Prevents double-bookings automatically.</p>
       </div>
-      <div class="feat-title">Calendar sync</div>
-      <div class="feat-desc">Connect your Google or Outlook calendar. Kairos auto-blocks busy times so you never double-book.</div>
+      <div class="bento-widget-link">
+        <span class="bento-preview-text">Google & Outlook</span>
+        <span class="bento-preview-tag" style="color:#0d9488;background:#f0fdfa;">2-Way Sync</span>
+      </div>
     </div>
-    <div class="feat-card">
-      <div class="feat-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+
+    {# Bento 3: Flexible Event Types (Span 4) #}
+    <div class="bento-card bento-span-4">
+      <div>
+        <div class="bento-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3 class="bento-title">Flexible event types</h3>
+        <p class="bento-desc">Create 15m intros, 30m strategy sessions, or custom workshops with custom buffer times.</p>
       </div>
-      <div class="feat-title">Multiple event types</div>
-      <div class="feat-desc">30-minute calls, hour-long consults, quick check-ins. Configure as many types as you need.</div>
+      <div class="bento-widget-link">
+        <span class="bento-preview-text">15m · 30m · 60m</span>
+        <span class="bento-preview-tag">Rules</span>
+      </div>
     </div>
-    <div class="feat-card">
-      <div class="feat-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+
+    {# Bento 4: Smart Timezone Handling (Span 4) #}
+    <div class="bento-card bento-span-4">
+      <div>
+        <div class="bento-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <h3 class="bento-title">Smart timezone handling</h3>
+        <p class="bento-desc">Automatic timezone detection converts meeting slots to your guest's local time worldwide.</p>
       </div>
-      <div class="feat-title">Timezone detection</div>
-      <div class="feat-desc">Automatically shows slots in each visitor's local timezone. No manual conversion needed.</div>
+      <div class="bento-widget-link">
+        <span class="bento-preview-text">EST ➔ GMT Detect</span>
+        <span class="bento-preview-tag" style="color:#0284c7;background:#f0f9ff;">Auto</span>
+      </div>
     </div>
-    <div class="feat-card">
-      <div class="feat-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+
+    {# Bento 5: Automatic Notifications (Span 4) #}
+    <div class="bento-card bento-span-4">
+      <div>
+        <div class="bento-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <h3 class="bento-title">Automatic notifications</h3>
+        <p class="bento-desc">Instant booking confirmations, calendar invites (.ics), and automated reminders.</p>
       </div>
-      <div class="feat-title">Email confirmations</div>
-      <div class="feat-desc">Automated booking confirmations and reminders sent to both host and guest. Zero manual work.</div>
+      <div class="bento-widget-link">
+        <span class="bento-preview-text">Email & Reminders</span>
+        <span class="bento-preview-tag" style="color:#16a34a;background:#f0fdf4;">✓ Sent</span>
+      </div>
     </div>
-    <div class="feat-card">
-      <div class="feat-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+
+    {# Bento 6: Self-Integration Spotlight (Full Width Span 12 Banner) #}
+    <div class="bento-card bento-span-12 bento-banner">
+      <div>
+        <div style="display:inline-flex; align-items:center; gap:0.5rem; padding:0.3rem 0.75rem; border-radius:9999px; font-size:0.7rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; background:rgba(45,212,191,0.15); color:#5eead4; border:1px solid rgba(45,212,191,0.25); margin-bottom:1rem;">
+          0% PLATFORM FEES · SELF INTEGRATION
+        </div>
+        <h3 class="bento-title">Self-Integration & Developer Docs</h3>
+        <p class="bento-desc">Connect Stripe or custom tools directly to your Kairos workflow with zero commission or middleman fees. Follow our simple, step-by-step developer documentation to integrate in minutes.</p>
       </div>
-      <div class="feat-title">Paid appointments</div>
-      <div class="feat-desc">Charge for your time. Set a price on any event type and collect payment before the meeting.</div>
+      <div class="bento-code-box">
+        <div class="bento-code-header">
+          <span>kairos-integration-guide.md</span>
+          <span style="color:#5eead4; font-weight:700;">Self-Hosted</span>
+        </div>
+        <div>
+          <span style="color:#94a3b8;">$</span> <span style="color:#f472b6;">curl</span> -X POST https://api.kairos.com/v1/webhooks \<br>
+          &nbsp;&nbsp;-H <span style="color:#a5f3fc;">"Authorization: Bearer sec_key"</span> \<br>
+          &nbsp;&nbsp;-d <span style="color:#fde047;">'{"event": "booking.created", "fee": 0}'</span>
+        </div>
+        <div style="margin-top:0.75rem; font-size:0.75rem; color:#94a3b8;">
+          ✓ Docs Available &nbsp;·&nbsp; 0% Platform Fees
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-{# ── CTA ────────────────────────────────────── #}
-<section class="cta-section">
-  <h2 class="cta-h2">Start scheduling in<br><em>60 seconds</em></h2>
-  <p class="cta-sub">No forms to fill, no credit card required. Just sign up and get your booking link instantly.</p>
-  <a href="{% url 'account_signup' %}" class="btn-primary" style="font-size:1.05rem;padding:1rem 2.5rem;">
-    Create your free page
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-  </a>
-  <p style="margin-top:1rem;font-size:0.8rem;color:#94a3b8;font-weight:600;">
-    Free forever · No restrictions · Works for teams of any size
-  </p>
-</section>
 
-{# ── FOOTER ─────────────────────────────────── #}
-<footer class="footer">
-  <div class="footer-grid">
 
-    {# Brand column #}
-    <div class="footer-brand">
-      <a href="/" class="footer-logo">
-        <span class="footer-logo-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        </span>
-        Kairos
-      </a>
-      <p class="footer-tagline">Scheduling made simple. Free forever for individuals, teams, and large companies alike.</p>
-    </div>
-
-    {# Product column #}
-    <div>
-      <p class="footer-col-label">Product</p>
-      <div class="footer-col-links">
-        <a href="#features" class="footer-link">Features</a>
-        <a href="{% url 'account_signup' %}" class="footer-link">Create your page</a>
-        <a href="{% url 'account_login' %}" class="footer-link">Log in</a>
-      </div>
-    </div>
-
-    {# Company column #}
-    <div>
-      <p class="footer-col-label">Company</p>
-      <div class="footer-col-links">
-        <a href="/" class="footer-link">About</a>
-        <a href="/" class="footer-link">Blog</a>
-        <a href="/" class="footer-link">Contact</a>
-      </div>
-    </div>
-
-  </div>
-
-  <div class="footer-bottom">
-    <p class="footer-copy">&copy; {% now "Y" %} Kairos &mdash; Free for everyone, always.</p>
-    <div class="footer-legal">
-      <a href="/">Privacy</a>
-      <a href="/">Terms</a>
-    </div>
-  </div>
-</footer>
+{% include "partials/_footer.html" %}
 
 {% endblock %}

@@ -4,19 +4,22 @@
 {% block title %}{% trans "Account Inactive" %} - Kairos{% endblock %}
 
 {% block public_content %}
-<div class="min-h-screen bg-surface-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-surface-900">
-            {% trans "Account Inactive" %}
-        </h2>
-    </div>
+{% include "partials/_auth_styles.html" %}
 
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 text-center">
-            <p class="text-surface-600">
-                {% trans "This account is currently inactive." %}
-            </p>
-        </div>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-icon-warning">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
     </div>
+    <span class="auth-eyebrow">{% trans "Account status" %}</span>
+    <h1 class="auth-heading">{% trans "Account Inactive" %}</h1>
+    <p class="auth-subtext">{% trans "This account is currently inactive." %} Please contact support if you believe this is an error.</p>
+
+    <a href="/" class="auth-btn-secondary">Go to homepage</a>
+
+    <div class="auth-footer-text">
+      <a href="{% url 'account_login' %}">Try logging in again</a>
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -1,44 +1,139 @@
-{% extends "layouts/public.html" %}
+{% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}
-    {% block head_title %}{% endblock head_title %}
+{% block title %}{% block head_title %}Kairos{% endblock %}{% endblock %}
+
+{% block extra_head %}{{ block.super }}{% endblock %}
+
+{% block content %}
+<style>
+  .allauth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fdfc;
+    padding: 2rem 1rem;
+  }
+  .allauth-card {
+    width: 100%;
+    max-width: 460px;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.07), 0 4px 16px rgba(13,148,136,0.06);
+    overflow: hidden;
+  }
+  .allauth-card-header {
+    padding: 1.75rem 2rem 1.25rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .allauth-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    margin-bottom: 1.25rem;
+  }
+  .allauth-logo-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: #0d9488;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .allauth-logo-text {
+    font-size: 1.05rem;
+    font-weight: 900;
+    color: #0d9488;
+    letter-spacing: -0.05em;
+  }
+  .allauth-eyebrow {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #0d9488;
+    margin-bottom: 0.4rem;
+    display: block;
+  }
+  .allauth-title {
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -0.03em;
+  }
+  .allauth-card-body {
+    padding: 1.75rem 2rem;
+  }
+  /* Messages */
+  .allauth-messages { margin-bottom: 1.25rem; }
+  .allauth-message {
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: rgba(13,148,136,0.07);
+    color: #0f766e;
+    border: 1px solid rgba(13,148,136,0.2);
+    margin-bottom: 0.5rem;
+  }
+  .allauth-card-footer {
+    padding: 1rem 2rem;
+    background: #f8fafc;
+    border-top: 1px solid #f1f5f9;
+    text-align: center;
+  }
+  .allauth-back-link {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: color 0.15s;
+  }
+  .allauth-back-link:hover { color: #0d9488; }
+</style>
+
+<div class="allauth-page">
+  <div class="allauth-card">
+    <div class="allauth-card-header">
+      <a href="/" class="allauth-logo">
+        <span class="allauth-logo-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </span>
+        <span class="allauth-logo-text">Kairos</span>
+      </a>
+      <span class="allauth-eyebrow">{% block allauth_eyebrow %}Account{% endblock %}</span>
+      <h1 class="allauth-title">{% block allauth_title %}Manage Account{% endblock %}</h1>
+    </div>
+
+    <div class="allauth-card-body">
+      {% if messages %}
+        <div class="allauth-messages">
+          {% for message in messages %}
+            <div class="allauth-message">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% block body %}
+        {% block content %}{% endblock %}
+      {% endblock %}
+    </div>
+
+    <div class="allauth-card-footer">
+      <a href="/" class="allauth-back-link">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back to dashboard
+      </a>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
-{% block extra_head %}
-    {{ block.super }}
-{% endblock extra_head %}
-
-{% block public_content %}
-<div class="sm:mx-auto sm:w-full sm:max-w-md mt-8">
-    <div class="mb-4 text-center">
-        <h2 class="mt-2 text-center text-3xl font-extrabold text-surface-900">
-            {% block allauth_title %}Manage Account{% endblock %}
-        </h2>
-    </div>
-    
-    <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 allauth-container">
-        
-        {% if messages %}
-            <div class="mb-6">
-                {% for message in messages %}
-                    <div class="p-3 text-sm rounded-md bg-brand-50 text-brand-800 mb-2">{{ message }}</div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        {% block body %}
-            {% block content %}
-            {% endblock %}
-        {% endblock %}
-    </div>
-    
-    <div class="mt-6 text-center">
-        <a href="/" class="text-sm font-medium text-brand-600 hover:text-brand-500">← Back to Dashboard</a>
-    </div>
-</div>
-{% endblock public_content %}
-
 {% block extra_js %}
-    {% block extra_body %}{% endblock %}
+  {% block extra_body %}{% endblock %}
 {% endblock %}

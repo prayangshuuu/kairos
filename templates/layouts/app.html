@@ -14,7 +14,13 @@
            class="fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-300 transform bg-white border-r border-surface-200 lg:translate-x-0 lg:static lg:inset-0 flex flex-col">
         
         <div class="flex items-center justify-center h-16 border-b border-surface-200">
-            <span class="text-xl font-bold text-brand-600">Kairos</span>
+            <a href="/" class="flex items-center gap-2 text-xl font-bold text-brand-600 no-underline" style="text-decoration:none;">
+                <span style="width:32px;height:32px;border-radius:50%;background:conic-gradient(from 0deg,#0d9488,#5eead4,#0d9488);animation:kairos-app-spin 4s linear infinite;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <span style="width:20px;height:20px;background:#fff;border-radius:50%;"></span>
+                </span>
+                Kairos
+            </a>
+            <style>@keyframes kairos-app-spin { 100% { transform: rotate(360deg); } }</style>
         </div>
         
         <nav class="p-4 space-y-1 flex-1">

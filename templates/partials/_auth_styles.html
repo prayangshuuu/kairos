@@ -1,0 +1,190 @@
+{# ── AUTH CARD STYLES ─────────────────────────────── #}
+{# Shared CSS for all public-facing auth/account pages. #}
+{# Creates a centered card with icon, heading, subtext, and form styling. #}
+
+<style>
+  /* ─── Auth page wrapper ────────────────────────── */
+  .auth-page {
+    min-height: calc(100vh - 68px);
+    background: linear-gradient(145deg, #f0fdfa 0%, #f8fafc 40%, #fff 100%);
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1.5rem;
+  }
+  .auth-card {
+    width: 100%; max-width: 460px;
+    background: #ffffff;
+    border-radius: 24px;
+    border: 1.5px solid #e2e8f0;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.06), 0 4px 16px rgba(13,148,136,0.04);
+    padding: 2.75rem 2.5rem;
+    text-align: center;
+    animation: authCardIn 0.4s ease both;
+  }
+  @keyframes authCardIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 480px) {
+    .auth-card { padding: 2rem 1.5rem; border-radius: 20px; }
+  }
+
+  /* ─── Icon container ───────────────────────────── */
+  .auth-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+    border: 1.5px solid #99f6e4;
+    margin-bottom: 1.5rem;
+    color: #0d9488;
+  }
+  .auth-icon svg { width: 26px; height: 26px; }
+
+  /* ─── Typography ───────────────────────────────── */
+  .auth-eyebrow {
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #0d9488;
+    margin-bottom: 0.5rem; display: block;
+  }
+  .auth-heading {
+    font-size: 1.75rem; font-weight: 800; line-height: 1.2;
+    letter-spacing: -0.02em; color: #0f172a;
+    margin: 0 0 0.75rem;
+  }
+  .auth-subtext {
+    font-size: 0.95rem; color: #64748b; line-height: 1.65;
+    margin: 0 0 2rem; max-width: 360px; margin-left: auto; margin-right: auto;
+  }
+
+  /* ─── Form elements ────────────────────────────── */
+  .auth-form-group {
+    margin-bottom: 1.25rem; text-align: left;
+  }
+  .auth-form-label {
+    display: block; font-size: 0.875rem; font-weight: 600;
+    color: #334155; margin-bottom: 0.5rem;
+  }
+  .auth-form-input {
+    width: 100%; padding: 0.75rem 1rem;
+    font-size: 1rem; color: #0f172a; font-family: 'Inter', sans-serif;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0; border-radius: 12px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+  }
+  .auth-form-input:focus {
+    outline: none; border-color: #0d9488;
+    box-shadow: 0 0 0 4px rgba(13,148,136,0.1);
+    background: #ffffff;
+  }
+  .auth-form-input.has-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239,68,68,0.08);
+  }
+  .auth-form-error {
+    color: #ef4444; font-size: 0.8rem; margin-top: 0.35rem;
+    display: block; text-align: left;
+  }
+  .auth-form-help {
+    color: #94a3b8; font-size: 0.78rem; margin-top: 0.35rem;
+    display: block; text-align: left; line-height: 1.5;
+  }
+  .auth-non-field-errors {
+    background: #fef2f2; border: 1px solid #fecaca;
+    color: #b91c1c; padding: 0.85rem 1rem;
+    border-radius: 12px; margin-bottom: 1.5rem;
+    font-size: 0.875rem; text-align: left;
+  }
+
+  /* ─── Buttons ──────────────────────────────────── */
+  .auth-btn-primary {
+    width: 100%; padding: 0.875rem 1.5rem;
+    background: #0d9488; color: #ffffff;
+    border: none; border-radius: 12px;
+    font-size: 1rem; font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer; transition: all 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(13,148,136,0.2);
+    text-decoration: none;
+  }
+  .auth-btn-primary:hover {
+    background: #0f766e; transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(13,148,136,0.3);
+  }
+  .auth-btn-secondary {
+    width: 100%; padding: 0.875rem 1.5rem;
+    background: #ffffff; color: #334155;
+    border: 1.5px solid #e2e8f0; border-radius: 12px;
+    font-size: 1rem; font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer; transition: all 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    text-decoration: none;
+  }
+  .auth-btn-secondary:hover {
+    background: #f0fdfa; border-color: #0d9488; color: #0f766e;
+  }
+
+  /* ─── Links & misc ─────────────────────────────── */
+  .auth-link {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.875rem; font-weight: 600;
+    color: #0d9488; text-decoration: none;
+    transition: color 0.15s;
+  }
+  .auth-link:hover { color: #0f766e; text-decoration: underline; }
+
+  .auth-divider {
+    display: flex; align-items: center; gap: 1rem;
+    margin: 1.75rem 0; color: #94a3b8; font-size: 0.8rem; font-weight: 500;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px; background: #e2e8f0;
+  }
+
+  .auth-footer-text {
+    text-align: center; margin-top: 1.75rem;
+    font-size: 0.875rem; color: #64748b;
+  }
+  .auth-footer-text a {
+    color: #0d9488; font-weight: 600; text-decoration: none;
+  }
+  .auth-footer-text a:hover { text-decoration: underline; }
+
+  /* ─── Success state ────────────────────────────── */
+  .auth-icon-success {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1.5px solid #86efac;
+    margin-bottom: 1.5rem;
+    color: #16a34a;
+  }
+  .auth-icon-success svg { width: 26px; height: 26px; }
+
+  /* ─── Warning state ────────────────────────────── */
+  .auth-icon-warning {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1.5px solid #fcd34d;
+    margin-bottom: 1.5rem;
+    color: #d97706;
+  }
+  .auth-icon-warning svg { width: 26px; height: 26px; }
+
+  /* ─── Danger state ─────────────────────────────── */
+  .auth-icon-danger {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+    border: 1.5px solid #fca5a5;
+    margin-bottom: 1.5rem;
+    color: #dc2626;
+  }
+  .auth-icon-danger svg { width: 26px; height: 26px; }
+</style>

@@ -4,28 +4,23 @@
 {% block title %}{% trans "Verify Your Email Address" %} - Kairos{% endblock %}
 
 {% block public_content %}
-<div class="min-h-screen bg-surface-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-surface-900">
-            {% trans "Verify Your Email Address" %}
-        </h2>
-    </div>
+{% include "partials/_auth_styles.html" %}
 
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 text-center">
-            {% url 'account_email' as email_url %}
-            <p class="text-surface-600 mb-6">
-                {% blocktrans %}This part of the site requires us to verify that you are who you claim to be. For this purpose, we require that you verify ownership of your email address.{% endblocktrans %}
-            </p>
-            <p class="text-surface-600">
-                {% blocktrans %}We have sent an email to you for verification. Please click on the link inside that email. If you do not see the verification email in your main inbox, check your spam folder. Otherwise contact us if you do not receive it within a few minutes.{% endblocktrans %}
-            </p>
-            <div class="mt-6">
-                <a href="{{ email_url }}" class="text-brand-600 hover:text-brand-500 font-medium text-sm">
-                    {% trans "Manage Email Addresses" %}
-                </a>
-            </div>
-        </div>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-icon-warning">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
     </div>
+    <span class="auth-eyebrow">{% trans "Verification required" %}</span>
+    <h1 class="auth-heading">{% trans "Verify your email" %}</h1>
+    <p class="auth-subtext">{% blocktrans %}We need to verify your email address before you can continue. We've sent a verification email — please check your inbox and spam folder.{% endblocktrans %}</p>
+
+    {% url 'account_email' as email_url %}
+    <a href="{{ email_url }}" class="auth-btn-primary">{% trans "Manage email addresses" %}</a>
+
+    <div class="auth-footer-text">
+      <a href="{% url 'account_login' %}">&larr; Back to log in</a>
+    </div>
+  </div>
 </div>
 {% endblock %}

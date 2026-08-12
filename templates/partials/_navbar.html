@@ -1,0 +1,148 @@
+{# ── NAVBAR COMPONENT ─────────────────────────────── #}
+{# Include this partial on any page that needs the public navigation bar. #}
+{# Requires: CSS tokens (--teal-*) to be defined on the page. #}
+
+<style>
+  /* ─── Navbar ────────────────────────────────────── */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 5%; height: 68px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border-bottom: 1px solid rgba(226,232,240,0.8);
+    transition: box-shadow 0.25s;
+  }
+  .nav.scrolled { box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+  .nav-logo {
+    font-size: 1.4rem; font-weight: 900; color: var(--teal-600, #0d9488);
+    letter-spacing: -0.05em; text-decoration: none;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .nav-logo-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: conic-gradient(from 0deg, #0d9488, #5eead4, #0d9488);
+    animation: kairos-spin 4s linear infinite;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .nav-logo-icon-inner {
+    width: 20px; height: 20px;
+    background: #fff;
+    border-radius: 50%;
+  }
+  .nav.scrolled .nav-logo-icon-inner { background: #fff; }
+  @keyframes kairos-spin { 100% { transform: rotate(360deg); } }
+  .nav-links { display: flex; align-items: center; gap: 0.25rem; }
+  .nav-link {
+    font-size: 0.875rem; font-weight: 600; color: #64748b;
+    text-decoration: none; padding: 0.45rem 0.75rem; border-radius: 8px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .nav-link:hover { color: var(--teal-700, #0f766e); background: var(--teal-50, #f0fdfa); }
+  .nav-divider { width: 1px; height: 22px; background: #e2e8f0; margin: 0 0.5rem; }
+  .nav-cta {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.55rem 1.2rem; border-radius: 10px;
+    font-size: 0.875rem; font-weight: 700; letter-spacing: -0.01em;
+    background: var(--teal-600, #0d9488); color: #fff;
+    text-decoration: none; border: none;
+    transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 4px rgba(13,148,136,0.25);
+  }
+  .nav-cta:hover { background: var(--teal-700, #0f766e); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13,148,136,0.3); }
+
+  /* ─── Navbar mobile ────────────────────────────── */
+  .nav-hamburger {
+    display: none; background: none; border: none; cursor: pointer;
+    padding: 0.5rem; color: #64748b;
+  }
+  .nav-mobile-overlay {
+    display: none; position: fixed; inset: 0; z-index: 99;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+  }
+  .nav-mobile-overlay.open { display: block; }
+  .nav-mobile-menu {
+    display: none; position: fixed; top: 0; right: 0; z-index: 101;
+    width: 280px; height: 100vh; background: #fff;
+    box-shadow: -8px 0 30px rgba(0,0,0,0.1);
+    padding: 1.5rem; flex-direction: column; gap: 0.5rem;
+    transform: translateX(100%); transition: transform 0.25s ease;
+  }
+  .nav-mobile-menu.open { display: flex; transform: translateX(0); }
+  .nav-mobile-close {
+    align-self: flex-end; background: none; border: none;
+    cursor: pointer; padding: 0.5rem; color: #64748b;
+  }
+  .nav-mobile-link {
+    font-size: 1rem; font-weight: 600; color: #334155;
+    text-decoration: none; padding: 0.75rem 1rem; border-radius: 10px;
+    transition: background 0.15s;
+  }
+  .nav-mobile-link:hover { background: var(--teal-50, #f0fdfa); color: var(--teal-700, #0f766e); }
+  .nav-mobile-cta {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+    padding: 0.75rem 1.2rem; border-radius: 10px; margin-top: 0.5rem;
+    font-size: 1rem; font-weight: 700;
+    background: var(--teal-600, #0d9488); color: #fff;
+    text-decoration: none; border: none;
+    transition: background 0.15s;
+  }
+  .nav-mobile-cta:hover { background: var(--teal-700, #0f766e); }
+
+  @media (max-width: 640px) {
+    .nav-links .nav-link { display: none; }
+    .nav-links .nav-divider { display: none; }
+    .nav-hamburger { display: block; }
+  }
+</style>
+
+<nav class="nav" id="kairos-nav">
+  <a href="/" class="nav-logo">
+    <span class="nav-logo-icon">
+      <span class="nav-logo-icon-inner"></span>
+    </span>
+    Kairos
+  </a>
+  <div class="nav-links">
+    <a href="/#features" class="nav-link">Features</a>
+    <div class="nav-divider"></div>
+    <a href="{% url 'account_login' %}" class="nav-link">Log in</a>
+    <a href="{% url 'account_signup' %}" class="nav-cta">
+      Get started free
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+
+  {# Mobile hamburger #}
+  <button class="nav-hamburger" onclick="document.getElementById('nav-mobile').classList.add('open'); document.getElementById('nav-overlay').classList.add('open');" aria-label="Open menu">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</nav>
+
+{# Mobile menu overlay #}
+<div class="nav-mobile-overlay" id="nav-overlay" onclick="this.classList.remove('open'); document.getElementById('nav-mobile').classList.remove('open');"></div>
+<div class="nav-mobile-menu" id="nav-mobile">
+  <button class="nav-mobile-close" onclick="this.parentElement.classList.remove('open'); document.getElementById('nav-overlay').classList.remove('open');" aria-label="Close menu">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <a href="/#features" class="nav-mobile-link">Features</a>
+  <a href="{% url 'account_login' %}" class="nav-mobile-link">Log in</a>
+  <a href="{% url 'account_signup' %}" class="nav-mobile-cta">
+    Get started free
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+  </a>
+</div>
+
+<script>
+  // Add .scrolled class on scroll for nav shadow
+  (function() {
+    const nav = document.getElementById('kairos-nav');
+    if (nav) {
+      window.addEventListener('scroll', () => {
+        nav.classList.toggle('scrolled', window.scrollY > 8);
+      }, { passive: true });
+    }
+  })();
+</script>
