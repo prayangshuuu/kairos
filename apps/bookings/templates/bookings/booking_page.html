@@ -58,25 +58,74 @@
     
     <div class="relative flex w-full flex-col bg-white p-6 md:w-2/3 md:p-8 lg:p-10">
       <div class="mb-8 border-b border-surface-200 pb-6">
-        <div class="mb-4">
-          <p class="text-sm font-semibold text-brand-600">Select a time</p>
-          <h2 class="mt-1 text-xl font-semibold text-surface-900">Choose what works for you</h2>
+
+        {# ── LIVE CLOCK HEADER ───────────────────────────────────── #}
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+
+          {# Left: heading + live clock display #}
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-brand-600 mb-1.5">Select a time</p>
+            <h2 class="text-xl font-bold text-surface-900 mb-4">Choose what works for you</h2>
+
+            {# Live digital clock card #}
+            <div class="inline-flex items-center gap-3 bg-surface-950 rounded-2xl px-5 py-3.5 shadow-lg select-none" id="kairos-clock-card">
+              {# Animated clock icon #}
+              <div class="relative flex-shrink-0 w-8 h-8">
+                <svg id="kairos-clock-face" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8">
+                  <circle cx="18" cy="18" r="16" stroke="#0d9488" stroke-width="2" opacity="0.3"/>
+                  <circle cx="18" cy="18" r="16" id="kairos-progress-ring"
+                    stroke="#0d9488" stroke-width="2" stroke-linecap="round"
+                    stroke-dasharray="100.53" stroke-dashoffset="100.53"
+                    transform="rotate(-90 18 18)"
+                    style="transition: stroke-dashoffset 1s linear;"/>
+                  <line id="kairos-hour-hand" x1="18" y1="18" x2="18" y2="10" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+                  <line id="kairos-min-hand"  x1="18" y1="18" x2="18" y2="7"  stroke="#2dd4bf" stroke-width="1.5" stroke-linecap="round"/>
+                  <line id="kairos-sec-hand"  x1="18" y1="18" x2="18" y2="6"  stroke="#0d9488" stroke-width="1" stroke-linecap="round"/>
+                  <circle cx="18" cy="18" r="1.5" fill="#0d9488"/>
+                </svg>
+              </div>
+
+              {# Digital time display #}
+              <div class="flex items-end gap-1.5">
+                <span id="kairos-hh" class="font-mono text-3xl font-black text-white tracking-tight tabular-nums">--</span>
+                <span class="font-mono text-3xl font-black text-brand-500 mb-0.5 animate-pulse">:</span>
+                <span id="kairos-mm" class="font-mono text-3xl font-black text-white tracking-tight tabular-nums">--</span>
+                <span class="font-mono text-3xl font-black text-brand-500 mb-0.5 animate-pulse">:</span>
+                <span id="kairos-ss" class="font-mono text-2xl font-bold text-brand-400 tracking-tight tabular-nums mb-0.5">--</span>
+                <span id="kairos-ampm" class="font-mono text-sm font-bold text-surface-400 mb-1 ml-1">--</span>
+              </div>
+            </div>
+          </div>
+
+          {# Right: timezone selector #}
+          <div class="flex-shrink-0 w-full sm:w-auto sm:min-w-[220px] sm:max-w-[260px]">
+            <label for="timezone-selector" class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-surface-500 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              Time zone
+            </label>
+            <div class="relative">
+              <select id="timezone-selector" name="tz"
+                      hx-get="?partial=tz_change"
+                      hx-target="#booking-body"
+                      hx-swap="outerHTML"
+                      hx-indicator=".htmx-indicator"
+                      class="w-full appearance-none rounded-xl border-2 border-surface-200 bg-surface-50 pl-3 pr-9 py-2.5 text-sm font-medium text-surface-800 shadow-sm cursor-pointer transition-all duration-150 hover:border-brand-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1 focus:bg-white">
+                {% for tz in all_timezones %}
+                  <option value="{{ tz }}" {% if tz == visitor_tz %}selected{% endif %}>{{ tz }}</option>
+                {% endfor %}
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                <svg class="h-4 w-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
+              </div>
+            </div>
+            <p class="text-xs text-surface-400 mt-2 leading-relaxed">
+              All times shown in your local zone.
+            </p>
+          </div>
+
         </div>
-        <label for="timezone-selector" class="block text-sm font-semibold text-surface-700 mb-2">Time zone</label>
-        <select id="timezone-selector" name="tz" 
-                hx-get="?partial=tz_change" 
-                hx-target="#booking-body" 
-                hx-swap="outerHTML"
-                hx-indicator=".htmx-indicator"
-                class="block w-full max-w-sm rounded-md border border-surface-300 bg-surface-50 p-2.5 text-surface-900 shadow-sm transition-colors focus:border-brand-500 focus:ring-brand-500 sm:text-sm">
-          {% for tz in all_timezones %}
-            <option value="{{ tz }}" {% if tz == visitor_tz %}selected{% endif %}>{{ tz }}</option>
-          {% endfor %}
-        </select>
-        <p class="text-xs text-surface-500 mt-2 flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-          Times are displayed in your local time zone.
-        </p>
+        {# /LIVE CLOCK HEADER #}
+
       </div>
 
       {% include "bookings/partials/booking_body.html" %}
@@ -116,6 +165,63 @@
     });
   });
 </script>
+
+<script>
+  // ── Kairos Live Clock Engine ──────────────────────────────
+  (function() {
+    const cx = 18, cy = 18, r = 16;
+    const circumference = 2 * Math.PI * r; // ≈ 100.53
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function rotateHand(id, deg) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      // Rotate around clock center (18,18)
+      el.setAttribute('transform', `rotate(${deg}, 18, 18)`);
+    }
+
+    function tick() {
+      const now = new Date();
+      const h24 = now.getHours();
+      const m   = now.getMinutes();
+      const s   = now.getSeconds();
+
+      // Digital display
+      const h12 = h24 % 12 || 12;
+      const ampm = h24 < 12 ? 'AM' : 'PM';
+      const hh = document.getElementById('kairos-hh');
+      const mm = document.getElementById('kairos-mm');
+      const ss = document.getElementById('kairos-ss');
+      const ap = document.getElementById('kairos-ampm');
+      if (hh) hh.textContent = pad(h12);
+      if (mm) mm.textContent = pad(m);
+      if (ss) ss.textContent = pad(s);
+      if (ap) ap.textContent = ampm;
+
+      // Analog hands (degrees from 12 o'clock)
+      const secDeg  = s * 6;                          // 360/60
+      const minDeg  = m * 6 + s * 0.1;               // smooth
+      const hourDeg = (h24 % 12) * 30 + m * 0.5;    // smooth
+
+      rotateHand('kairos-sec-hand',  secDeg);
+      rotateHand('kairos-min-hand',  minDeg);
+      rotateHand('kairos-hour-hand', hourDeg);
+
+      // Progress ring (seconds arc)
+      const ring = document.getElementById('kairos-progress-ring');
+      if (ring) {
+        const progress = s / 60;
+        const offset   = circumference * (1 - progress);
+        ring.style.strokeDashoffset = offset.toFixed(3);
+      }
+    }
+
+    // Run immediately then every second
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
 <style>
   .htmx-indicator {
     opacity: 0;
@@ -134,7 +240,7 @@
     opacity: 0.5;
     pointer-events: none;
   }
-  
+
   /* Custom Scrollbar */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
@@ -148,6 +254,34 @@
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: #d1d5db;
+  }
+
+  /* surface-950 dark card for clock */
+  .bg-surface-950 {
+    background-color: #0a0f0e;
+  }
+
+  /* Clock card subtle inner glow */
+  #kairos-clock-card {
+    box-shadow:
+      0 4px 24px rgba(13, 148, 136, 0.15),
+      0 1px 3px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* Smooth second-hand sweep */
+  #kairos-sec-hand {
+    transform-origin: 18px 18px;
+    transform-box: fill-box;
+  }
+  #kairos-min-hand, #kairos-hour-hand {
+    transform-origin: 18px 18px;
+    transform-box: fill-box;
+  }
+
+  /* Seconds digit subtle pulse on change */
+  #kairos-ss {
+    transition: opacity 0.1s ease;
   }
 </style>
 {% endblock %}
