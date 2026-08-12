@@ -110,6 +110,13 @@
                     <div>
                         <p class="font-medium text-gray-900">Booking Info</p>
                         <p>Created at: {{ booking.created_at|date:"M j, Y, g:i A" }}</p>
+                        {% if booking.meeting_url %}
+                        <p class="mt-1"><strong>Meeting Link:</strong> <a href="{{ booking.meeting_url }}" target="_blank" @click.stop class="text-primary-600 hover:underline break-all">{{ booking.meeting_url }}</a></p>
+                        {% elif booking.location_type == 'google_meet' or booking.location_type == 'jitsi' or booking.location_type == 'zoom' %}
+                        <p class="mt-1 text-gray-500"><strong>Meeting Link:</strong> Generating...</p>
+                        {% elif booking.location_value %}
+                        <p class="mt-1"><strong>Location:</strong> {{ booking.location_value }}</p>
+                        {% endif %}
                         {% if booking.cancellation_reason %}
                         <p class="text-red-600 mt-2"><strong>Cancellation Reason:</strong> {{ booking.cancellation_reason }}</p>
                         {% endif %}
