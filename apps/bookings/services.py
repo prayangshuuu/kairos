@@ -316,7 +316,7 @@ def create_booking(
         guest_emails = []
 
     if event_type.price_cents > 0:
-        raise NotImplementedError("Paid events are not supported yet.")
+        pass # Allow paid events
 
     # 1. Fast path check
     from apps.integrations.services import fetch_external_busy, check_live_conflict
@@ -334,7 +334,10 @@ def create_booking(
         raise SlotUnavailable("Slot was just booked on the host's external calendar.")
 
 
-    status = Booking.StatusChoices.PENDING if event_type.requires_confirmation else Booking.StatusChoices.CONFIRMED
+    if event_type.price_cents > 0:
+        status = Booking.StatusChoices.PENDING_PAYMENT
+    else:
+        status = Booking.StatusChoices.PENDING if event_type.requires_confirmation else Booking.StatusChoices.CONFIRMED
 
     booking = Booking(
         event_type=event_type,

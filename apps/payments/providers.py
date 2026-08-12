@@ -263,10 +263,10 @@ class PayStationProvider(PaymentProvider):
         guest_email = "guest@example.com"
         guest_phone = "01700000000"
         
-        # Determine actual guest info if slot relationship exists
-        if hasattr(payment, 'slot') and payment.slot:
-            guest_name = payment.slot.guest_name or guest_name
-            guest_email = payment.slot.guest_email or guest_email
+        # Determine actual guest info if booking relationship exists
+        if hasattr(payment, 'booking') and payment.booking:
+            guest_name = payment.booking.invitee_name or guest_name
+            guest_email = payment.booking.invitee_email or guest_email
             
         amount = payment.amount_cents
         

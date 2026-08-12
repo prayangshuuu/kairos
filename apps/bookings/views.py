@@ -286,13 +286,34 @@ class BookingStubView(View):
                         }
                         return render(request, "bookings/partials/slots.html", context, status=409)
                         
-                # Return HX-Redirect header
-                response = HttpResponse()
-                
-                from apps.bookings.tokens import make_manage_token
-                token = make_manage_token(booking)
-                response['HX-Redirect'] = f"/booking/{booking.uid}/?t={token}"
-                return response
+                if booking.status == Booking.StatusChoices.PENDING_PAYMENT:
+                    from apps.payments.services import create_payment_for_booking
+                    from apps.payments.routing import select_provider
+                    
+                    payment = create_payment_for_booking(booking=booking)
+                    provider = select_provider(booking.event_type)
+                    
+                    from django.urls import reverse
+                    success_url = request.build_absolute_uri(reverse('payments:payment_return'))
+                    cancel_url = request.build_absolute_uri(f"{reverse('payments:payment_cancel')}?payment_uid={payment.uid}")
+                    
+                    checkout_result = provider.create_checkout(payment, success_url, cancel_url)
+                    
+                    # Update payment with external_session_id so PaymentReturnView can find it
+                    payment.external_session_id = checkout_result.session_id
+                    payment.save(update_fields=['external_session_id'])
+                    
+                    response = HttpResponse()
+                    response['HX-Redirect'] = checkout_result.redirect_url
+                    return response
+                else:
+                    # Return HX-Redirect header
+                    response = HttpResponse()
+                    
+                    from apps.bookings.tokens import make_manage_token
+                    token = make_manage_token(booking)
+                    response['HX-Redirect'] = f"/booking/{booking.uid}/?t={token}"
+                    return response
             else:
                 # Re-render form with errors
                 tz_str = request.POST.get('tz', 'UTC')
