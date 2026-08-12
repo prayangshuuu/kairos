@@ -12,6 +12,7 @@ env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env")
 
 SECRET_KEY = env("SECRET_KEY", default="insecure-default-secret-key")
+DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
@@ -122,6 +123,7 @@ AUTH_USER_MODEL = 'accounts.User'
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://localhost:6379/0")
 CELERY_TIMEZONE = "UTC"
+CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=DEBUG)
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
@@ -175,7 +177,7 @@ from sentry_sdk.integrations.celery import CeleryIntegration
 
 # Sentry Configuration
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
-if SENTRY_DSN and not env.bool("DJANGO_DEBUG", default=False):
+if SENTRY_DSN and not DEBUG:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[DjangoIntegration(), CeleryIntegration()],
@@ -200,7 +202,7 @@ LOGGING = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'plain' if env.bool("DJANGO_DEBUG", default=False) else 'json',
+            'formatter': 'plain' if DEBUG else 'json',
         },
     },
     'loggers': {
@@ -243,7 +245,7 @@ CSP_IMG_SRC = ("'self'", "data:")
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'SAMEORIGIN'
-if not env.bool("DJANGO_DEBUG", default=False):
+if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -252,6 +254,11 @@ if not env.bool("DJANGO_DEBUG", default=False):
     SECURE_HSTS_PRELOAD = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     CSRF_COOKIE_SAMESITE = 'Lax'
+else:
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SECURE_HSTS_SECONDS = 0
 
 # Database Connection Pooling / Max Age
 CONN_MAX_AGE = int(os.environ.get('CONN_MAX_AGE', 600))
@@ -303,3 +310,8 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Kairos <hello@mail.joinkairos.me>")
 SERVER_EMAIL = env("SERVER_EMAIL", default="server@mail.joinkairos.me")
+
+if DEBUG and env.bool("ENABLE_DEBUG_TOOLBAR", default=True):
+    INSTALLED_APPS += ["debug_toolbar"]
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+    INTERNAL_IPS = ["127.0.0.1"]

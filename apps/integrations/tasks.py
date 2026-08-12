@@ -335,7 +335,7 @@ def create_calendar_event(self, booking_id: int):
                     created_event = client.service.events().insert(
                         calendarId=write_target.external_calendar_id,
                         body=event_body,
-                        sendUpdates='none'
+                        sendUpdates='all'
                     ).execute()
                 except HttpError as insert_e:
                     if insert_e.resp.status == 409:
@@ -400,7 +400,7 @@ def delete_calendar_event(self, reference_id: int):
             client.service.events().delete(
                 calendarId=ref.external_calendar_id,
                 eventId=ref.external_event_id,
-                sendUpdates='none'
+                sendUpdates='all'
             ).execute()
         except HttpError as e:
             if e.resp.status in (404, 410):

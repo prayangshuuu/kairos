@@ -775,6 +775,7 @@ dependencies = [
     { name = "google-api-python-client" },
     { name = "google-auth-oauthlib" },
     { name = "icalendar" },
+    { name = "paystation" },
     { name = "pillow" },
     { name = "pre-commit" },
     { name = "psycopg", extra = ["binary"] },
@@ -811,6 +812,7 @@ requires-dist = [
     { name = "google-api-python-client", specifier = ">=2.198.0" },
     { name = "google-auth-oauthlib", specifier = ">=1.4.0" },
     { name = "icalendar" },
+    { name = "paystation", specifier = ">=1.1.0" },
     { name = "pillow", specifier = ">=12.3.0" },
     { name = "pre-commit", specifier = ">=4.6.2" },
     { name = "psycopg", extras = ["binary"] },
@@ -872,6 +874,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093/packaging-26.3.tar.gz", hash = "sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79", size = 313412, upload-time = "2026-08-04T18:15:28.737Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl", hash = "sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c", size = 129956, upload-time = "2026-08-04T18:15:27.159Z" },
+]
+
+[[package]]
+name = "paystation"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/5d/b86eb8c0409c2a5054735d4e7190444dafdf108a0639ed838182896be30e/paystation-1.1.0.tar.gz", hash = "sha256:9925778205b227aa55353b53a60499ec366b8bc88e88b5231c925da2210d3c2e", size = 3583, upload-time = "2026-03-14T11:32:13.213Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/f0/41bdf198a69fb2016b07253693a6a5a0b5b352e3f5a136aa49e0a603c28c/paystation-1.1.0-py3-none-any.whl", hash = "sha256:3ed2e67d14256f0408c9f414effcdfce5786e24abdd5e090243d0e1845b3884e", size = 4661, upload-time = "2026-03-14T11:32:11.831Z" },
 ]
 
 [[package]]
