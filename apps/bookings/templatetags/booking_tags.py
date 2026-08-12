@@ -41,3 +41,8 @@ def relative_time(value):
             return "yesterday"
         else:
             return f"{diff.days} days ago"
+
+@register.filter
+def split(value, arg):
+    """Splits the string by the given argument."""
+    return value.split(arg)

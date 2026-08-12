@@ -38,10 +38,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
     path('', include('apps.accounts.urls')),
-
+    path('payments/', include('apps.payments.urls')),
     path('', include('apps.scheduling.urls')),
     path('', include('apps.bookings.urls')),
-    path('payments/', include('apps.payments.urls')),
     path('webhooks/resend/', resend_webhook, name='resend_webhook'),
 ]
 

@@ -183,7 +183,7 @@ def stripe_connect_webhook(request):
 
 
 class PaymentReturnView(View):
-    """Customer returns from Stripe Checkout (success URL).
+    """Customer returns from Stripe Checkout or PayStation (success/failure URL).
 
     CRITICAL: The webhook frequently arrives BEFORE this redirect. Both paths
     converge on the same idempotent confirm_payment() function. Whichever
@@ -192,13 +192,30 @@ class PaymentReturnView(View):
 
     def get(self, request):
         session_id = request.GET.get('session_id', '')
-        if not session_id:
-            return HttpResponseBadRequest("Missing session_id")
+        invoice_number = request.GET.get('invoice_number', '')
 
-        payment = Payment.objects.filter(external_session_id=session_id).first()
+        payment = None
+        if session_id:
+            payment = Payment.objects.filter(external_session_id=session_id).first()
+        if not payment and invoice_number:
+            payment = Payment.objects.filter(invoice_number=invoice_number).first()
+
         if not payment:
-            logger.warning(f"No payment found for session {session_id}")
+            logger.warning(f"No payment found for session_id={session_id}, invoice_number={invoice_number}")
             return HttpResponseBadRequest("Payment not found")
+
+        status_param = request.GET.get('status', '').lower()
+        message_param = request.GET.get('message', '')
+
+        # Check if payment failed or was cancelled
+        if status_param in ['failed', 'cancel', 'cancelled', 'error'] or 'invalid' in message_param.lower() or 'fail' in message_param.lower():
+            logger.info(f"Payment {payment.uid} failed/cancelled via return URL: status={status_param}, msg={message_param}")
+            if payment.status == Payment.STATUS_PENDING:
+                expire_payment(payment_uid=str(payment.uid))
+
+            host_slug = payment.booking.event_type.owner.slug
+            event_slug = payment.booking.event_type.slug
+            return redirect(f"/{host_slug}/{event_slug}/?payment_error={message_param or 'Payment was not completed'}")
 
         confirm_payment(payment_uid=str(payment.uid))
 
@@ -213,17 +230,21 @@ class PaymentCancelView(View):
 
     def get(self, request):
         payment_uid = request.GET.get('payment_uid', '')
-        if not payment_uid:
-            return HttpResponseBadRequest("Missing payment_uid")
+        invoice_number = request.GET.get('invoice_number', '')
 
-        payment = Payment.objects.filter(uid=payment_uid).first()
+        payment = None
+        if payment_uid:
+            payment = Payment.objects.filter(uid=payment_uid).first()
+        if not payment and invoice_number:
+            payment = Payment.objects.filter(invoice_number=invoice_number).first()
+
         if not payment:
-            return HttpResponseBadRequest("Payment not found")
+            return redirect('/')
 
         if payment.status == Payment.STATUS_PENDING:
             expire_payment(payment_uid=str(payment.uid))
 
-        return redirect(f"/{payment.booking.event_type.owner.slug}/{payment.booking.event_type.slug}")
+        return redirect(f"/{payment.booking.event_type.owner.slug}/{payment.booking.event_type.slug}/?payment_cancelled=1")
 
 
 class ConnectDashboardView(LoginRequiredMixin, View):
