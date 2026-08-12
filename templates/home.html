@@ -304,50 +304,7 @@
   .feat-title { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; }
   .feat-desc  { font-size: 0.875rem; color: #64748b; line-height: 1.65; }
 
-  /* ─── Pricing callout ───────────────────────────── */
-  .pricing-section {
-    padding: 5rem 5%; background: var(--teal-50);
-    border-top: 1px solid var(--teal-100); border-bottom: 1px solid var(--teal-100);
-    text-align: center;
-  }
-  .pricing-card {
-    max-width: 580px; margin: 2.5rem auto 0;
-    background: #fff; border-radius: 1.5rem;
-    border: 2px solid var(--teal-200);
-    box-shadow: 0 20px 60px -12px rgba(13,148,136,0.18);
-    overflow: hidden;
-  }
-  .pricing-head {
-    padding: 2.5rem 2.5rem 2rem;
-    background: linear-gradient(135deg, var(--dark), var(--dark-3));
-    position: relative; overflow: hidden;
-  }
-  .pricing-head::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(13,148,136,0.3) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .pricing-plan { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-400); margin-bottom: 0.5rem; position:relative;z-index:1; }
-  .pricing-price {
-    font-size: 4.5rem; font-weight: 900; letter-spacing: -0.05em; color: #fff; line-height: 1;
-    position: relative; z-index: 1;
-  }
-  .pricing-price sup { font-size: 1.5rem; vertical-align: super; font-weight: 700; }
-  .pricing-price-label { font-size: 0.85rem; color: var(--teal-400); font-weight: 600; margin-top: 0.25rem; position:relative;z-index:1; }
-  .pricing-body { padding: 2rem 2.5rem 2.5rem; }
-  .pricing-feature-list { list-style: none; display: flex; flex-direction: column; gap: 0.9rem; margin-bottom: 2rem; text-align: left; }
-  .pricing-feature-list li {
-    display: flex; align-items: center; gap: 0.75rem;
-    font-size: 0.9rem; font-weight: 600; color: #334155;
-  }
-  .pricing-feature-list li::before {
-    content: '';
-    display: block; flex-shrink: 0; width: 20px; height: 20px;
-    border-radius: 9999px; background: var(--teal-500);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: center; background-size: 12px;
-  }
+
 
   /* ─── CTA section ───────────────────────────────── */
   .cta-section {
@@ -395,7 +352,6 @@
   <a href="/" class="nav-logo">Kairos</a>
   <div class="nav-links">
     <a href="#features" class="nav-link">Features</a>
-    <a href="#pricing" class="nav-link">Pricing</a>
     <a href="{% url 'account_login' %}" class="nav-link">Log in</a>
     <a href="{% url 'account_signup' %}" class="nav-cta">
       Get started — it's free
@@ -594,37 +550,6 @@
   </div>
 </section>
 
-{# ── PRICING SECTION ────────────────────────── #}
-<section class="pricing-section" id="pricing">
-  <div class="section-label">Pricing</div>
-  <h2 class="section-h2">One plan. Free. Always.</h2>
-  <p class="section-sub" style="margin:0.75rem auto 0;max-width:420px;">No free tier with paywalled features. No "Pro" upsell. Just Kairos, 100% free for everyone.</p>
-
-  <div class="pricing-card">
-    <div class="pricing-head">
-      <div class="pricing-plan">Forever Free Plan</div>
-      <div class="pricing-price"><sup>$</sup>0</div>
-      <div class="pricing-price-label">per month · per user · forever</div>
-    </div>
-    <div class="pricing-body">
-      <ul class="pricing-feature-list">
-        <li>Unlimited booking pages & event types</li>
-        <li>Unlimited team members — no per-seat charge</li>
-        <li>Calendar sync (Google &amp; Outlook)</li>
-        <li>Automated email confirmations &amp; reminders</li>
-        <li>Custom booking links &amp; slugs</li>
-        <li>Paid appointments with payment collection</li>
-        <li>Timezone auto-detection</li>
-        <li>No Kairos branding requirements</li>
-      </ul>
-      <a href="{% url 'account_signup' %}" class="btn-primary" style="width:100%;justify-content:center;font-size:1rem;">
-        Get started free
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </a>
-    </div>
-  </div>
-</section>
-
 {# ── CTA ────────────────────────────────────── #}
 <section class="cta-section">
   <h2 class="cta-h2">Start scheduling in<br><em>60 seconds</em></h2>
@@ -644,7 +569,6 @@
     <a href="/" class="footer-logo">Kairos</a>
     <div class="footer-links">
       <a href="#features" class="footer-link">Features</a>
-      <a href="#pricing" class="footer-link">Pricing</a>
       <a href="{% url 'account_signup' %}" class="footer-link">Sign up</a>
       <a href="{% url 'account_login' %}" class="footer-link">Log in</a>
     </div>
