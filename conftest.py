@@ -22,7 +22,7 @@ class ScheduleFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Schedule
 
-    owner = factory.SubFactory(UserFactory)
+    user = factory.SubFactory(UserFactory)
     name = "Test Schedule"
     timezone = "Asia/Dhaka"
 
@@ -58,7 +58,7 @@ def host_with_schedule(db):
     )
 
     schedule = Schedule.objects.create(
-        owner=user, name="Working Hours", timezone="Asia/Dhaka", is_default=True
+        user=user, name="Working Hours", timezone="Asia/Dhaka", is_default=True
     )
 
     for weekday in range(5):
@@ -74,7 +74,7 @@ def host_with_schedule(db):
         title="30 Minute Free",
         slug="30-min",
         duration_minutes=30,
-        price=0,
+        price_cents=0,
         schedule=schedule,
     )
 
@@ -83,7 +83,7 @@ def host_with_schedule(db):
         title="60 Minute Paid",
         slug="60-min",
         duration_minutes=60,
-        price=50.00,
+        price_cents=5000,
         schedule=schedule,
     )
 

@@ -30,4 +30,4 @@ class NotificationPreferencesForm(forms.ModelForm):
 class BrandingForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ["brand_color", "hide_branding"]
+        fields = ["brand_color"]

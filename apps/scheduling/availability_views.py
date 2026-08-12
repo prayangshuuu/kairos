@@ -11,7 +11,6 @@ from django.utils import timezone
 from django.views.generic import DetailView, View
 
 from django.urls import reverse
-from apps.subscriptions.entitlements import within_limit
 from .engine import get_slots
 from .models import AvailabilityRule, DateOverride, EventType, Schedule
 
@@ -73,14 +72,6 @@ class ScheduleDetailView(OwnerRequiredMixin, DetailView):
 
 class ScheduleCreateView(LoginRequiredMixin, View):
     def post(self, request):
-        count = Schedule.objects.filter(user=request.user).count()
-        if not within_limit(request.user, "max_schedules", count):
-            messages.error(
-                request,
-                "You have reached your plan limit for availability schedules. Upgrade to Pro for unlimited schedules.",
-            )
-            return redirect(reverse("subscriptions:pricing") + "?limit_reached=max_schedules")
-
         name = request.POST.get("name", "New Schedule")
         s = Schedule.objects.create(
             user=request.user, name=name, timezone=request.user.timezone or "UTC"
@@ -95,14 +86,6 @@ class ScheduleCreateView(LoginRequiredMixin, View):
 class ScheduleDuplicateView(LoginRequiredMixin, View):
     def post(self, request, pk):
         schedule = get_object_or_404(Schedule, user=request.user, pk=pk)
-
-        count = Schedule.objects.filter(user=request.user).count()
-        if not within_limit(request.user, "max_schedules", count):
-            messages.error(
-                request,
-                "You have reached your plan limit for availability schedules. Upgrade to Pro for unlimited schedules.",
-            )
-            return redirect(reverse("subscriptions:pricing") + "?limit_reached=max_schedules")
 
         with transaction.atomic():
             new_s = Schedule.objects.create(

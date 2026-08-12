@@ -40,17 +40,6 @@ class Workflow(models.Model):
 
     def clean(self):
         super().clean()
-        from django.core.exceptions import ValidationError
-        from apps.subscriptions.entitlements import has_feature
-
-        # Gating: Custom workflows beyond the 3 defaults require Pro
-        if self.pk is None and not self.is_default and self.owner_id:
-            custom_count = Workflow.objects.filter(owner=self.owner, is_default=False).count()
-            total_count = Workflow.objects.filter(owner=self.owner).count()
-            if total_count >= 3 and not has_feature(self.owner, "workflows_reminders"):
-                raise ValidationError(
-                    "Custom workflows beyond the 3 default reminders require a Pro subscription."
-                )
 
     def __str__(self):
         return f"{self.name} ({self.owner.email})"

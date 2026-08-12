@@ -10,7 +10,6 @@ from apps.accounts.models import User
 from apps.bookings.models import Booking
 from apps.bookings.services import cancel_booking, create_booking, reschedule_booking
 from apps.scheduling.models import EventType, Schedule
-from apps.subscriptions.models import Subscription
 from apps.workflows.engine import ALLOWED_TEMPLATE_VARIABLES, validate_template_string
 from apps.workflows.models import (
     Workflow,
@@ -45,7 +44,6 @@ def host(db):
         AvailabilityRule.objects.create(
             schedule=s, weekday=i, start_time="00:00", end_time="23:59"
         )
-    Subscription.objects.create(user=user, plan_code="free", status=Subscription.STATUS_ACTIVE)
     ensure_default_workflows_for_user(user)
     return user
 
@@ -70,7 +68,6 @@ def pro_host(db):
         AvailabilityRule.objects.create(
             schedule=s, weekday=i, start_time="00:00", end_time="23:59"
         )
-    Subscription.objects.create(user=user, plan_code="pro", status=Subscription.STATUS_ACTIVE)
     ensure_default_workflows_for_user(user)
     return user
 
@@ -266,36 +263,11 @@ class TestTemplateValidationAndGating:
         # Valid placeholders do not raise
         validate_template_string("Hello {invitee_name}, meeting is at {start_time}")
 
-    def test_free_user_cannot_create_fourth_workflow_via_direct_post(self, client, host):
-        """A free user cannot create a fourth workflow via direct POST."""
-        # Host already has 3 default workflows
+    def test_user_can_create_additional_custom_workflows(self, client, host):
+        """Any user can create additional custom workflows without limit."""
         assert Workflow.objects.filter(owner=host).count() == 3
 
         client.force_login(host)
-        response = client.post(
-            reverse("workflows:create"),
-            {
-                "name": "Fourth Workflow Attempt",
-                "trigger": "before_event",
-                "offset_minutes": -30,
-                "is_active": True,
-                "channel": "email",
-                "recipient": "invitee",
-                "subject_template": "Notice: {event_title}",
-                "body_template": "Hi {invitee_name}, see you soon.",
-            },
-        )
-
-        # Cannot create 4th workflow -> redirected to pricing
-        assert Workflow.objects.filter(owner=host).count() == 3
-        assert response.status_code == 302
-        assert "pricing" in response.url
-
-    def test_pro_user_can_create_additional_custom_workflows(self, client, pro_host):
-        """A Pro user can create additional custom workflows."""
-        assert Workflow.objects.filter(owner=pro_host).count() == 3
-
-        client.force_login(pro_host)
         response = client.post(
             reverse("workflows:create"),
             {
@@ -311,4 +283,4 @@ class TestTemplateValidationAndGating:
         )
 
         assert response.status_code == 302
-        assert Workflow.objects.filter(owner=pro_host).count() == 4
+        assert Workflow.objects.filter(owner=host).count() == 4

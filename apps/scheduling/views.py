@@ -10,7 +10,6 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.views.generic import CreateView, ListView, UpdateView, View
 
-from apps.subscriptions.entitlements import has_feature, within_limit
 from .forms import EventTypeForm
 from .models import BookingQuestion, EventType
 
@@ -43,13 +42,6 @@ class EventTypeCreateView(LoginRequiredMixin, CreateView):
         if questions_json:
             try:
                 questions = json.loads(questions_json)
-                valid_questions = [q for q in questions if not q.get("deleted")]
-                if len(valid_questions) > 3 and not has_feature(self.request.user, "unlimited_custom_questions"):
-                    return HttpResponse(
-                        "Free plan is limited to 3 custom questions per event type. Upgrade to Pro for unlimited custom questions.",
-                        status=400,
-                    )
-
                 for i, q in enumerate(questions):
                     if q.get("deleted"):
                         continue
@@ -100,13 +92,6 @@ class EventTypeUpdateView(OwnerRequiredMixin, UpdateView):
         if questions_json:
             try:
                 questions = json.loads(questions_json)
-                valid_questions = [q for q in questions if not q.get("deleted")]
-                if len(valid_questions) > 3 and not has_feature(self.request.user, "unlimited_custom_questions"):
-                    return HttpResponse(
-                        "Free plan is limited to 3 custom questions per event type. Upgrade to Pro for unlimited custom questions.",
-                        status=400,
-                    )
-
                 for i, q in enumerate(questions):
                     if q.get("deleted") and q.get("id"):
                         BookingQuestion.objects.filter(id=q["id"], event_type=self.object).delete()
@@ -162,14 +147,6 @@ class EventTypeDuplicateView(LoginRequiredMixin, View):
     def post(self, request, slug):
         event = get_object_or_404(EventType, owner=request.user, slug=slug)
 
-        active_count = EventType.objects.filter(owner=request.user, is_active=True).count()
-        if not within_limit(request.user, "max_event_types", active_count):
-            messages.error(
-                request,
-                "You have reached your plan limit for active event types. Upgrade to Pro for unlimited event types.",
-            )
-            return redirect(reverse("subscriptions:pricing") + "?limit_reached=max_event_types")
-
         with transaction.atomic():
             new_title = f"{event.title} (copy)"
             base_slug = slugify(new_title)
@@ -197,17 +174,6 @@ class EventTypeDuplicateView(LoginRequiredMixin, View):
 class EventTypeToggleActiveView(LoginRequiredMixin, View):
     def post(self, request, slug):
         event = get_object_or_404(EventType, owner=request.user, slug=slug)
-
-        if not event.is_active:
-            active_count = EventType.objects.filter(owner=request.user, is_active=True).count()
-            if not within_limit(request.user, "max_event_types", active_count):
-                messages.error(
-                    request,
-                    "You have reached your plan limit for active event types. Upgrade to Pro for unlimited event types.",
-                )
-                return redirect(
-                    reverse("subscriptions:pricing") + "?limit_reached=max_event_types"
-                )
 
         event.is_active = not event.is_active
         event.save(update_fields=["is_active"])

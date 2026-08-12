@@ -33,16 +33,6 @@ class Schedule(models.Model):
             )
         ]
 
-    def clean(self):
-        super().clean()
-        if self.pk is None and self.user_id:
-            from apps.subscriptions.entitlements import within_limit
-            count = Schedule.objects.filter(user=self.user).count()
-            if not within_limit(self.user, "max_schedules", count):
-                raise ValidationError(
-                    {"name": "You have reached your plan limit for availability schedules. Upgrade to Pro for unlimited schedules."}
-                )
-
     def save(self, *args, **kwargs):
         if not self.timezone and self.user_id:
             self.timezone = self.user.timezone
@@ -59,21 +49,6 @@ class Schedule(models.Model):
     @property
     def zoneinfo(self):
         return ZoneInfo(self.timezone)
-
-    def clean(self):
-        super().clean()
-        if self.pk is None:
-            from apps.subscriptions.entitlements import within_limit
-
-            count = Schedule.objects.filter(user=self.user).count()
-            if not within_limit(self.user, "max_schedules", count):
-                from django.core.exceptions import ValidationError
-
-                raise ValidationError(
-                    {
-                        "name": "You have reached your plan limit for schedules. Upgrade to Pro for unlimited schedules."
-                    }
-                )
 
     def __str__(self):
         return self.name
@@ -291,27 +266,6 @@ class EventType(models.Model):
 
     def clean(self):
         super().clean()
-        from apps.subscriptions.entitlements import has_feature, within_limit
-
-        if self.pk is None and self.is_active:
-            active_count = EventType.objects.filter(owner=self.owner, is_active=True).count()
-            if not within_limit(self.owner, "max_event_types", active_count):
-                from django.core.exceptions import ValidationError
-
-                raise ValidationError(
-                    {
-                        "title": "You have reached your plan limit for active event types. Upgrade to Pro for unlimited event types."
-                    }
-                )
-
-        if self.is_paid and not has_feature(self.owner, "paid_bookings"):
-            from django.core.exceptions import ValidationError
-
-            raise ValidationError(
-                {
-                    "price_cents": "Paid bookings require a Pro subscription. Upgrade to Pro to charge for meetings."
-                }
-            )
 
         if self.payment_provider == "paystation":
             if self.currency.upper() != "BDT":

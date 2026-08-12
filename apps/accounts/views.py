@@ -277,7 +277,6 @@ class SettingsBrandingView(LoginRequiredMixin, View):
     def post(self, request):
         brand_form = BrandingForm(request.POST, instance=request.user)
         if brand_form.is_valid():
-            # If hide_branding is true, maybe check plan in future. Force false if no plan.
             brand_form.save()
             return render(
                 request,

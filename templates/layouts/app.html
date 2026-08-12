@@ -82,8 +82,10 @@
                     <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-brand-100 to-brand-200 flex items-center justify-center text-brand-700 font-bold overflow-hidden ring-2 ring-white shadow-sm">
                         {% if request.user.is_authenticated and request.user.avatar %}
                             <img src="{{ request.user.avatar.url }}" alt="Avatar" class="w-full h-full object-cover">
+                        {% elif request.user.is_authenticated %}
+                            {{ request.user.display_name|default:request.user.email|make_list|first|upper }}
                         {% else %}
-                            {{ request.user.display_name|default:request.user.email|make_list|first|upper|default:"K" }}
+                            K
                         {% endif %}
                     </div>
                     <svg class="w-4 h-4 text-surface-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>

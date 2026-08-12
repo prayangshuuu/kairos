@@ -83,7 +83,7 @@ def test_booking_requires_confirmation(mock_is_slot_available):
 
 
 @patch("apps.bookings.services.is_slot_available", return_value=True)
-def test_paid_event_raises_not_implemented(mock_is_slot_available):
+def test_paid_event_creates_pending_payment_booking(mock_is_slot_available):
     user = User.objects.create_user(email="host3@example.com", password="pw", slug="host3")
     schedule = Schedule.objects.create(user=user, name="Default", timezone="UTC")
     event = EventType.objects.create(
@@ -97,16 +97,16 @@ def test_paid_event_raises_not_implemented(mock_is_slot_available):
 
     start_at = datetime.now(UTC) + timedelta(days=1)
 
-    with pytest.raises(NotImplementedError):
-        create_booking(
-            event_type=event,
-            start_at=start_at,
-            invitee_name="Test Invitee",
-            invitee_email="test@example.com",
-            invitee_timezone="UTC",
-            answers={},
-            now=datetime.now(UTC),
-        )
+    booking = create_booking(
+        event_type=event,
+        start_at=start_at,
+        invitee_name="Test Invitee",
+        invitee_email="test@example.com",
+        invitee_timezone="UTC",
+        answers={},
+        now=datetime.now(UTC),
+    )
+    assert booking.status == Booking.StatusChoices.PENDING_PAYMENT
 
 
 @patch("apps.bookings.services.is_slot_available", return_value=True)

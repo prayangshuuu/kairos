@@ -11,7 +11,6 @@ from django.utils import timezone
 from django.views import View
 
 from apps.bookings.models import Booking
-from apps.subscriptions.entitlements import has_feature
 from apps.workflows.engine import ALLOWED_TEMPLATE_VARIABLES, render_workflow_template
 from apps.workflows.forms import WorkflowForm, WorkflowStepForm
 from apps.workflows.models import (
@@ -51,25 +50,17 @@ class WorkflowListView(LoginRequiredMixin, View):
         context = {
             "workflows": workflows,
             "executions": executions,
-            "can_create_custom": has_feature(request.user, "workflows_reminders"),
+            "can_create_custom": True,
         }
         return render(request, "workflows/workflow_list.html", context)
 
 
 class WorkflowCreateView(LoginRequiredMixin, View):
     """
-    Create a new custom workflow. Gated to Pro users if user already has 3 workflows.
+    Create a new custom workflow.
     """
 
     def get(self, request):
-        total_count = Workflow.objects.filter(owner=request.user).count()
-        if total_count >= 3 and not has_feature(request.user, "workflows_reminders"):
-            messages.error(
-                request,
-                "Custom workflows beyond the 3 default reminders require a Pro subscription.",
-            )
-            return redirect(reverse("subscriptions:pricing") + "?feature_required=workflows_reminders")
-
         workflow_form = WorkflowForm(user=request.user)
         step_form = WorkflowStepForm()
 
@@ -82,14 +73,6 @@ class WorkflowCreateView(LoginRequiredMixin, View):
         return render(request, "workflows/workflow_form.html", context)
 
     def post(self, request):
-        total_count = Workflow.objects.filter(owner=request.user).count()
-        if total_count >= 3 and not has_feature(request.user, "workflows_reminders"):
-            messages.error(
-                request,
-                "Custom workflows beyond the 3 default reminders require a Pro subscription.",
-            )
-            return redirect(reverse("subscriptions:pricing") + "?feature_required=workflows_reminders")
-
         workflow_form = WorkflowForm(request.POST, user=request.user)
         step_form = WorkflowStepForm(request.POST)
 
@@ -172,14 +155,6 @@ class WorkflowDuplicateView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         workflow = get_object_or_404(Workflow, owner=request.user, pk=pk)
-
-        total_count = Workflow.objects.filter(owner=request.user).count()
-        if total_count >= 3 and not has_feature(request.user, "workflows_reminders"):
-            messages.error(
-                request,
-                "Custom workflows beyond the 3 default reminders require a Pro subscription.",
-            )
-            return redirect(reverse("subscriptions:pricing") + "?feature_required=workflows_reminders")
 
         with transaction.atomic():
             new_wf = Workflow.objects.create(

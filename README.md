@@ -1,6 +1,12 @@
 # Kairos
 
-Scheduling and paid-appointments platform.
+## Business Model
+
+Kairos is 100% free with no subscription tiers or artificial feature limits. Every feature (unlimited event types, schedules, workflows, custom questions, and bookings) is available to all users.
+
+Revenue model:
+- **0% service charge** for hosts who connect their own Stripe account via Stripe Connect.
+- **3% service charge** for hosts accepting paid bookings via the Kairos PayStation route.
 
 ## Setup
 
