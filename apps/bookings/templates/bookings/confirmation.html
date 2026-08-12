@@ -101,7 +101,16 @@
 
         <div class="sm:col-span-2">
           <dt class="text-sm font-medium text-gray-500">Location</dt>
-          <dd class="mt-1 text-sm text-gray-900">
+          <dd id="location-details" class="mt-1 text-sm text-gray-900"
+            {% if not booking.meeting_url %}
+              {% if booking.location_type == 'google_meet' or booking.location_type == 'jitsi' or booking.location_type == 'zoom' %}
+                hx-get="{% url 'bookings:booking_confirmation' uid=booking.uid %}?t={{ token }}"
+                hx-select="#location-details"
+                hx-trigger="every 2s"
+                hx-swap="outerHTML"
+              {% endif %}
+            {% endif %}
+          >
             {% if booking.meeting_url %}
               <div class="flex items-center gap-2">
                 <a href="{{ booking.meeting_url }}" target="_blank" class="text-primary-600 hover:text-primary-700 underline font-medium break-all">
@@ -109,7 +118,13 @@
                 </a>
               </div>
             {% elif booking.location_type == 'google_meet' or booking.location_type == 'jitsi' or booking.location_type == 'zoom' %}
-              Video Conference (Link will be sent in calendar invitation)
+              <div class="flex items-center gap-2 text-gray-600">
+                <svg class="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Generating meeting link...</span>
+              </div>
             {% elif booking.location_type == 'in_person' %}
               {{ booking.location_value }}
             {% elif booking.location_type == 'phone' %}
