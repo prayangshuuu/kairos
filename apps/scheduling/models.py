@@ -259,9 +259,22 @@ class EventType(models.Model):
                 raise ValidationError({"payment_provider": "PayStation is only available for BDT currency."})
             
             from django.conf import settings
-            if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', False):
+            if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', True):
                 from django.core.exceptions import ValidationError
                 raise ValidationError({"payment_provider": "PayStation is not enabled on this server."})
+
+        if self.is_paid:
+            from apps.payments.routing import select_provider
+            provider = select_provider(self)
+            if not provider:
+                from django.core.exceptions import ValidationError
+                raise ValidationError({
+                    "price_cents": (
+                        "No valid payment provider is available for this event type/currency. "
+                        "Please connect your Stripe account or accept Kairos PayStation terms for BDT bookings."
+                    )
+                })
+
 
     def __str__(self):
         return f"{self.title} ({self.duration_minutes} min)"

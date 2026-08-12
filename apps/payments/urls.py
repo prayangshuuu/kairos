@@ -56,4 +56,6 @@ urlpatterns = [
     ),
     path('enable-paystation/', views.EnablePaystationView.as_view(), name='enable_paystation'),
     path('statement/', views.HostLedgerView.as_view(), name='host_ledger'),
+    path('generate-payout/', views.GeneratePayoutView.as_view(), name='generate_payout'),
 ]
+

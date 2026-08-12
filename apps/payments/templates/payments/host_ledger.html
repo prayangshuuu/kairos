@@ -10,47 +10,112 @@
         </a>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-        <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Current Balance Owed</h2>
-        <p class="text-4xl font-light text-gray-900">৳{{ balance|default:"0" }}</p>
-        <p class="text-sm text-gray-500 mt-2">
-            Kairos collects payments on your behalf. Balances are paid out automatically on a stated schedule once they reach the minimum threshold.
-        </p>
+    <!-- Balance & Payout Generation Card -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Current Un-payout-ed Balance</h2>
+                <p class="text-4xl font-bold {% if balance < 0 %}text-red-600{% else %}text-gray-900{% endif %}">
+                    ৳{{ balance|default:"0" }}
+                </p>
+                <p class="text-xs text-gray-500 mt-2">
+                    Minimum payout threshold: ৳{{ min_threshold_cents|default:100000|divisibleby:100|default:"1,000" }}
+                </p>
+            </div>
+            <div>
+                <form action="{% url 'payments:generate_payout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" 
+                            {% if balance < min_threshold_cents or balance <= 0 %}disabled{% endif %}
+                            class="px-5 py-2.5 rounded-md font-medium text-sm text-white transition 
+                                   {% if balance >= min_threshold_cents and balance > 0 %}bg-indigo-600 hover:bg-indigo-700 cursor-pointer{% else %}bg-gray-300 cursor-not-allowed{% endif %}">
+                        Generate Payout Statement
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Manual Disbursement Notice -->
+        <div class="mt-5 pt-4 border-t border-gray-100 bg-amber-50 border-l-4 border-l-amber-500 p-3 rounded-r text-xs text-amber-900">
+            <strong>Disbursement Notice:</strong> Payout disbursement is processed manually and out-of-band by our finance team via bank transfer or mobile financial service (bKash/Nagad). Kairos records payout statements here; the system does not perform automated bank transfers.
+        </div>
     </div>
 
-    <h2 class="text-lg font-medium mb-4">Ledger Activity</h2>
-    
-    {% if entries %}
+    <!-- Payout Statements Section -->
+    {% if payouts %}
+    <div class="mb-8">
+        <h2 class="text-lg font-medium mb-4">Payout Statements</h2>
         <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs font-medium text-gray-500 uppercase">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-3 text-left">ID</th>
+                        <th class="px-6 py-3 text-left">Period</th>
+                        <th class="px-6 py-3 text-left">Status</th>
+                        <th class="px-6 py-3 text-right">Net Amount</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    {% for payout in payouts %}
+                    <tr>
+                        <td class="px-6 py-4 font-mono font-medium text-gray-900">#{{ payout.id }}</td>
+                        <td class="px-6 py-4 text-gray-600">
+                            {{ payout.period_start|date:"M j" }} - {{ payout.period_end|date:"M j, Y" }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                                {% if payout.status == 'COMPLETED' %}bg-green-100 text-green-800
+                                {% elif payout.status == 'PENDING' %}bg-amber-100 text-amber-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ payout.status }} (Manual Transfer)
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right font-medium text-gray-900">
+                            ৳{{ payout.net_cents }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Ledger Activity Table -->
+    <h2 class="text-lg font-medium mb-4">Ledger Activity</h2>
+    {% if entries %}
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50 text-xs font-medium text-gray-500 uppercase">
+                    <tr>
+                        <th class="px-6 py-3 text-left">Date</th>
+                        <th class="px-6 py-3 text-left">Type</th>
+                        <th class="px-6 py-3 text-left">Description</th>
+                        <th class="px-6 py-3 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
                     {% for entry in entries %}
                     <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td class="px-6 py-4 text-gray-500 whitespace-nowrap">
                             {{ entry.created_at|date:"M j, Y, g:i a" }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full 
                                 {% if entry.entry_type == 'charge' %}bg-green-100 text-green-800
+                                {% elif entry.entry_type == 'service_fee' %}bg-amber-100 text-amber-800
+                                {% elif entry.entry_type == 'refund_fee_reversal' %}bg-teal-100 text-teal-800
                                 {% elif entry.entry_type == 'payout' %}bg-blue-100 text-blue-800
                                 {% elif entry.entry_type == 'refund' %}bg-red-100 text-red-800
                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
                                 {{ entry.get_entry_type_display }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-900">
+                        <td class="px-6 py-4 text-gray-900">
                             {{ entry.description }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right {% if entry.amount_cents < 0 %}text-red-600{% else %}text-green-600{% endif %}">
-                            ৳{{ entry.amount_cents }}
+                        <td class="px-6 py-4 whitespace-nowrap font-mono font-medium text-right {% if entry.amount_cents < 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                            {% if entry.amount_cents > 0 %}+{% endif %}৳{{ entry.amount_cents }}
                         </td>
                     </tr>
                     {% endfor %}
@@ -59,7 +124,7 @@
         </div>
     {% else %}
         <div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <p class="text-gray-500">No ledger activity yet.</p>
+            <p class="text-gray-500">No ledger activity recorded yet.</p>
         </div>
     {% endif %}
 </div>

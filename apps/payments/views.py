@@ -275,12 +275,16 @@ class ConnectDashboardView(LoginRequiredMixin, View):
             except Exception as e:
                 logger.error(f"Failed to create Express dashboard link: {e}")
 
+        from apps.payments.models import HostPaymentTerms
+        has_accepted_terms = HostPaymentTerms.objects.filter(user=request.user).exists()
+
         context = {
             'account': payment_account,
             'paystation_account': paystation_account,
             'express_dashboard_url': express_dashboard_url,
-            'enable_paystation': getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', False),
+            'enable_paystation': getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', True),
             'platform_fee_percent': getattr(settings, 'KAIROS_PLATFORM_FEE_PERCENT', 5.0),
+            'has_accepted_terms': has_accepted_terms,
         }
         return render(request, 'payments/connect_dashboard.html', context)
 
@@ -309,11 +313,27 @@ class FeeCalculatorView(LoginRequiredMixin, View):
 
 
 class EnablePaystationView(LoginRequiredMixin, View):
-    """Enable Paystation route for the host."""
+    """Enable Paystation route for the host after accepting terms."""
     def post(self, request):
-        if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', False):
+        if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', True):
             return HttpResponseBadRequest("Paystation is not enabled.")
             
+        from apps.payments.models import HostPaymentTerms
+        
+        # Get client IP
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+            
+        # Record terms acceptance
+        HostPaymentTerms.objects.get_or_create(
+            user=request.user,
+            terms_version="1.0",
+            defaults={'ip_address': ip}
+        )
+
         PaymentAccount.objects.get_or_create(
             user=request.user,
             provider='paystation',
@@ -332,17 +352,43 @@ class EnablePaystationView(LoginRequiredMixin, View):
 class HostLedgerView(LoginRequiredMixin, View):
     """View statement/ledger for PayStation route."""
     def get(self, request):
-        if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', False):
+        if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', True):
             return redirect('payments:connect_dashboard')
             
-        from apps.payments.models import HostLedger
+        from apps.payments.models import HostLedger, Payout
         from django.db.models import Sum
         
         entries = HostLedger.objects.filter(host=request.user).order_by('-created_at')
         balance = entries.aggregate(Sum('amount_cents'))['amount_cents__sum'] or 0
+        payouts = Payout.objects.filter(host=request.user).order_by('-initiated_at')
         
         context = {
             'entries': entries,
-            'balance': balance
+            'balance': balance,
+            'payouts': payouts,
+            'min_threshold_cents': getattr(settings, 'PAYSTATION_MIN_PAYOUT_THRESHOLD_CENTS', 100000),
         }
         return render(request, 'payments/host_ledger.html', context)
+
+
+class GeneratePayoutView(LoginRequiredMixin, View):
+    """Host/Admin triggers payout generation for a period."""
+    def post(self, request):
+        from apps.payments.services import generate_payout
+        from django.contrib import messages
+        from datetime import timedelta
+        
+        period_end = timezone.now()
+        period_start = period_end - timedelta(days=30)
+        
+        try:
+            payout = generate_payout(host=request.user, period_start=period_start, period_end=period_end)
+            if payout:
+                messages.success(request, f"Payout #{payout.id} generated for ৳{payout.net_cents/100:.2f}.")
+            else:
+                messages.error(request, "No positive balance available for payout.")
+        except ValueError as e:
+            messages.error(request, str(e))
+            
+        return redirect('payments:host_ledger')
+

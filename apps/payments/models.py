@@ -102,6 +102,26 @@ class ReconciliationFlag(models.Model):
     def __str__(self):
         return f"Reconciliation: {self.flag_type} for Payment {self.payment.uid}"
 
+# IMPORTANT NOTICE REGARDING PAYSTATION FALLBACK ROUTE:
+# Operating this PayStation fallback route at scale involves money-transmission and regulatory licensing 
+# questions because Kairos collects funds into its own merchant account on behalf of hosts.
+# Before operating this route in production, the legal position must be confirmed with a qualified professional.
+# This codebase assumes, but does not establish, that this regulatory position is settled.
+
+class HostPaymentTerms(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payment_terms_accepted')
+    terms_version = models.CharField(max_length=20, default="1.0")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    accepted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'terms_version'], name='unique_host_terms_version')
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} accepted terms v{self.terms_version} on {self.accepted_at}"
+
 class Payout(models.Model):
     STATUS_CHOICES = [
         ("PENDING", "Pending"),
@@ -127,9 +147,11 @@ class Payout(models.Model):
 class HostLedger(models.Model):
     ENTRY_TYPES = [
         ("charge", "Charge"),
+        ("service_fee", "Service Fee"),
         ("platform_fee", "Platform Fee"),
         ("gateway_fee", "Gateway Fee"),
         ("refund", "Refund"),
+        ("refund_fee_reversal", "Fee Reversal"),
         ("payout", "Payout"),
         ("adjustment", "Adjustment"),
     ]
@@ -138,10 +160,11 @@ class HostLedger(models.Model):
     payment = models.ForeignKey('Payment', on_delete=models.PROTECT, null=True, blank=True, related_name='ledger_entries')
     payout = models.ForeignKey(Payout, on_delete=models.PROTECT, null=True, blank=True, related_name='ledger_entries')
     entry_type = models.CharField(max_length=30, choices=ENTRY_TYPES)
-    amount_cents = models.IntegerField()  # Negative for fees, payouts, and refunds
+    amount_cents = models.IntegerField()  # Negative for fees, payouts, and refunds; positive for charges and fee reversals
     currency = models.CharField(max_length=3, default="BDT")
     description = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.entry_type} {self.amount_cents} {self.currency} (Host: {self.host.email})"
+

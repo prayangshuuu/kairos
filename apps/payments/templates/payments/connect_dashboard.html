@@ -1,154 +1,124 @@
 {% extends "base.html" %}
-{% block title %}Stripe Connect — Kairos{% endblock %}
+{% block title %}Payment Settings — Kairos{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto py-8 px-4">
+<div class="max-w-4xl mx-auto py-8 px-4">
     <h1 class="text-2xl font-semibold mb-6">Payment Settings</h1>
 
-    {% if not account and not paystation_account %}
-        {# No connected accounts yet #}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white border border-gray-200 rounded-lg p-6 flex flex-col">
-                <div class="flex-grow">
-                    <h2 class="text-lg font-medium mb-2">Stripe Connect</h2>
-                    <p class="text-gray-600 mb-4 text-sm">
-                        You are paid directly. Kairos never holds your money. Available in most countries.
-                    </p>
-                    <div class="bg-gray-50 rounded p-3 mb-4 text-sm">
-                        <p class="font-medium text-gray-700 mb-1">Example on ৳1000 booking:</p>
-                        <ul class="text-gray-600 space-y-1">
-                            <li>Stripe processing fee: ~৳59 (2.9% + 30¢)</li>
-                            <li>Kairos platform fee: ৳{{ platform_fee_percent|default:"5" }}%</li>
-                        </ul>
-                    </div>
+    <!-- Two Side-by-Side Cards: Provider Comparison -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <!-- Stripe Card -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-medium text-gray-900">Stripe Connect</h2>
+                    {% if account and account.charges_enabled %}
+                        <span class="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded-full font-medium">Connected</span>
+                    {% endif %}
                 </div>
-                <a href="{% url 'payments:stripe_connect_onboard' %}" 
-                   class="inline-block bg-indigo-600 text-center text-white px-5 py-2.5 rounded-md hover:bg-indigo-700 transition">
-                    Connect Stripe Account
-                </a>
-            </div>
-
-            {% if enable_paystation %}
-            <div class="bg-white border border-gray-200 rounded-lg p-6 flex flex-col">
-                <div class="flex-grow">
-                    <h2 class="text-lg font-medium mb-2 flex items-center">
-                        Kairos PayStation 
-                        <span class="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full font-medium">Bangladesh Only</span>
-                    </h2>
-                    <p class="text-gray-600 mb-4 text-sm">
-                        Kairos collects payment on your behalf in BDT and pays you out on the 15th of each month.
-                    </p>
-                    <div class="bg-gray-50 rounded p-3 mb-4 text-sm">
-                        <p class="font-medium text-gray-700 mb-1">Example on ৳1000 booking:</p>
-                        <ul class="text-gray-600 space-y-1">
-                            <li>Gateway processing fee: ৳25 (2.5%)</li>
-                            <li>Kairos platform fee: ৳{{ platform_fee_percent|default:"5" }}%</li>
-                        </ul>
-                    </div>
-                </div>
-                <form action="{% url 'payments:enable_paystation' %}" method="post">
-                    {% csrf_token %}
-                    <button type="submit" class="w-full bg-gray-900 text-white px-5 py-2.5 rounded-md hover:bg-black transition">
-                        Enable PayStation Route
-                    </button>
-                </form>
-            </div>
-            {% endif %}
-        </div>
-    {% else %}
-        {# Accounts exist — show status #}
-        <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-            <h2 class="text-lg font-medium mb-4">Connection Status</h2>
-            <dl class="space-y-3">
-                <div class="flex justify-between">
-                    <dt class="text-gray-500">Account ID</dt>
-                    <dd class="font-mono text-sm">{{ account.external_account_id }}</dd>
-                </div>
-                <div class="flex justify-between">
-                    <dt class="text-gray-500">Country</dt>
-                    <dd>{{ account.country|default:"—" }}</dd>
-                </div>
-                <div class="flex justify-between">
-                    <dt class="text-gray-500">Default Currency</dt>
-                    <dd>{{ account.default_currency|upper|default:"—" }}</dd>
-                </div>
-                <div class="flex justify-between">
-                    <dt class="text-gray-500">Can Accept Charges</dt>
-                    <dd>
-                        {% if account.charges_enabled %}
-                            <span class="text-green-600 font-medium">✓ Yes</span>
-                        {% else %}
-                            <span class="text-red-600 font-medium">✗ Not yet</span>
-                        {% endif %}
-                    </dd>
-                </div>
-                <div class="flex justify-between">
-                    <dt class="text-gray-500">Payouts Enabled</dt>
-                    <dd>
-                        {% if account.payouts_enabled %}
-                            <span class="text-green-600 font-medium">✓ Yes</span>
-                        {% else %}
-                            <span class="text-amber-600 font-medium">✗ Not yet</span>
-                        {% endif %}
-                    </dd>
-                </div>
-            </dl>
-        </div>
-
-        {% if not account.charges_enabled %}
-            <div class="bg-amber-50 border border-amber-200 rounded-lg p-5 mb-6">
-                <h3 class="text-amber-800 font-medium mb-2">⚠ Onboarding Incomplete</h3>
-                <p class="text-amber-700 text-sm mb-3">
-                    Your account cannot accept charges yet. Stripe still needs the following:
+                <p class="text-gray-600 mb-4 text-sm">
+                    Paid directly to you. Kairos never holds your money. Requires a Stripe account. Available in most countries.
                 </p>
-                {% if account.requirements_due %}
-                    <ul class="list-disc list-inside text-sm text-amber-700 space-y-1 mb-4">
-                        {% for req in account.requirements_due %}
-                            <li>{{ req }}</li>
-                        {% endfor %}
-                    </ul>
+                <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 mb-4 text-sm">
+                    <p class="font-semibold text-gray-700 mb-2">Worked example on ৳1,000 booking:</p>
+                    <dl class="space-y-1.5 text-gray-600">
+                        <div class="flex justify-between">
+                            <dt>Invitee pays:</dt>
+                            <dd class="font-mono font-medium">৳1,000</dd>
+                        </div>
+                        <div class="flex justify-between text-red-600">
+                            <dt>Stripe fee (2.9% + 30¢):</dt>
+                            <dd class="font-mono">-৳59</dd>
+                        </div>
+                        <div class="flex justify-between text-red-600">
+                            <dt>Kairos platform fee:</dt>
+                            <dd class="font-mono">-৳0</dd>
+                        </div>
+                        <div class="border-t border-gray-200 pt-1.5 flex justify-between font-semibold text-gray-900">
+                            <dt>You receive:</dt>
+                            <dd class="font-mono text-green-700">৳941</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+            <div>
+                {% if account and account.charges_enabled %}
+                    {% if express_dashboard_url %}
+                        <a href="{{ express_dashboard_url }}" target="_blank" rel="noopener"
+                           class="w-full inline-block text-center bg-gray-800 text-white px-5 py-2.5 rounded-md hover:bg-gray-900 transition font-medium text-sm">
+                            Open Stripe Dashboard ↗
+                        </a>
+                    {% else %}
+                        <span class="text-xs text-green-600 font-medium">✓ Charges enabled</span>
+                    {% endif %}
+                {% else %}
+                    <a href="{% url 'payments:stripe_connect_onboard' %}" 
+                       class="w-full inline-block bg-indigo-600 text-center text-white px-5 py-2.5 rounded-md hover:bg-indigo-700 transition font-medium text-sm">
+                        {% if account %}Resume Stripe Onboarding{% else %}Connect Stripe Account{% endif %}
+                    </a>
                 {% endif %}
-                <a href="{% url 'payments:stripe_connect_onboard' %}" 
-                   class="inline-block bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700 transition text-sm">
-                    Complete Onboarding
-                </a>
-                <p class="text-xs text-amber-600 mt-3">
-                    You will not be able to set up paid event types until charges are enabled.
-                </p>
             </div>
-        {% endif %}
+        </div>
 
-        {% if express_dashboard_url %}
-            <div class="bg-white border border-gray-200 rounded-lg p-6">
-                <h2 class="text-lg font-medium mb-2">Stripe Dashboard</h2>
-                <p class="text-gray-600 text-sm mb-4">
-                    View your payouts, transaction history, and manage your Stripe account directly.
+        <!-- PayStation Fallback Card -->
+        {% if enable_paystation %}
+        <div class="bg-white border border-gray-200 rounded-lg p-6 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-medium text-gray-900 flex items-center">
+                        Kairos Payments (PayStation)
+                    </h2>
+                    <span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-medium">Bangladesh, BDT only</span>
+                </div>
+                <p class="text-gray-600 mb-4 text-sm">
+                    No account needed. We collect and pay you out. 3% service charge. Bangladesh, BDT only.
                 </p>
-                <a href="{{ express_dashboard_url }}" 
-                   target="_blank" rel="noopener"
-                   class="inline-block bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 transition text-sm">
-                    Open Stripe Dashboard ↗
-                </a>
+                <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 mb-4 text-sm">
+                    <p class="font-semibold text-gray-700 mb-2">Worked example on ৳1,000 booking:</p>
+                    <dl class="space-y-1.5 text-gray-600">
+                        <div class="flex justify-between">
+                            <dt>Invitee pays:</dt>
+                            <dd class="font-mono font-medium">৳1,000</dd>
+                        </div>
+                        <div class="flex justify-between text-red-600">
+                            <dt>Kairos service charge (3%):</dt>
+                            <dd class="font-mono">-৳30</dd>
+                        </div>
+                        <div class="flex justify-between text-gray-500">
+                            <dt>Gateway processing fee:</dt>
+                            <dd class="font-mono text-xs">Included in 3% (৳0)</dd>
+                        </div>
+                        <div class="border-t border-gray-200 pt-1.5 flex justify-between font-semibold text-gray-900">
+                            <dt>You receive:</dt>
+                            <dd class="font-mono text-green-700">৳970</dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="text-xs text-gray-500 mb-4 bg-amber-50 border border-amber-200 rounded p-2.5">
+                    <strong>Terms Summary:</strong> Kairos collects on your behalf, deducts 3%, pays out on a stated schedule once the ৳1,000 minimum threshold is reached, and refunds reduce your balance.
+                </div>
             </div>
-        {% endif %}
-        
-        {% if paystation_account %}
-        <div class="bg-white border border-gray-200 rounded-lg p-6 mt-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-medium flex items-center">
-                    PayStation Route
-                    <span class="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full font-medium">Active</span>
-                </h2>
-                <a href="{% url 'payments:host_ledger' %}" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
-                    View Ledger &rarr;
-                </a>
+            <div>
+                {% if has_accepted_terms or paystation_account %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-green-700 font-medium flex items-center">
+                            ✓ PayStation Route Active
+                        </span>
+                        <a href="{% url 'payments:host_ledger' %}" class="inline-block bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-black transition text-sm font-medium">
+                            View Ledger & Payouts &rarr;
+                        </a>
+                    </div>
+                {% else %}
+                    <form action="{% url 'payments:enable_paystation' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full bg-gray-900 text-white px-5 py-2.5 rounded-md hover:bg-black transition font-medium text-sm">
+                            Accept Terms & Enable PayStation
+                        </button>
+                    </form>
+                {% endif %}
             </div>
-            <p class="text-gray-600 text-sm">
-                Kairos collects payments on your behalf in BDT and pays you out monthly. 
-                You can select this as the payment provider for your event types.
-            </p>
         </div>
         {% endif %}
-    {% endif %}
+    </div>
 </div>
 {% endblock %}

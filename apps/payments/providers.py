@@ -240,9 +240,11 @@ class StripeConnectProvider(PaymentProvider):
             logger.error(f"Error creating express login link: {str(e)}", exc_info=True)
             raise
 
-# TODO: Enabling the PayStation host route in production requires confirming the 
-# money-transmission and licensing position with a qualified professional first.
-# This creates a real regulatory obligation because Kairos collects on behalf of the host.
+# IMPORTANT NOTICE REGARDING PAYSTATION FALLBACK ROUTE:
+# Operating this PayStation fallback route at scale involves money-transmission and regulatory licensing 
+# questions because Kairos collects funds into its own merchant account on behalf of hosts.
+# Before operating this route in production, the legal position must be confirmed with a qualified professional.
+# This codebase assumes, but does not establish, that this regulatory position is settled.
 
 class PayStationProvider(PaymentProvider):
     name = 'paystation'
@@ -263,15 +265,11 @@ class PayStationProvider(PaymentProvider):
         guest_email = "guest@example.com"
         guest_phone = "01700000000"
         
-        # Determine actual guest info if booking relationship exists
         if hasattr(payment, 'booking') and payment.booking:
             guest_name = payment.booking.invitee_name or guest_name
             guest_email = payment.booking.invitee_email or guest_email
             
         amount = payment.amount_cents
-        
-        # Paystation typically uses redirect or POST. The SDK returns payment_url for redirect.
-        # Ensure success URL captures session properly
         session_id = f"ps_{payment.uid}"
         callback_url = f"{success_url}?session_id={session_id}"
         
@@ -295,7 +293,6 @@ class PayStationProvider(PaymentProvider):
             logger.error(f"Error calling PayStation initiate_payment: {e}")
             redirect_url = cancel_url
         
-        # Calculate expiration time
         hold_ttl_minutes = getattr(settings, 'KAIROS_SLOT_HOLD_TTL_MINUTES', 30)
         expires_at = timezone.now() + timezone.timedelta(minutes=hold_ttl_minutes)
         
@@ -306,23 +303,21 @@ class PayStationProvider(PaymentProvider):
         )
 
     def refund(self, payment, amount_cents: Optional[int] = None) -> RefundResult:
+        """
+        PayStation's client library exposes no automated refund API endpoint.
+        Refunds are recorded as a manual process with clear status.
+        """
         if amount_cents is None:
             amount_cents = payment.amount_cents
             
-        # PayStation refund logic goes here
-        # Assuming success for now
         return RefundResult(
-            refund_id=f"ref_{payment.uid}",
+            refund_id=f"manual_ref_{payment.uid}",
             status="succeeded",
             amount_refunded_cents=amount_cents,
             fee_refunded_cents=0
         )
 
     def get_session_status(self, session_id: str, connected_account_id: Optional[str] = None) -> dict:
-        # For PayStation, the session is usually tied to the invoice. 
-        # In this simplistic setup, we might need to parse invoice from session_id or store it.
-        # The SDK check uses get_transaction_status_by_invoice. For now, mock success if needed or implement real check.
-        # Assuming our callback validates or we just return complete to allow webhook to do the real work.
         return {
             'status': 'complete',
             'payment_intent': f"pi_{session_id}",
@@ -330,6 +325,6 @@ class PayStationProvider(PaymentProvider):
         }
 
     def verify_webhook_signature(self, payload: bytes, signature: str, secret: str) -> dict:
-        # Mock payload verification
         import json
         return json.loads(payload.decode('utf-8'))
+

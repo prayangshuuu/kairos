@@ -1,7 +1,13 @@
+# IMPORTANT NOTICE REGARDING PAYSTATION FALLBACK ROUTE:
+# Operating this PayStation fallback route at scale involves money-transmission and regulatory licensing 
+# questions because Kairos collects funds into its own merchant account on behalf of hosts.
+# Before operating this route in production, the legal position must be confirmed with a qualified professional.
+# This codebase assumes, but does not establish, that this regulatory position is settled.
+
 import logging
 import secrets
 from datetime import timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, Optional
 
 from django.conf import settings
@@ -13,12 +19,34 @@ from apps.payments.models import Payment, PaymentAccount, SlotHold
 
 logger = logging.getLogger(__name__)
 
+# Named constant for PayStation 3% service fee
+PAYSTATION_SERVICE_FEE_PERCENT = Decimal("3.0")
+
+# Minimum payout threshold for PayStation route (default ৳1000 = 100,000 cents)
+PAYSTATION_MIN_PAYOUT_THRESHOLD_CENTS = int(getattr(settings, 'PAYSTATION_MIN_PAYOUT_THRESHOLD_CENTS', 100000))
+
 # Currencies widely supported by Stripe for presentment
 SUPPORTED_CURRENCIES = {
     'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'SEK', 'NOK', 'DKK',
     'NZD', 'SGD', 'HKD', 'BRL', 'MXN', 'INR', 'BDT', 'MYR', 'PHP', 'THB',
     'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'HRK', 'ZAR', 'KES', 'NGN',
 }
+
+
+def compute_paystation_service_fee(amount_cents: int) -> int:
+    """
+    Calculate PayStation 3% service fee in cents using Decimal arithmetic with ROUND_HALF_UP rounding rule.
+    
+    Rounding rule:
+    Amounts are rounded to the nearest integer cent/paisa using ROUND_HALF_UP (e.g., 0.5 cents rounds up to 1 cent).
+    
+    Gateway cost policy:
+    PayStation's own processing cost comes out of Kairos's 3% service fee, NOT the host's 97%.
+    The host sees a single clean 3% deduction, and the net amount promised (97%) is the exact amount received.
+    """
+    amount_dec = Decimal(str(amount_cents))
+    fee_dec = (amount_dec * PAYSTATION_SERVICE_FEE_PERCENT / Decimal("100")).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    return int(fee_dec)
 
 
 def compute_platform_fee(amount_cents: int) -> dict:
@@ -30,9 +58,6 @@ def compute_platform_fee(amount_cents: int) -> dict:
       KAIROS_PLATFORM_FEE_MIN_CENTS  (default 50)
 
     Fee = max(min_fee, (amount × percent / 100) + fixed)
-
-    The returned dict captures the exact parameters at the time of computation
-    so the fee stored on the Payment row never needs recomputation.
     """
     fee_percent = float(getattr(settings, 'KAIROS_PLATFORM_FEE_PERCENT', 5.0))
     fee_fixed = int(getattr(settings, 'KAIROS_PLATFORM_FEE_FIXED_CENTS', 0))
@@ -49,17 +74,7 @@ def compute_platform_fee(amount_cents: int) -> dict:
 
 
 def compute_fee_breakdown(amount_cents: int, fee_amount_cents: int, currency: str = 'USD') -> dict:
-    """Returns breakdown for host-facing display.
-
-    Shows three lines:
-      1. Total amount the invitee pays
-      2. Kairos platform fee
-      3. Estimated Stripe processing fee (2.9% + 30¢ standard rate)
-      4. What the host actually receives
-
-    Note: Stripe's own processing fee is deducted from the host's side on
-    direct charges. The host's net = amount − Stripe fee − platform fee.
-    """
+    """Returns breakdown for host-facing display."""
     stripe_fee_estimate = int(amount_cents * 0.029) + 30  # Standard Stripe rate
     host_receives = amount_cents - fee_amount_cents - stripe_fee_estimate
     return {
@@ -72,7 +87,7 @@ def compute_fee_breakdown(amount_cents: int, fee_amount_cents: int, currency: st
 
 
 @transaction.atomic
-def create_payment_for_booking(*, booking: Booking) -> Payment:
+def create_payment_for_booking(*, booking: Booking, payment_account: Optional[PaymentAccount] = None) -> Payment:
     """Create a Payment and SlotHold for a paid booking.
 
     The fee is computed and frozen at creation time. Changing the global fee
@@ -88,31 +103,34 @@ def create_payment_for_booking(*, booking: Booking) -> Payment:
     if not provider:
         raise ValueError("No valid payment provider configured for this event type/currency.")
         
-    payment_account = PaymentAccount.objects.filter(
-        user=event_type.owner, 
-        provider=provider.name,
-        is_active=True
-    ).first()
-    
-    if not payment_account and provider.name != 'paystation':
-        # Paystation might not strictly need a payment_account record, 
-        # but for consistency we require it. If missing, this shouldn't have been returned by get_available_providers.
-        raise ValueError(f"Host lacks a valid payment account for {provider.name}")
+    if not payment_account:
+        payment_account = PaymentAccount.objects.filter(
+            user=event_type.owner, 
+            provider=provider.name,
+            is_active=True
+        ).first()
+
 
     amount_cents = event_type.price_cents
-    currency = event_type.currency
-    fee_data = compute_platform_fee(amount_cents)
+    currency = event_type.currency.upper()
 
     date_str = timezone.now().strftime('%Y%m%d')
     random_hex = secrets.token_hex(2).upper()
     invoice_number = f"KRS-{date_str}-{random_hex}"
 
-    # For PayStation, the gateway fee is typically our cost. Let's estimate it at 2.5% for BDT
-    gateway_fee_cents = 0
     if provider.name == 'paystation':
-        gateway_fee_cents = int(amount_cents * 0.025)
-        
-    net_owed_cents = amount_cents - fee_data['fee_amount_cents'] - gateway_fee_cents
+        fee_percent_applied = PAYSTATION_SERVICE_FEE_PERCENT
+        fee_amount_cents = compute_paystation_service_fee(amount_cents)
+        fee_fixed_applied = 0
+        gateway_fee_cents = 0  # Kairos absorbs gateway costs out of its 3% fee
+        net_owed_cents = amount_cents - fee_amount_cents
+    else:
+        fee_data = compute_platform_fee(amount_cents)
+        fee_percent_applied = Decimal(str(fee_data['fee_percent']))
+        fee_amount_cents = fee_data['fee_amount_cents']
+        fee_fixed_applied = fee_data['fee_fixed']
+        gateway_fee_cents = 0
+        net_owed_cents = amount_cents - fee_amount_cents
 
     payment = Payment.objects.create(
         booking=booking,
@@ -122,9 +140,9 @@ def create_payment_for_booking(*, booking: Booking) -> Payment:
         amount_cents=amount_cents,
         currency=currency,
         status=Payment.STATUS_PENDING,
-        fee_percent_applied=Decimal(str(fee_data['fee_percent'])),
-        fee_fixed_applied=fee_data['fee_fixed'],
-        fee_amount_cents=fee_data['fee_amount_cents'],
+        fee_percent_applied=fee_percent_applied,
+        fee_fixed_applied=fee_fixed_applied,
+        fee_amount_cents=fee_amount_cents,
         gateway_fee_cents=gateway_fee_cents,
         net_owed_cents=net_owed_cents,
     )
@@ -138,26 +156,19 @@ def create_payment_for_booking(*, booking: Booking) -> Payment:
         expires_at=expires_at,
     )
 
-    # Transition booking to pending_payment so the slot is held via the
-    # exclusion constraint (BLOCKING_STATUSES includes "pending_payment").
     booking.status = Booking.StatusChoices.PENDING_PAYMENT
     booking.save(update_fields=['status', 'updated_at'])
 
     logger.info(
         f"Payment {payment.uid} created for booking {booking.uid}, "
-        f"amount={amount_cents} {currency}, fee={fee_data['fee_amount_cents']}"
+        f"provider={provider.name}, amount={amount_cents} {currency}, fee={fee_amount_cents}"
     )
     return payment
 
 
 @transaction.atomic
 def confirm_payment(*, payment_uid) -> Payment:
-    """Idempotent confirmation — the critical convergence point.
-
-    CRITICAL ORDERING: The Stripe webhook frequently arrives BEFORE the
-    customer's browser redirect returns. Both paths call this function.
-    Whichever arrives second sees status=COMPLETED and returns immediately.
-    """
+    """Idempotent confirmation — the critical convergence point."""
     payment = Payment.objects.select_for_update().get(uid=payment_uid)
 
     if payment.status == Payment.STATUS_COMPLETED:
@@ -175,32 +186,24 @@ def confirm_payment(*, payment_uid) -> Payment:
     
     booking = payment.booking
     
-    # Write to HostLedger for PayStation
+    # Write to HostLedger for PayStation route
     if payment.provider == 'paystation':
         from apps.payments.models import HostLedger
         host = booking.event_type.owner
         
-        # 1. Gross Charge
+        # 1. Gross Charge (positive credit to host balance)
         HostLedger.objects.create(
             host=host, payment=payment, entry_type='charge',
             amount_cents=payment.amount_cents, currency=payment.currency,
             description=f"Payment for booking {booking.uid}"
         )
         
-        # 2. Platform Fee (negative)
+        # 2. Service Fee (negative debit to host balance)
         if payment.fee_amount_cents > 0:
             HostLedger.objects.create(
-                host=host, payment=payment, entry_type='platform_fee',
+                host=host, payment=payment, entry_type='service_fee',
                 amount_cents=-payment.fee_amount_cents, currency=payment.currency,
-                description="Kairos platform fee"
-            )
-            
-        # 3. Gateway Fee (negative)
-        if payment.gateway_fee_cents > 0:
-            HostLedger.objects.create(
-                host=host, payment=payment, entry_type='gateway_fee',
-                amount_cents=-payment.gateway_fee_cents, currency=payment.currency,
-                description="Gateway processing fee"
+                description=f"PayStation 3% service charge for payment {payment.uid}"
             )
 
     if booking.event_type.requires_confirmation:
@@ -266,10 +269,10 @@ def expire_payment(*, payment_uid) -> Payment:
 
 
 def handle_refund(*, payment: Payment, amount_cents: Optional[int] = None):
-    """Process a refund through the provider and update local state.
+    """Process a refund through the provider and update local state and ledger.
 
-    Platform fee IS refunded proportionally — keeping a fee on a cancelled
-    meeting is indefensible. Uses refund_application_fee=True.
+    Platform/Service fee IS refunded proportionally.
+    Uses refund_application_fee=True on Stripe, and proportional fee reversal on PayStation.
     """
     from apps.payments.providers import StripeConnectProvider, PayStationProvider
 
@@ -296,6 +299,15 @@ def handle_refund(*, payment: Payment, amount_cents: Optional[int] = None):
         if payment.provider == 'paystation' and result.amount_refunded_cents > 0:
             from apps.payments.models import HostLedger
             
+            # Calculate proportional fee reversal using Decimal ROUND_HALF_UP
+            amount_dec = Decimal(str(result.amount_refunded_cents))
+            total_dec = Decimal(str(payment.amount_cents))
+            orig_fee_dec = Decimal(str(payment.fee_amount_cents))
+            
+            fee_reversal_dec = (orig_fee_dec * amount_dec / total_dec).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+            fee_reversal_cents = int(fee_reversal_dec)
+            
+            # 1. Reverse charge (negative debit to host balance)
             HostLedger.objects.create(
                 host=payment.booking.event_type.owner,
                 payment=payment,
@@ -304,6 +316,17 @@ def handle_refund(*, payment: Payment, amount_cents: Optional[int] = None):
                 currency=payment.currency,
                 description=f"Refund for booking {payment.booking.uid}"
             )
+            
+            # 2. Reverse service fee (positive credit to host balance)
+            if fee_reversal_cents > 0:
+                HostLedger.objects.create(
+                    host=payment.booking.event_type.owner,
+                    payment=payment,
+                    entry_type='refund_fee_reversal',
+                    amount_cents=fee_reversal_cents,
+                    currency=payment.currency,
+                    description=f"Proportional reversal of 3% service fee for refund on payment {payment.uid}"
+                )
 
     logger.info(
         f"Refunded {result.amount_refunded_cents} cents for payment {payment.uid}, "
@@ -313,11 +336,7 @@ def handle_refund(*, payment: Payment, amount_cents: Optional[int] = None):
 
 
 def handle_dispute(*, payment: Payment, dispute_data: dict) -> None:
-    """Handle a charge.dispute.created event.
-
-    The host is merchant of record on direct charges, so THEY handle the
-    dispute, not Kairos. We flag it and notify them.
-    """
+    """Handle a charge.dispute.created event."""
     payment.status = Payment.STATUS_DISPUTED
     payment.metadata = {**(payment.metadata or {}), 'dispute': dispute_data}
     payment.save(update_fields=['status', 'metadata', 'updated_at'])
@@ -325,16 +344,12 @@ def handle_dispute(*, payment: Payment, dispute_data: dict) -> None:
     booking = payment.booking
     logger.warning(
         f"DISPUTE on payment {payment.uid} (booking {booking.uid}). "
-        f"Host {booking.host.email} is merchant of record and must respond. "
-        f"Evidence due by: {dispute_data.get('evidence_details', {}).get('due_by', 'unknown')}."
+        f"Host {booking.host.email} is merchant of record and must respond."
     )
 
 
 def validate_event_type_currency(*, event_type, payment_account: PaymentAccount) -> dict:
-    """Validate that an event type's currency is supported by the host's connected account.
-
-    Returns dict with 'valid', 'warning', and 'error' keys.
-    """
+    """Validate that an event type's currency is supported by the host's connected account."""
     currency = event_type.currency.upper()
     default_currency = (payment_account.default_currency or '').upper()
 
@@ -382,38 +397,43 @@ def sync_payment_account_from_stripe(
         payment_account.onboarding_completed_at = timezone.now()
 
     payment_account.save()
-    logger.info(
-        f"Synced PaymentAccount {payment_account.external_account_id}: "
-        f"charges_enabled={charges_enabled}, requirements={payment_account.requirements_due}"
-    )
     return payment_account
 
 
 @transaction.atomic
-def generate_payout(*, host, period_start, period_end) -> Optional[Any]:
+def generate_payout(*, host, period_start, period_end, notes: str = "") -> Optional[Any]:
     """
     Generate a payout for a host on the PayStation route for a given period.
-    Sums up all ledger entries in the period, creates a Payout, and adds a payout entry.
+    Checks host's total ledger balance. If negative or below minimum threshold, blocks payout.
     """
     from apps.payments.models import HostLedger, Payout
     from django.db.models import Sum
 
-    # Aggregate un-payout-ed entries in the period
+    # 1. Total balance across all host ledger entries
+    current_balance = HostLedger.objects.filter(host=host).aggregate(Sum('amount_cents'))['amount_cents__sum'] or 0
+
+    if current_balance <= 0:
+        raise ValueError("Host balance is zero or negative. Cannot generate payout.")
+
+    if current_balance < PAYSTATION_MIN_PAYOUT_THRESHOLD_CENTS:
+        raise ValueError(
+            f"Host balance (৳{current_balance/100:.2f}) is below minimum payout threshold "
+            f"(৳{PAYSTATION_MIN_PAYOUT_THRESHOLD_CENTS/100:.2f})."
+        )
+
+    # 2. Aggregate un-payout-ed entries up to period_end
     entries = HostLedger.objects.filter(
         host=host,
-        created_at__gte=period_start,
-        created_at__lt=period_end,
+        created_at__lte=period_end,
         payout__isnull=True
     )
     
-    total_balance = entries.aggregate(Sum('amount_cents'))['amount_cents__sum'] or 0
-    
-    if total_balance <= 0:
-        logger.info(f"No positive balance for {host.email} in period {period_start} to {period_end}. Skip payout.")
-        return None
-        
+    period_balance = entries.aggregate(Sum('amount_cents'))['amount_cents__sum'] or 0
+    if period_balance <= 0:
+        raise ValueError("No positive un-payout-ed balance in specified period.")
+
     gross_cents = entries.filter(entry_type='charge').aggregate(Sum('amount_cents'))['amount_cents__sum'] or 0
-    fees_cents = abs(entries.filter(entry_type__in=['platform_fee', 'gateway_fee']).aggregate(Sum('amount_cents'))['amount_cents__sum'] or 0)
+    fees_cents = abs(entries.filter(entry_type='service_fee').aggregate(Sum('amount_cents'))['amount_cents__sum'] or 0)
 
     payout = Payout.objects.create(
         host=host,
@@ -421,20 +441,21 @@ def generate_payout(*, host, period_start, period_end) -> Optional[Any]:
         period_end=period_end,
         gross_cents=gross_cents,
         fees_cents=fees_cents,
-        net_cents=total_balance,
+        net_cents=period_balance,
         status="PENDING",
+        notes=notes,
     )
     
     entries.update(payout=payout)
     
-    # Create the payout entry in the ledger (negative)
+    # Record payout debit in ledger (negative)
     HostLedger.objects.create(
         host=host,
         payout=payout,
         entry_type='payout',
-        amount_cents=-total_balance,
-        currency="BDT",  # Paystation is BDT only
-        description=f"Payout generated for period {period_start.strftime('%Y-%m-%d')} to {period_end.strftime('%Y-%m-%d')}"
+        amount_cents=-period_balance,
+        currency="BDT",
+        description=f"Payout generated for period ending {period_end.strftime('%Y-%m-%d')}"
     )
     
     return payout
