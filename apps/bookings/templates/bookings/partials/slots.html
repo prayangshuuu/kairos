@@ -8,30 +8,87 @@
   {% endif %}
 
   {% if selected_date %}
-    <h3 class="text-base font-semibold text-surface-900 mb-2 sticky top-0 bg-white z-10">{{ selected_date|date:"l, F j" }}</h3>
-    <p class="mb-5 text-sm text-surface-500">Pick a start time to continue.</p>
+    <div class="sticky top-0 bg-white/80 backdrop-blur-md z-10 pb-4 mb-4 border-b border-surface-100">
+      <h3 class="text-xl font-black text-surface-900 tracking-tight">{{ selected_date|date:"l, F j" }}</h3>
+      <p class="text-xs font-semibold text-surface-400 uppercase tracking-widest mt-1">Pick a start time</p>
+    </div>
     
     {% if day_slots %}
-      <div class="flex-grow overflow-y-auto pr-2 space-y-3 pb-8">
-        {% timezone visitor_tz %}
-          {% for slot in day_slots %}
-            <button 
-              {% if booking %}
-              hx-post="{% url 'bookings:booking_reschedule' uid=booking.uid %}?t={{ token }}"
-              hx-include="#reason"
-              hx-vals='{"slot_time": "{{ slot.isoformat }}", "tz": "{{ visitor_tz }}"}'
-              {% else %}
-              hx-post="{% url 'bookings:booking_stub' host_slug=host.slug event_slug=event.slug %}"
-              hx-vals='{"slot": "{{ slot.isoformat }}", "tz": "{{ visitor_tz }}"}'
-              {% endif %}
-              hx-target="#slots-partial"
-              hx-swap="outerHTML"
-              class="w-full py-3.5 px-4 border border-brand-600 text-brand-700 rounded-md text-sm font-semibold hover:border-brand-700 hover:bg-brand-50 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 flex justify-center items-center bg-white shadow-sm"
-            >
-              {{ slot|time:"g:i A" }}
-            </button>
-          {% endfor %}
-        {% endtimezone %}
+      <div class="flex-grow flex flex-col items-center justify-start pt-2 pb-8 space-y-6">
+        <div class="timepicker-ui w-full relative group">
+          <input type="text" class="timepicker-ui-input w-full py-4 px-6 bg-white border border-surface-300 text-surface-900 rounded-xl text-center text-xl font-bold shadow-sm focus:border-brand-500 focus:ring-0 cursor-pointer hover:border-brand-400 hover:shadow-md transition-all duration-300 outline-none" value="{{ day_slots.0|time:'h:i A' }}" readonly>
+          <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-surface-400 group-hover:text-brand-500 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+        </div>
+        
+        <button id="confirm-time-btn" class="w-full py-4 px-6 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
+          Confirm Selected Time
+        </button>
+        
+        <script src="https://cdn.jsdelivr.net/npm/timepicker-ui@2.6.1/dist/timepicker-ui.umd.js"></script>
+        <script>
+          (function() {
+            const container = document.querySelector('.timepicker-ui');
+            const input = document.querySelector('.timepicker-ui-input');
+            const btn = document.getElementById('confirm-time-btn');
+            
+            if (container && !window.kairosTimepickerLoaded) {
+              const picker = new window.tui.TimepickerUI(container, {
+                mobile: true,
+                theme: 'basic',
+              });
+              picker.create();
+              window.kairosTimepickerLoaded = true;
+              
+              const slotsData = [
+                {% for slot in day_slots %}
+                  { label: "{{ slot|time:'h:i A' }}", iso: "{{ slot.isoformat }}" },
+                {% endfor %}
+              ];
+              
+              btn.addEventListener('click', function() {
+                const timeStr = input.value;
+                let selectedIso = "";
+                
+                // 1. Try to find an exact match in available slots
+                const match = slotsData.find(s => s.label === timeStr);
+                
+                if (match) {
+                  selectedIso = match.iso;
+                } else {
+                  // 2. Construct ISO for the arbitrary time they picked
+                  const timeParts = timeStr.match(/(\d+):(\d+) (AM|PM)/);
+                  if (timeParts) {
+                    let hours = parseInt(timeParts[1], 10);
+                    const minutes = timeParts[2].padStart(2, '0');
+                    if (timeParts[3] === 'PM' && hours < 12) hours += 12;
+                    if (timeParts[3] === 'AM' && hours === 12) hours = 0;
+                    const hh = hours.toString().padStart(2, '0');
+                    
+                    const sampleIso = slotsData[0].iso; 
+                    const offset = sampleIso.substring(19); 
+                    selectedIso = "{{ selected_date.isoformat }}T" + hh + ":" + minutes + ":00" + offset;
+                  }
+                }
+                
+                {% if booking %}
+                htmx.ajax('POST', "{% url 'bookings:booking_reschedule' uid=booking.uid %}?t={{ token }}", {
+                  values: { slot_time: selectedIso, tz: "{{ visitor_tz }}" },
+                  target: '#slots-partial',
+                  swap: 'outerHTML'
+                });
+                {% else %}
+                htmx.ajax('POST', "{% url 'bookings:booking_stub' host_slug=host.slug event_slug=event.slug %}", {
+                  values: { slot: selectedIso, tz: "{{ visitor_tz }}" },
+                  target: '#slots-partial',
+                  swap: 'outerHTML'
+                });
+                {% endif %}
+              });
+            }
+          })();
+        </script>
       </div>
     {% else %}
       <div class="flex flex-col items-center justify-center mt-12 text-surface-500">

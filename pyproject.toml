@@ -29,6 +29,7 @@ dependencies = [
     "google-api-python-client>=2.198.0",
     "google-auth-oauthlib>=1.4.0",
     "paystation>=1.1.0",
+    "django-htmx>=1.19.0",
 ]
 
 [dependency-groups]

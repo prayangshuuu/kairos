@@ -24,11 +24,6 @@
                 Preview
             </a>
             {% endif %}
-            <button type="submit" form="event-type-form" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
-                    :disabled="isSubmitting"
-                    x-text="isSubmitting ? 'Updating...' : '{% if object %}Update settings{% else %}Create event type{% endif %}'">
-                {% if object %}Update settings{% else %}Create event type{% endif %}
-            </button>
         </div>
     </div>
 
