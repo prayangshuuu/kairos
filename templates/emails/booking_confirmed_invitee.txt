@@ -8,9 +8,9 @@ Your meeting with {{ host_name }} is confirmed.
 WHAT: {{ event_title }}
 WHEN: {{ start_at|date:"l, j F Y" }} at {{ start_at|date:"g:i A" }} - {{ end_at|date:"g:i A" }} ({{ invitee_tz }})
       {{ host_name }}'s time: {{ start_at|date:"g:i A" }} ({{ host_tz }})
-WHERE: {% if location_type == 'video_conference' and meeting_url %}{{ meeting_url }}{% else %}{{ location_value|default:"To be determined" }}{% endif %}
+WHERE: {% if meeting_url %}{{ meeting_url }}{% else %}{{ location_value|default:"To be determined" }}{% endif %}
 
-{% if location_type == 'video_conference' and meeting_url %}
+{% if meeting_url %}
 Join here: {{ meeting_url }}
 {% endif %}
 

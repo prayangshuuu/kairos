@@ -43,15 +43,43 @@ def create_conference_link(self, booking_id: int):
                 meeting_url=meeting_details.url
             )
         except NotImplementedError:
-            pass
+            provider = PROVIDERS.get("jitsi")
+            meeting_details = provider.create_meeting(booking)
+            booking.meeting_url = meeting_details.url
+            booking.save(update_fields=['meeting_url'])
+            BookingReference.objects.create(
+                booking=booking,
+                external_event_id=meeting_details.id,
+                external_calendar_id="",
+                kind="video_conference",
+                meeting_url=meeting_details.url
+            )
         except Exception as e:
             if str(e) == "pending":
                 logger.info(f"Conference creation pending for booking {booking.uid}, retrying...")
-                raise self.retry(countdown=5)
+                try:
+                    raise self.retry(countdown=5)
+                except self.MaxRetriesExceededError:
+                    logger.warning(f"Max retries exceeded for pending conference on booking {booking.uid}. Falling back to Jitsi.")
                 
             logger.error(f"Failed to create conference for booking {booking.uid}: {e}")
-            booking.location_value = "Conference creation failed. Host will contact you."
-            booking.save(update_fields=['location_value'])
+            # Fallback to Jitsi if creation fails (e.g. no calendar connected for Meet)
+            try:
+                provider = PROVIDERS.get("jitsi")
+                meeting_details = provider.create_meeting(booking)
+                booking.meeting_url = meeting_details.url
+                booking.save(update_fields=['meeting_url'])
+                BookingReference.objects.create(
+                    booking=booking,
+                    external_event_id=meeting_details.id,
+                    external_calendar_id="",
+                    kind="video_conference",
+                    meeting_url=meeting_details.url
+                )
+            except Exception as jitsi_err:
+                logger.error(f"Fallback to Jitsi failed: {jitsi_err}")
+                booking.location_value = "Conference creation failed. Host will contact you."
+                booking.save(update_fields=['location_value'])
             
     return booking_id
 

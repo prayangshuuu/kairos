@@ -23,7 +23,7 @@
             </p>
 
             <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Where</p>
-            {% if location_type == 'video_conference' and meeting_url %}
+            {% if meeting_url %}
             <p style="margin: 0; color: #0f172a; font-size: 16px;">
                 <a href="{{ meeting_url }}" style="color: #3b82f6; text-decoration: none;">Join Video Call</a>
             </p>
@@ -34,7 +34,7 @@
     </tr>
 </table>
 
-{% if location_type == 'video_conference' and meeting_url %}
+{% if meeting_url %}
 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 30px;">
   <tr>
     <td align="center">
