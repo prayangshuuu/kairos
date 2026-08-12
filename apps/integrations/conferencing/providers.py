@@ -26,13 +26,60 @@ class JitsiProvider(ConferenceProvider):
 
 class GoogleMeetProvider(ConferenceProvider):
     def create_meeting(self, booking: Booking) -> MeetingDetails:
-        raise NotImplementedError("Google Meet is created via Calendar sync")
+        from apps.bookings.models import BookingReference
+        cal_ref = BookingReference.objects.filter(booking=booking, kind="calendar_event").first()
+        if not cal_ref:
+            raise Exception("Cannot create Google Meet without a calendar event.")
+            
+        from apps.integrations.google.client import GoogleCalendarClient
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        client = GoogleCalendarClient(cal_ref.connection)
+        
+        request_id = f"kairos-{booking.uid.hex}"
+        
+        try:
+            event = client.service.events().patch(
+                calendarId=cal_ref.external_calendar_id,
+                eventId=cal_ref.external_event_id,
+                conferenceDataVersion=1,
+                body={
+                    'conferenceData': {
+                        'createRequest': {
+                            'requestId': request_id,
+                            'conferenceSolutionKey': {'type': 'hangoutsMeet'}
+                        }
+                    }
+                }
+            ).execute()
+        except Exception as e:
+            logger.error(f"Failed to create Google Meet for booking {booking.uid}: {e}")
+            raise
+            
+        conference_data = event.get('conferenceData', {})
+        create_request = conference_data.get('createRequest', {})
+        status = create_request.get('status', {}).get('statusCode')
+        
+        if status == 'pending':
+            raise Exception("pending")
+            
+        if status == 'success':
+            for entry_point in conference_data.get('entryPoints', []):
+                if entry_point.get('entryPointType') == 'video':
+                    return MeetingDetails(
+                        url=entry_point.get('uri'),
+                        id=conference_data.get('conferenceId', ''),
+                        provider_name="Google Meet"
+                    )
+        
+        raise Exception(f"Failed to create Google Meet, status: {status}")
 
     def update_meeting(self, booking: Booking, reference: 'BookingReference') -> MeetingDetails:
-        raise NotImplementedError()
+        return MeetingDetails(url="", id="", provider_name="Google Meet")
 
     def delete_meeting(self, reference: 'BookingReference') -> None:
-        raise NotImplementedError()
+        pass
 
 class ZoomProvider(ConferenceProvider):
     def create_meeting(self, booking: Booking) -> MeetingDetails:

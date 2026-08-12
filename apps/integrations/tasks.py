@@ -321,16 +321,6 @@ def create_calendar_event(self, booking_id: int):
             }
         }
         
-        is_google_meet = booking.location_type == 'google_meet'
-        if is_google_meet:
-            request_id = "meet" + booking.uid.hex
-            event_body['conferenceData'] = {
-                'createRequest': {
-                    'requestId': request_id,
-                    'conferenceSolutionKey': {'type': 'hangoutsMeet'}
-                }
-            }
-            
         if booking.location_value:
             event_body['location'] = booking.location_value
             
@@ -345,7 +335,6 @@ def create_calendar_event(self, booking_id: int):
                     created_event = client.service.events().insert(
                         calendarId=write_target.external_calendar_id,
                         body=event_body,
-                        conferenceDataVersion=1,
                         sendUpdates='none'
                     ).execute()
                 except HttpError as insert_e:
@@ -363,37 +352,6 @@ def create_calendar_event(self, booking_id: int):
                 ).execute()
             else:
                 raise
-                
-        if is_google_meet:
-            conf_data = created_event.get('conferenceData', {})
-            conf_status = conf_data.get('createRequest', {}).get('status', {}).get('statusCode')
-            
-            if conf_status == 'pending':
-                raise Exception("Google Meet link creation is still pending")
-                
-            if conf_status == 'success':
-                meet_url = conf_data.get('entryPoints', [{}])[0].get('uri')
-                if meet_url:
-                    booking.meeting_url = meet_url
-                    booking.save(update_fields=['meeting_url'])
-                    
-                    try:
-                        BookingReference.objects.create(
-                            booking=booking,
-                            connection=write_target.connection,
-                            external_event_id=conf_data.get('conferenceId', request_id),
-                            external_calendar_id=write_target.external_calendar_id,
-                            kind="video_conference",
-                            meeting_url=meet_url
-                        )
-                    except IntegrityError:
-                        pass
-            elif conf_status == 'failed':
-                # Fallback gracefully
-                booking.location_value = "Meeting link could not be generated. Please contact the host."
-                booking.save(update_fields=['location_value'])
-                # Optionally flag the host (maybe another log)
-                logger.warning(f"Google Meet creation failed for booking {booking.uid}")
                 
         try:
             BookingReference.objects.create(

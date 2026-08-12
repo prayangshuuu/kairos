@@ -17,34 +17,42 @@ def process_booking_confirmation(booking_id: int):
         send_booking_confirmation_emails.s()
     ).apply_async()
 
-@shared_task
-def create_conference_link(booking_id: int):
+@shared_task(bind=True, max_retries=5)
+def create_conference_link(self, booking_id: int):
     try:
         booking = Booking.objects.get(id=booking_id)
     except Booking.DoesNotExist:
         return booking_id
         
-    if booking.location_type in ['jitsi', 'zoom', 'ms_teams']:
-        if BookingReference.objects.filter(booking=booking, kind="video_conference").exists():
-            return booking_id
+    if BookingReference.objects.filter(booking=booking, kind="video_conference").exists():
+        return booking_id
+        
+    from apps.integrations.conferencing.providers import PROVIDERS
+    provider = PROVIDERS.get(booking.location_type)
+    if provider:
+        try:
+            meeting_details = provider.create_meeting(booking)
+            booking.meeting_url = meeting_details.url
+            booking.save(update_fields=['meeting_url'])
             
-        from apps.integrations.conferencing.providers import PROVIDERS
-        provider = PROVIDERS.get(booking.location_type)
-        if provider:
-            try:
-                meeting_details = provider.create_meeting(booking)
-                booking.meeting_url = meeting_details.url
-                booking.save(update_fields=['meeting_url'])
+            BookingReference.objects.create(
+                booking=booking,
+                external_event_id=meeting_details.id,
+                external_calendar_id="",
+                kind="video_conference",
+                meeting_url=meeting_details.url
+            )
+        except NotImplementedError:
+            pass
+        except Exception as e:
+            if str(e) == "pending":
+                logger.info(f"Conference creation pending for booking {booking.uid}, retrying...")
+                raise self.retry(countdown=5)
                 
-                BookingReference.objects.create(
-                    booking=booking,
-                    external_event_id=meeting_details.id,
-                    external_calendar_id="",
-                    kind="video_conference",
-                    meeting_url=meeting_details.url
-                )
-            except NotImplementedError:
-                pass
+            logger.error(f"Failed to create conference for booking {booking.uid}: {e}")
+            booking.location_value = "Conference creation failed. Host will contact you."
+            booking.save(update_fields=['location_value'])
+            
     return booking_id
 
 @shared_task
