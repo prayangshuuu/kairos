@@ -10,8 +10,9 @@ def generate_ics_for_booking(booking: Booking) -> str:
     dtstart = booking.start_at.strftime(dtformat)
     dtend = booking.end_at.strftime(dtformat)
     
-    organizer_email = booking.host.email
-    organizer_name = booking.host.get_full_name() or organizer_email
+    from django.conf import settings
+    organizer_email = settings.DEFAULT_FROM_EMAIL
+    organizer_name = booking.host.get_full_name() or booking.host.email
     
     summary = f"Meeting with {organizer_name}"
     description = f"Event: {booking.event_type.title}"
