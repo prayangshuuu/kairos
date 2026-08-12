@@ -279,6 +279,9 @@ STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")
 STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")
 STRIPE_CONNECT_WEBHOOK_SECRET = env("STRIPE_CONNECT_WEBHOOK_SECRET", default="")
 
+# ---------- PayStation ----------
+KAIROS_ENABLE_PAYSTATION_ROUTE = env.bool("KAIROS_ENABLE_PAYSTATION_ROUTE", default=False)
+
 # ---------- Kairos Platform Fees ----------
 # Fee = max(MIN, (amount × PERCENT / 100) + FIXED)
 # These are frozen on each Payment at creation time. Changing them later does

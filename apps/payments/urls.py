@@ -54,4 +54,6 @@ urlpatterns = [
         views.FeeCalculatorView.as_view(),
         name='fee_calculator',
     ),
+    path('enable-paystation/', views.EnablePaystationView.as_view(), name='enable_paystation'),
+    path('statement/', views.HostLedgerView.as_view(), name='host_ledger'),
 ]

@@ -181,6 +181,12 @@ class EventType(models.Model):
 
     price_cents = models.PositiveIntegerField(default=0)
     currency = models.CharField(max_length=3, default="USD")
+    
+    PAYMENT_PROVIDER_CHOICES = [
+        ("stripe_connect", "Stripe Connect"),
+        ("paystation", "PayStation"),
+    ]
+    payment_provider = models.CharField(max_length=30, choices=PAYMENT_PROVIDER_CHOICES, null=True, blank=True)
 
     resource_id = models.UUIDField(null=True, blank=True)
     assignment_strategy = models.CharField(max_length=20, choices=AssignmentStrategyChoices.choices, default=AssignmentStrategyChoices.SINGLE)
@@ -223,6 +229,18 @@ class EventType(models.Model):
         if self.owner.slug:
             return f"/{self.owner.slug}/{self.slug}"
         return f"/u/{self.owner.id}/{self.slug}"
+
+    def clean(self):
+        super().clean()
+        if self.payment_provider == "paystation":
+            if self.currency.upper() != "BDT":
+                from django.core.exceptions import ValidationError
+                raise ValidationError({"payment_provider": "PayStation is only available for BDT currency."})
+            
+            from django.conf import settings
+            if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', False):
+                from django.core.exceptions import ValidationError
+                raise ValidationError({"payment_provider": "PayStation is not enabled on this server."})
 
     def __str__(self):
         return f"{self.title} ({self.duration_minutes} min)"

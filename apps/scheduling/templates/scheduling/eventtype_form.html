@@ -457,24 +457,38 @@
                 <!-- Payments -->
                 <div>
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Payments</h3>
-                    <div class="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
-                        <p class="text-sm text-gray-600">Payments require connecting a Stripe account. This feature will be enabled in a later task.</p>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 opacity-50">
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Price</label>
-                            <div class="mt-1 relative rounded-md shadow-sm">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 sm:text-sm">$</span>
-                                </div>
-                                <input type="number" disabled class="focus:ring-primary-500 focus:border-primary-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md bg-gray-100" placeholder="0.00">
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 sm:text-sm" id="price-currency">USD</span>
-                                </div>
-                            </div>
+                            <label for="id_price_cents" class="block text-sm font-medium text-gray-700">Price (in cents/poisha)</label>
+                            <input type="number" name="price_cents" id="id_price_cents" value="{{ form.price_cents.value|default:0 }}" min="0" class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md shadow-sm">
+                            <p class="mt-1 text-xs text-gray-500">Set to 0 for free meetings. For ৳1000, enter 100000.</p>
+                            {% if form.price_cents.errors %}<p class="mt-1 text-sm text-red-600">{{ form.price_cents.errors.0 }}</p>{% endif %}
                         </div>
-                        <input type="hidden" name="price_cents" value="0">
-                        <input type="hidden" name="currency" value="USD">
+                        <div>
+                            <label for="id_currency" class="block text-sm font-medium text-gray-700">Currency</label>
+                            <select name="currency" id="id_currency" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+                                <option value="USD" {% if form.currency.value == 'USD' %}selected{% endif %}>USD ($)</option>
+                                <option value="EUR" {% if form.currency.value == 'EUR' %}selected{% endif %}>EUR (€)</option>
+                                <option value="GBP" {% if form.currency.value == 'GBP' %}selected{% endif %}>GBP (£)</option>
+                                <option value="BDT" {% if form.currency.value == 'BDT' %}selected{% endif %}>BDT (৳)</option>
+                            </select>
+                            {% if form.currency.errors %}<p class="mt-1 text-sm text-red-600">{{ form.currency.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="id_payment_provider" class="block text-sm font-medium text-gray-700">Payment Provider</label>
+                        <select name="payment_provider" id="id_payment_provider" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+                            <option value="">Default (First Available)</option>
+                            <option value="stripe_connect" {% if form.payment_provider.value == 'stripe_connect' %}selected{% endif %}>Stripe Connect</option>
+                            <option value="paystation" {% if form.payment_provider.value == 'paystation' %}selected{% endif %}>Kairos PayStation (BDT Only)</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Leave blank to auto-select based on currency and your active connections. 
+                            Note: PayStation requires the currency to be BDT.
+                        </p>
+                        {% if form.payment_provider.errors %}<p class="mt-1 text-sm text-red-600">{{ form.payment_provider.errors.0 }}</p>{% endif %}
                     </div>
                 </div>
             </div>

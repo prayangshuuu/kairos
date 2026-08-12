@@ -238,6 +238,10 @@ class ConnectDashboardView(LoginRequiredMixin, View):
         payment_account = PaymentAccount.objects.filter(
             user=request.user, provider='stripe_connect'
         ).first()
+        
+        paystation_account = PaymentAccount.objects.filter(
+            user=request.user, provider='paystation'
+        ).first()
 
         express_dashboard_url = None
 
@@ -252,7 +256,10 @@ class ConnectDashboardView(LoginRequiredMixin, View):
 
         context = {
             'account': payment_account,
+            'paystation_account': paystation_account,
             'express_dashboard_url': express_dashboard_url,
+            'enable_paystation': getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', False),
+            'platform_fee_percent': getattr(settings, 'KAIROS_PLATFORM_FEE_PERCENT', 5.0),
         }
         return render(request, 'payments/connect_dashboard.html', context)
 
@@ -278,3 +285,43 @@ class FeeCalculatorView(LoginRequiredMixin, View):
         breakdown = compute_fee_breakdown(amount_cents, fee_data['fee_amount_cents'], currency)
 
         return render(request, 'payments/partials/fee_breakdown.html', {'breakdown': breakdown})
+
+
+class EnablePaystationView(LoginRequiredMixin, View):
+    """Enable Paystation route for the host."""
+    def post(self, request):
+        if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', False):
+            return HttpResponseBadRequest("Paystation is not enabled.")
+            
+        PaymentAccount.objects.get_or_create(
+            user=request.user,
+            provider='paystation',
+            defaults={
+                'external_account_id': f"internal_{request.user.id}",
+                'charges_enabled': True,
+                'payouts_enabled': True,
+                'default_currency': 'BDT',
+                'country': 'BD',
+                'is_active': True,
+            }
+        )
+        return redirect('payments:connect_dashboard')
+
+
+class HostLedgerView(LoginRequiredMixin, View):
+    """View statement/ledger for PayStation route."""
+    def get(self, request):
+        if not getattr(settings, 'KAIROS_ENABLE_PAYSTATION_ROUTE', False):
+            return redirect('payments:connect_dashboard')
+            
+        from apps.payments.models import HostLedger
+        from django.db.models import Sum
+        
+        entries = HostLedger.objects.filter(host=request.user).order_by('-created_at')
+        balance = entries.aggregate(Sum('amount_cents'))['amount_cents__sum'] or 0
+        
+        context = {
+            'entries': entries,
+            'balance': balance
+        }
+        return render(request, 'payments/host_ledger.html', context)

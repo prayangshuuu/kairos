@@ -237,3 +237,55 @@ class StripeConnectProvider(PaymentProvider):
         except Exception as e:
             logger.error(f"Error creating express login link: {str(e)}", exc_info=True)
             raise
+
+# TODO: Enabling the PayStation host route in production requires confirming the 
+# money-transmission and licensing position with a qualified professional first.
+# This creates a real regulatory obligation because Kairos collects on behalf of the host.
+
+class PayStationProvider(PaymentProvider):
+    name = 'paystation'
+    is_marketplace = False
+    
+    def create_checkout(self, payment, success_url: str, cancel_url: str) -> CheckoutResult:
+        # Dummy implementation for now, or interact with PayStation API
+        # Return a CheckoutResult
+        
+        # PayStation checkout creation would go here
+        session_id = f"ps_{payment.uid}"
+        redirect_url = f"{success_url}?session_id={session_id}"
+        
+        # Calculate expiration time
+        hold_ttl_minutes = getattr(settings, 'KAIROS_SLOT_HOLD_TTL_MINUTES', 30)
+        expires_at = timezone.now() + timezone.timedelta(minutes=hold_ttl_minutes)
+        
+        return CheckoutResult(
+            redirect_url=redirect_url,
+            session_id=session_id,
+            expires_at=expires_at
+        )
+
+    def refund(self, payment, amount_cents: Optional[int] = None) -> RefundResult:
+        if amount_cents is None:
+            amount_cents = payment.amount_cents
+            
+        # PayStation refund logic goes here
+        # Assuming success for now
+        return RefundResult(
+            refund_id=f"ref_{payment.uid}",
+            status="succeeded",
+            amount_refunded_cents=amount_cents,
+            fee_refunded_cents=0
+        )
+
+    def get_session_status(self, session_id: str, connected_account_id: Optional[str] = None) -> dict:
+        # Mock status
+        return {
+            'status': 'complete',
+            'payment_intent': f"pi_{session_id}",
+            'payment_status': 'paid'
+        }
+
+    def verify_webhook_signature(self, payload: bytes, signature: str, secret: str) -> dict:
+        # Mock payload verification
+        import json
+        return json.loads(payload.decode('utf-8'))

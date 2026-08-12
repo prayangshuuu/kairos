@@ -56,6 +56,8 @@ class Payment(models.Model):
     fee_percent_applied = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     fee_fixed_applied = models.PositiveIntegerField(default=0)
     fee_amount_cents = models.PositiveIntegerField(default=0)
+    gateway_fee_cents = models.PositiveIntegerField(default=0)
+    net_owed_cents = models.IntegerField(default=0)
     refund_amount_cents = models.PositiveIntegerField(default=0)
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -99,3 +101,47 @@ class ReconciliationFlag(models.Model):
 
     def __str__(self):
         return f"Reconciliation: {self.flag_type} for Payment {self.payment.uid}"
+
+class Payout(models.Model):
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("COMPLETED", "Completed"),
+        ("FAILED", "Failed"),
+    ]
+
+    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payouts')
+    period_start = models.DateTimeField()
+    period_end = models.DateTimeField()
+    gross_cents = models.PositiveIntegerField(default=0)
+    fees_cents = models.PositiveIntegerField(default=0)
+    net_cents = models.IntegerField(default=0)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="PENDING")
+    reference = models.CharField(max_length=100, blank=True)
+    initiated_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Payout {self.id} for {self.host.email} ({self.status})"
+
+class HostLedger(models.Model):
+    ENTRY_TYPES = [
+        ("charge", "Charge"),
+        ("platform_fee", "Platform Fee"),
+        ("gateway_fee", "Gateway Fee"),
+        ("refund", "Refund"),
+        ("payout", "Payout"),
+        ("adjustment", "Adjustment"),
+    ]
+
+    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ledger_entries')
+    payment = models.ForeignKey('Payment', on_delete=models.PROTECT, null=True, blank=True, related_name='ledger_entries')
+    payout = models.ForeignKey(Payout, on_delete=models.PROTECT, null=True, blank=True, related_name='ledger_entries')
+    entry_type = models.CharField(max_length=30, choices=ENTRY_TYPES)
+    amount_cents = models.IntegerField()  # Negative for fees, payouts, and refunds
+    currency = models.CharField(max_length=3, default="BDT")
+    description = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.entry_type} {self.amount_cents} {self.currency} (Host: {self.host.email})"

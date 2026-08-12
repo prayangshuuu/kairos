@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Payouts Statement — Kairos{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8 px-4">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-semibold">PayStation Statement</h1>
+        <a href="{% url 'payments:connect_dashboard' %}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+            &larr; Back to Settings
+        </a>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+        <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Current Balance Owed</h2>
+        <p class="text-4xl font-light text-gray-900">৳{{ balance|default:"0" }}</p>
+        <p class="text-sm text-gray-500 mt-2">
+            Kairos collects payments on your behalf. Balances are paid out automatically on a stated schedule once they reach the minimum threshold.
+        </p>
+    </div>
+
+    <h2 class="text-lg font-medium mb-4">Ledger Activity</h2>
+    
+    {% if entries %}
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for entry in entries %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ entry.created_at|date:"M j, Y, g:i a" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if entry.entry_type == 'charge' %}bg-green-100 text-green-800
+                                {% elif entry.entry_type == 'payout' %}bg-blue-100 text-blue-800
+                                {% elif entry.entry_type == 'refund' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ entry.get_entry_type_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            {{ entry.description }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-right {% if entry.amount_cents < 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                            ৳{{ entry.amount_cents }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <p class="text-gray-500">No ledger activity yet.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

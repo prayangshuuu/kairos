@@ -11,7 +11,7 @@ class EventTypeForm(forms.ModelForm):
             'max_bookings_per_day', 'max_bookings_per_week', 'max_bookings_per_month', 'seats_per_slot',
             'cancellation_cutoff_hours', 'reschedule_cutoff_hours', 'confirmation_deadline_hours',
             'requires_confirmation', 'is_hidden', 'is_active', 'allow_guests', 'allow_rescheduling', 'allow_cancellation',
-            'price_cents', 'currency'
+            'price_cents', 'currency', 'payment_provider'
         ]
 
     def __init__(self, *args, **kwargs):
