@@ -23,7 +23,16 @@
 <div class="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
     <ul role="list" class="divide-y divide-gray-200">
         {% for booking in page_obj %}
-        <li class="p-4 sm:px-6 hover:bg-gray-50" x-data="{ expanded: false }">
+        <li id="booking-row-{{ booking.uid }}" class="p-4 sm:px-6 hover:bg-gray-50" x-data="{ expanded: false }"
+            {% if not booking.meeting_url %}
+                {% if booking.location_type == 'google_meet' or booking.location_type == 'jitsi' or booking.location_type == 'zoom' %}
+                    hx-get="{% url 'bookings:dashboard_bookings' %}?tab={{ tab }}"
+                    hx-select="#booking-row-{{ booking.uid }}"
+                    hx-swap="outerHTML"
+                    hx-trigger="every 2s"
+                {% endif %}
+            {% endif %}
+        >
             <div class="flex items-center justify-between cursor-pointer" @click="expanded = !expanded">
                 <div class="flex-1">
                     <div class="flex items-center justify-between">

@@ -20,3 +20,4 @@ INTERNAL_IPS = [
 # Write emails to local files in development for easy inspection
 EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
 EMAIL_FILE_PATH = BASE_DIR / "tmp" / "emails"
+CELERY_TASK_ALWAYS_EAGER = True
