@@ -1,22 +1,662 @@
-{% extends "layouts/public.html" %}
+{% extends "base.html" %}
+{% load static %}
 
-{% block title %}Kairos - Simple Scheduling{% endblock %}
+{% block title %}Kairos — Free Scheduling for Everyone, Forever{% endblock %}
+{% block meta_description %}Kairos is a 100% free scheduling platform for individuals, teams, and large companies. No credit card. No limits. No restrictions. Ever.{% endblock %}
 
-{% block public_content %}
-<div class="max-w-4xl mx-auto py-20 px-4 sm:px-6 lg:px-8 text-center">
-    <h1 class="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
-        Scheduling made simple
-    </h1>
-    <p class="mt-5 max-w-xl mx-auto text-xl text-gray-500">
-        Kairos helps you manage your meetings without the back-and-forth emails.
-    </p>
-    <div class="mt-10 flex justify-center gap-4">
-        <a href="{% url 'account_signup' %}" class="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-            Sign up
-        </a>
-        <a href="{% url 'account_login' %}" class="inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-            Log in
-        </a>
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&display=swap" rel="stylesheet">
+
+<style>
+  /* ─── Reset & Base ──────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', sans-serif; background: #fff; color: #0f172a; -webkit-font-smoothing: antialiased; }
+
+  /* ─── Tokens ────────────────────────────────────── */
+  :root {
+    --teal-50:  #f0fdfa;
+    --teal-100: #ccfbf1;
+    --teal-200: #99f6e4;
+    --teal-300: #5eead4;
+    --teal-400: #2dd4bf;
+    --teal-500: #14b8a6;
+    --teal-600: #0d9488;
+    --teal-700: #0f766e;
+    --teal-800: #115e59;
+    --teal-900: #134e4a;
+    --teal-950: #042f2e;
+    --dark:     #060d0c;
+    --dark-2:   #0a1412;
+    --dark-3:   #0f1f1c;
+  }
+
+  /* ─── Keyframes ─────────────────────────────────── */
+  @keyframes spin     { to { transform: rotate(360deg); } }
+  @keyframes fadeUp   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulse-glow {
+    0%,100% { box-shadow: 0 0 0 0 rgba(13,148,136,0); }
+    50%      { box-shadow: 0 0 40px 8px rgba(13,148,136,0.18); }
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+  }
+  @keyframes ticker {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ─── Navbar ────────────────────────────────────── */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 5%; height: 64px;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(13,148,136,0.08);
+    transition: background 0.3s;
+  }
+  .nav-logo { font-size: 1.35rem; font-weight: 900; color: var(--teal-600); letter-spacing: -0.04em; text-decoration: none; }
+  .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+  .nav-link  { font-size: 0.875rem; font-weight: 600; color: #475569; text-decoration: none; transition: color 0.15s; }
+  .nav-link:hover { color: var(--teal-600); }
+  .nav-cta {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.55rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.875rem; font-weight: 700;
+    background: var(--teal-600); color: #fff;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .nav-cta:hover { background: var(--teal-700); transform: translateY(-1px); }
+
+  /* ─── Hero ──────────────────────────────────────── */
+  .hero {
+    position: relative; overflow: hidden;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 120px 5% 80px;
+    text-align: center;
+    background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(13,148,136,0.08) 0%, transparent 70%),
+                linear-gradient(to bottom, #f8fdfc 0%, #fff 60%);
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.4rem 1rem; border-radius: 9999px;
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    background: var(--teal-50); color: var(--teal-700);
+    border: 1px solid var(--teal-200);
+    margin-bottom: 1.75rem;
+    animation: fadeUp 0.5s ease both;
+  }
+  .hero-badge-dot { width: 7px; height: 7px; border-radius: 9999px; background: var(--teal-500); animation: pulse-glow 2s ease infinite; }
+  .hero-h1 {
+    font-size: clamp(2.6rem, 6vw, 5rem);
+    font-weight: 900; line-height: 1.05; letter-spacing: -0.04em;
+    color: #0a0f0e;
+    max-width: 820px;
+    animation: fadeUp 0.55s 0.05s ease both;
+  }
+  .hero-h1 em { font-style: normal; color: var(--teal-600); }
+  .hero-sub {
+    margin-top: 1.5rem;
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    font-weight: 400; line-height: 1.7; color: #64748b;
+    max-width: 580px;
+    animation: fadeUp 0.55s 0.1s ease both;
+  }
+  .hero-actions {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem;
+    margin-top: 2.5rem;
+    animation: fadeUp 0.55s 0.15s ease both;
+  }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.9rem 2rem; border-radius: 14px;
+    font-size: 1rem; font-weight: 800;
+    background: var(--teal-600); color: #fff;
+    text-decoration: none; border: none; cursor: pointer;
+    transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(13,148,136,0.3);
+  }
+  .btn-primary:hover { background: var(--teal-700); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(13,148,136,0.35); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.9rem 1.75rem; border-radius: 14px;
+    font-size: 1rem; font-weight: 700;
+    background: #fff; color: #1e293b;
+    text-decoration: none;
+    border: 1.5px solid #e2e8f0;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+  }
+  .btn-secondary:hover { border-color: var(--teal-400); background: var(--teal-50); transform: translateY(-2px); }
+
+  .hero-note {
+    margin-top: 1rem;
+    font-size: 0.8rem; font-weight: 600; color: #94a3b8;
+    animation: fadeUp 0.55s 0.2s ease both;
+  }
+  .hero-note span { color: var(--teal-600); }
+
+  /* Floating mockup card */
+  .hero-mockup {
+    margin-top: 5rem;
+    position: relative;
+    display: inline-block;
+    animation: fadeUp 0.7s 0.25s ease both;
+  }
+  .hero-mockup-card {
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 1.5rem;
+    box-shadow: 0 32px 80px -12px rgba(0,0,0,0.12), 0 4px 16px rgba(13,148,136,0.06);
+    overflow: hidden;
+    max-width: 680px;
+    width: 90vw;
+    display: flex;
+    animation: float 5s ease-in-out infinite;
+  }
+  .mockup-sidebar {
+    width: 220px; flex-shrink: 0;
+    background: linear-gradient(160deg, #0a1412 0%, #0f1f1c 55%, #091210 100%);
+    padding: 1.75rem 1.5rem;
+    display: flex; flex-direction: column;
+    position: relative; overflow: hidden;
+  }
+  .mockup-blob {
+    position: absolute; border-radius: 9999px; pointer-events: none;
+  }
+  .mockup-avatar {
+    width: 48px; height: 48px; border-radius: 9999px;
+    background: linear-gradient(135deg, #134e4a, #0d9488);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 900; color: #ccfbf1;
+    margin-bottom: 0.75rem;
+    border: 2px solid rgba(45,212,191,0.4);
+    position: relative; z-index: 1;
+  }
+  .mockup-name { font-size: 0.8rem; font-weight: 900; color: #fff; margin-bottom: 0.2rem; z-index:1; position:relative; }
+  .mockup-label { font-size: 0.65rem; font-weight: 700; color: var(--teal-400); text-transform: uppercase; letter-spacing: 0.1em; z-index:1; position:relative; }
+  .mockup-pill {
+    margin-top: 1rem; z-index:1; position:relative;
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.3rem 0.75rem; border-radius: 9999px;
+    font-size: 0.65rem; font-weight: 700;
+    background: rgba(13,148,136,0.2); color: var(--teal-300);
+    border: 1px solid rgba(45,212,191,0.2);
+    width: fit-content;
+  }
+  .mockup-right { flex: 1; padding: 1.5rem; }
+  .mockup-heading { font-size: 0.7rem; font-weight: 700; color: var(--teal-600); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; }
+  .mockup-title  { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 1rem; }
+  .mockup-slot {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.6rem 0.75rem; border-radius: 0.65rem;
+    border: 1.5px solid #e2e8f0; margin-bottom: 0.5rem;
+    font-size: 0.8rem; font-weight: 700; color: #475569;
+    transition: all 0.15s;
+  }
+  .mockup-slot.active { border-color: var(--teal-500); background: var(--teal-50); color: var(--teal-700); }
+  .mockup-dot { width: 8px; height: 8px; border-radius: 9999px; background: #e2e8f0; }
+  .mockup-slot.active .mockup-dot { background: var(--teal-500); }
+
+  /* ─── Ticker / Social proof ─────────────────────── */
+  .ticker-wrap {
+    width: 100%; overflow: hidden;
+    border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;
+    padding: 1rem 0; background: #fafafa;
+  }
+  .ticker-inner {
+    display: flex; width: max-content;
+    animation: ticker 28s linear infinite;
+  }
+  .ticker-item {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0 2.5rem;
+    font-size: 0.8rem; font-weight: 700; color: #94a3b8;
+    white-space: nowrap;
+  }
+  .ticker-item svg { color: var(--teal-500); flex-shrink: 0; }
+  .ticker-sep { color: #cbd5e1; }
+
+  /* ─── Free banner ───────────────────────────────── */
+  .free-banner {
+    padding: 5rem 5%; text-align: center;
+    background: linear-gradient(135deg, var(--dark) 0%, var(--dark-3) 100%);
+    position: relative; overflow: hidden;
+  }
+  .free-banner::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(13,148,136,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .free-tag {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    padding: 0.5rem 1.25rem; border-radius: 9999px;
+    font-size: 0.8rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    background: rgba(13,148,136,0.15); color: var(--teal-300);
+    border: 1px solid rgba(45,212,191,0.25);
+    margin-bottom: 1.5rem;
+    position: relative; z-index: 1;
+  }
+  .free-h2 {
+    font-size: clamp(2rem, 5vw, 3.75rem);
+    font-weight: 900; line-height: 1.1; letter-spacing: -0.04em;
+    color: #fff; max-width: 700px; margin: 0 auto 1.25rem;
+    position: relative; z-index: 1;
+  }
+  .free-h2 em { font-style: normal; color: var(--teal-400); }
+  .free-sub {
+    font-size: 1.1rem; color: #94a3b8; max-width: 480px; margin: 0 auto 2.5rem;
+    line-height: 1.7; position: relative; z-index: 1;
+  }
+  .free-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1px; max-width: 860px; margin: 0 auto 2.5rem;
+    background: rgba(255,255,255,0.06); border-radius: 1.25rem; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.07);
+    position: relative; z-index: 1;
+  }
+  .free-item {
+    padding: 1.75rem 1.5rem; text-align: center;
+    background: rgba(255,255,255,0.03);
+    transition: background 0.2s;
+  }
+  .free-item:hover { background: rgba(13,148,136,0.08); }
+  .free-item-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 0.85rem;
+    background: rgba(13,148,136,0.15); border: 1px solid rgba(45,212,191,0.15);
+  }
+  .free-item-title { font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 0.3rem; }
+  .free-item-desc  { font-size: 0.78rem; color: #64748b; line-height: 1.5; }
+
+  /* ─── Features ──────────────────────────────────── */
+  .features { padding: 6rem 5%; max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--teal-600); margin-bottom: 0.6rem;
+  }
+  .section-h2 {
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    font-weight: 900; letter-spacing: -0.03em; color: #0a0f0e;
+    margin-bottom: 0.75rem;
+  }
+  .section-sub { font-size: 1rem; color: #64748b; line-height: 1.7; max-width: 480px; }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-top: 3.5rem; }
+  .feat-card {
+    padding: 1.75rem; border-radius: 1.25rem;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+  }
+  .feat-card:hover { border-color: var(--teal-400); box-shadow: 0 8px 30px rgba(13,148,136,0.1); transform: translateY(-3px); }
+  .feat-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;
+    background: var(--teal-50); border: 1px solid var(--teal-100);
+  }
+  .feat-title { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; }
+  .feat-desc  { font-size: 0.875rem; color: #64748b; line-height: 1.65; }
+
+  /* ─── Pricing callout ───────────────────────────── */
+  .pricing-section {
+    padding: 5rem 5%; background: var(--teal-50);
+    border-top: 1px solid var(--teal-100); border-bottom: 1px solid var(--teal-100);
+    text-align: center;
+  }
+  .pricing-card {
+    max-width: 580px; margin: 2.5rem auto 0;
+    background: #fff; border-radius: 1.5rem;
+    border: 2px solid var(--teal-200);
+    box-shadow: 0 20px 60px -12px rgba(13,148,136,0.18);
+    overflow: hidden;
+  }
+  .pricing-head {
+    padding: 2.5rem 2.5rem 2rem;
+    background: linear-gradient(135deg, var(--dark), var(--dark-3));
+    position: relative; overflow: hidden;
+  }
+  .pricing-head::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(13,148,136,0.3) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .pricing-plan { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-400); margin-bottom: 0.5rem; position:relative;z-index:1; }
+  .pricing-price {
+    font-size: 4.5rem; font-weight: 900; letter-spacing: -0.05em; color: #fff; line-height: 1;
+    position: relative; z-index: 1;
+  }
+  .pricing-price sup { font-size: 1.5rem; vertical-align: super; font-weight: 700; }
+  .pricing-price-label { font-size: 0.85rem; color: var(--teal-400); font-weight: 600; margin-top: 0.25rem; position:relative;z-index:1; }
+  .pricing-body { padding: 2rem 2.5rem 2.5rem; }
+  .pricing-feature-list { list-style: none; display: flex; flex-direction: column; gap: 0.9rem; margin-bottom: 2rem; text-align: left; }
+  .pricing-feature-list li {
+    display: flex; align-items: center; gap: 0.75rem;
+    font-size: 0.9rem; font-weight: 600; color: #334155;
+  }
+  .pricing-feature-list li::before {
+    content: '';
+    display: block; flex-shrink: 0; width: 20px; height: 20px;
+    border-radius: 9999px; background: var(--teal-500);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: center; background-size: 12px;
+  }
+
+  /* ─── CTA section ───────────────────────────────── */
+  .cta-section {
+    padding: 7rem 5%; text-align: center;
+    background: radial-gradient(ellipse 70% 50% at 50% 100%, rgba(13,148,136,0.07) 0%, transparent 70%);
+  }
+  .cta-h2 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; letter-spacing: -0.04em; color: #0a0f0e; margin-bottom: 1rem; }
+  .cta-h2 em { font-style: normal; color: var(--teal-600); }
+  .cta-sub  { font-size: 1.05rem; color: #64748b; max-width: 420px; margin: 0 auto 2.5rem; line-height: 1.7; }
+
+  /* ─── Footer ────────────────────────────────────── */
+  .footer {
+    background: var(--dark); color: #64748b;
+    padding: 3rem 5% 2rem;
+    border-top: 1px solid rgba(45,212,191,0.08);
+  }
+  .footer-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1.5rem; padding-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .footer-logo { font-size: 1.2rem; font-weight: 900; color: var(--teal-400); letter-spacing: -0.04em; text-decoration: none; }
+  .footer-links { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+  .footer-link  { font-size: 0.8rem; font-weight: 600; color: #64748b; text-decoration: none; transition: color 0.15s; }
+  .footer-link:hover { color: var(--teal-400); }
+  .footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; padding-top: 1.5rem; }
+  .footer-copy { font-size: 0.78rem; }
+  .footer-free-badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.85rem; border-radius: 9999px;
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    background: rgba(13,148,136,0.12); color: var(--teal-400);
+    border: 1px solid rgba(45,212,191,0.18);
+  }
+
+  /* ─── Responsive ────────────────────────────────── */
+  @media (max-width: 640px) {
+    .nav-links .nav-link { display: none; }
+    .mockup-sidebar { width: 140px; }
+    .mockup-name { font-size: 0.7rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── NAVBAR ─────────────────────────────────── #}
+<nav class="nav">
+  <a href="/" class="nav-logo">Kairos</a>
+  <div class="nav-links">
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="{% url 'account_login' %}" class="nav-link">Log in</a>
+    <a href="{% url 'account_signup' %}" class="nav-cta">
+      Get started — it's free
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+</nav>
+
+{# ── HERO ───────────────────────────────────── #}
+<section class="hero">
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    100% Free · No credit card · No limits
+  </div>
+
+  <h1 class="hero-h1">
+    Scheduling that's <em>always free</em><br>for everyone
+  </h1>
+
+  <p class="hero-sub">
+    Kairos is a powerful scheduling platform — free forever, for individuals, startups, and large enterprises alike. No tiers. No caps. No hidden costs.
+  </p>
+
+  <div class="hero-actions">
+    <a href="{% url 'account_signup' %}" class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Create your free page
+    </a>
+    <a href="{% url 'account_login' %}" class="btn-secondary">
+      Log in
+    </a>
+  </div>
+
+  <p class="hero-note">No credit card required · <span>Free forever</span> · Setup in 60 seconds</p>
+
+  {# Floating mockup #}
+  <div class="hero-mockup">
+    <div class="hero-mockup-card">
+      {# Sidebar #}
+      <div class="mockup-sidebar">
+        <div class="mockup-blob" style="width:120px;height:120px;top:-30px;left:-30px;background:radial-gradient(circle,#0d9488 0%,transparent 70%);opacity:0.25;"></div>
+        <div class="mockup-avatar">J</div>
+        <div class="mockup-label">Schedule with</div>
+        <div class="mockup-name">Jamie Rivera</div>
+        <div class="mockup-pill">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          30 min · Free
+        </div>
+      </div>
+      {# Right panel #}
+      <div class="mockup-right">
+        <div class="mockup-heading">Select a time</div>
+        <div class="mockup-title">Choose what works for you</div>
+        <div class="mockup-slot active">
+          <div class="mockup-dot"></div>
+          9:00 AM
+          <span style="margin-left:auto;font-size:0.7rem;color:#0d9488;font-weight:800;">Next →</span>
+        </div>
+        <div class="mockup-slot">
+          <div class="mockup-dot"></div>
+          9:30 AM
+        </div>
+        <div class="mockup-slot">
+          <div class="mockup-dot"></div>
+          10:00 AM
+        </div>
+        <div class="mockup-slot">
+          <div class="mockup-dot"></div>
+          10:30 AM
+        </div>
+      </div>
     </div>
+  </div>
+</section>
+
+{# ── TICKER ─────────────────────────────────── #}
+<div class="ticker-wrap">
+  <div class="ticker-inner">
+    {% with items="Unlimited bookings,No credit card,Free for large teams,Custom booking links,Calendar sync,Automated emails,Zero fees,Enterprise ready,Built-in timezone detection,HTMX powered,Open for everyone,No seat limits" %}
+    {% for item in items.split %}
+      <span class="ticker-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        {{ item|cut:"," }}
+      </span>
+      <span class="ticker-item ticker-sep">·</span>
+    {% endfor %}
+    {# Duplicate for seamless loop #}
+    {% for item in items.split %}
+      <span class="ticker-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        {{ item|cut:"," }}
+      </span>
+      <span class="ticker-item ticker-sep">·</span>
+    {% endfor %}
+    {% endwith %}
+  </div>
 </div>
+
+{# ── FREE BANNER ────────────────────────────── #}
+<section class="free-banner">
+  <div class="free-tag">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    Always free · No exceptions
+  </div>
+  <h2 class="free-h2">Free for <em>everyone</em>.<br>Even large companies.</h2>
+  <p class="free-sub">Most scheduling tools charge per seat. Kairos doesn't. Use it for your solo side project or your 10,000-person company — it's the same: free.</p>
+
+  <div class="free-grid">
+    <div class="free-item">
+      <div class="free-item-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="free-item-title">Unlimited team members</div>
+      <div class="free-item-desc">Add your entire org. No per-seat pricing, ever.</div>
+    </div>
+    <div class="free-item">
+      <div class="free-item-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="free-item-title">Unlimited bookings</div>
+      <div class="free-item-desc">Book as many meetings as you need, forever.</div>
+    </div>
+    <div class="free-item">
+      <div class="free-item-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      </div>
+      <div class="free-item-title">All features included</div>
+      <div class="free-item-desc">No feature gating. Everything, for everyone.</div>
+    </div>
+    <div class="free-item">
+      <div class="free-item-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="free-item-title">No restrictions</div>
+      <div class="free-item-desc">No rate limits, no approval needed, no fine print.</div>
+    </div>
+  </div>
+
+  <a href="{% url 'account_signup' %}" class="btn-primary" style="position:relative;z-index:1;">
+    Get started — it's completely free
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+  </a>
+</section>
+
+{# ── FEATURES ───────────────────────────────── #}
+<section class="features" id="features">
+  <div>
+    <div class="section-label">Features</div>
+    <h2 class="section-h2">Everything you need to schedule</h2>
+    <p class="section-sub">A full-featured scheduling platform. No compromises because it's free.</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      </div>
+      <div class="feat-title">Custom booking links</div>
+      <div class="feat-desc">Share your personal link like <strong>kairos.app/yourname</strong>. Professional, memorable, and yours.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="feat-title">Calendar sync</div>
+      <div class="feat-desc">Connect your Google or Outlook calendar. Kairos auto-blocks busy times so you never double-book.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="feat-title">Multiple event types</div>
+      <div class="feat-desc">30-minute calls, hour-long consults, quick check-ins. Configure as many types as you need.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </div>
+      <div class="feat-title">Timezone detection</div>
+      <div class="feat-desc">Automatically shows slots in each visitor's local timezone. No manual conversion needed.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      </div>
+      <div class="feat-title">Email confirmations</div>
+      <div class="feat-desc">Automated booking confirmations and reminders sent to both host and guest. Zero manual work.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+      </div>
+      <div class="feat-title">Paid appointments</div>
+      <div class="feat-desc">Charge for your time. Set a price on any event type and collect payment before the meeting.</div>
+    </div>
+  </div>
+</section>
+
+{# ── PRICING SECTION ────────────────────────── #}
+<section class="pricing-section" id="pricing">
+  <div class="section-label">Pricing</div>
+  <h2 class="section-h2">One plan. Free. Always.</h2>
+  <p class="section-sub" style="margin:0.75rem auto 0;max-width:420px;">No free tier with paywalled features. No "Pro" upsell. Just Kairos, 100% free for everyone.</p>
+
+  <div class="pricing-card">
+    <div class="pricing-head">
+      <div class="pricing-plan">Forever Free Plan</div>
+      <div class="pricing-price"><sup>$</sup>0</div>
+      <div class="pricing-price-label">per month · per user · forever</div>
+    </div>
+    <div class="pricing-body">
+      <ul class="pricing-feature-list">
+        <li>Unlimited booking pages & event types</li>
+        <li>Unlimited team members — no per-seat charge</li>
+        <li>Calendar sync (Google &amp; Outlook)</li>
+        <li>Automated email confirmations &amp; reminders</li>
+        <li>Custom booking links &amp; slugs</li>
+        <li>Paid appointments with payment collection</li>
+        <li>Timezone auto-detection</li>
+        <li>No Kairos branding requirements</li>
+      </ul>
+      <a href="{% url 'account_signup' %}" class="btn-primary" style="width:100%;justify-content:center;font-size:1rem;">
+        Get started free
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+{# ── CTA ────────────────────────────────────── #}
+<section class="cta-section">
+  <h2 class="cta-h2">Start scheduling in<br><em>60 seconds</em></h2>
+  <p class="cta-sub">No forms to fill, no credit card required. Just sign up and get your booking link instantly.</p>
+  <a href="{% url 'account_signup' %}" class="btn-primary" style="font-size:1.05rem;padding:1rem 2.5rem;">
+    Create your free page
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+  </a>
+  <p style="margin-top:1rem;font-size:0.8rem;color:#94a3b8;font-weight:600;">
+    Free forever · No restrictions · Works for teams of any size
+  </p>
+</section>
+
+{# ── FOOTER ─────────────────────────────────── #}
+<footer class="footer">
+  <div class="footer-top">
+    <a href="/" class="footer-logo">Kairos</a>
+    <div class="footer-links">
+      <a href="#features" class="footer-link">Features</a>
+      <a href="#pricing" class="footer-link">Pricing</a>
+      <a href="{% url 'account_signup' %}" class="footer-link">Sign up</a>
+      <a href="{% url 'account_login' %}" class="footer-link">Log in</a>
+    </div>
+    <span class="footer-free-badge">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      100% Free Forever
+    </span>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-copy">&copy; {% now "Y" %} Kairos. Free for everyone, always.</p>
+    <p style="font-size:0.75rem;">Built with ❤️ for the open web</p>
+  </div>
+</footer>
+
 {% endblock %}
