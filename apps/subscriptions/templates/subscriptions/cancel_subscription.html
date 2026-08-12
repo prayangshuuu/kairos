@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Cancel Subscription — Kairos{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-12 px-4">
+    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h1 class="text-xl font-bold text-gray-900 mb-2">Cancel your subscription</h1>
+        <p class="text-sm text-gray-600 mb-6">
+            We are sorry to see you go! Your Pro features will remain active until the end of your current billing period. Your data and event types will be safely preserved without deletion.
+        </p>
+
+        <form method="post" action="{% url 'subscriptions:cancel' %}" class="space-y-5">
+            {% csrf_token %}
+            <div>
+                <label for="reason" class="block text-sm font-medium text-gray-700 mb-2">
+                    Why are you cancelling? <span class="text-xs text-gray-400 font-normal">(Optional)</span>
+                </label>
+                <select id="reason" name="reason" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-teal-500 focus:border-teal-500">
+                    <option value="">Select a reason...</option>
+                    <option value="too_expensive">Too expensive / reduced budget</option>
+                    <option value="not_using_enough">Not using it enough</option>
+                    <option value="missing_feature">Missing a required feature</option>
+                    <option value="switched_tool">Switched to another scheduling tool</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="flex items-center space-x-3 pt-2">
+                <button type="submit" class="flex-1 py-2.5 px-4 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm">
+                    Confirm Cancellation
+                </button>
+                <a href="{% url 'subscriptions:billing_settings' %}" class="py-2.5 px-4 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 text-center">
+                    Keep Plan
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

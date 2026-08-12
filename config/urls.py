@@ -39,10 +39,12 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('', include('apps.accounts.urls')),
     path('payments/', include('apps.payments.urls')),
+    path('', include('apps.subscriptions.urls')),
     path('', include('apps.scheduling.urls')),
     path('', include('apps.bookings.urls')),
     path('webhooks/resend/', resend_webhook, name='resend_webhook'),
 ]
+
 
 handler404 = 'apps.core.views.custom_404'
 handler500 = 'apps.core.views.custom_500'

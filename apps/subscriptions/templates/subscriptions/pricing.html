@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Pricing & Plans — Kairos{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-10 px-4">
+
+    {% if limit_reached or feature_required %}
+    <div class="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start space-x-3">
+        <svg class="w-6 h-6 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+            <h3 class="font-medium text-amber-900">Upgrade required for this action</h3>
+            <p class="text-sm text-amber-700 mt-1">
+                {% if limit_reached == 'max_event_types' %}
+                    You have reached the 1 event type limit on the Free plan. Upgrade to Pro for unlimited event types.
+                {% elif limit_reached == 'max_schedules' %}
+                    You have reached the 1 schedule limit on the Free plan. Upgrade to Pro for unlimited availability schedules.
+                {% elif feature_required == 'paid_bookings' %}
+                    Paid bookings require a Pro subscription. Upgrade to Pro to collect payments for your meetings.
+                {% else %}
+                    You need a Pro subscription to access this premium feature.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="text-center mb-10">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Simple, transparent pricing</h1>
+        <p class="text-gray-600 text-lg">Choose the plan that fits your scheduling workflow.</p>
+
+        <!-- Currency Selector Toggle -->
+        <div class="mt-6 inline-flex items-center bg-gray-100 p-1 rounded-lg border border-gray-200">
+            <a href="?currency=BDT{% if feature_required %}&feature_required={{ feature_required }}{% endif %}{% if limit_reached %}&limit_reached={{ limit_reached }}{% endif %}"
+               class="px-4 py-1.5 rounded-md text-sm font-medium transition-all {% if currency == 'BDT' %}bg-white text-gray-900 shadow-sm{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                BDT (৳) — PayStation
+            </a>
+            <a href="?currency=USD{% if feature_required %}&feature_required={{ feature_required }}{% endif %}{% if limit_reached %}&limit_reached={{ limit_reached }}{% endif %}"
+               class="px-4 py-1.5 rounded-md text-sm font-medium transition-all {% if currency == 'USD' %}bg-white text-gray-900 shadow-sm{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                USD ($) — Stripe
+            </a>
+        </div>
+    </div>
+
+    <!-- Plan Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        <!-- Free Plan -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 flex flex-col justify-between shadow-sm">
+            <div>
+                <h2 class="text-xl font-bold text-gray-900">Free</h2>
+                <p class="text-gray-500 text-sm mt-1">Essential scheduling for individuals.</p>
+                <div class="mt-4 mb-6">
+                    <span class="text-4xl font-extrabold text-gray-900">{% if currency == 'BDT' %}৳0{% else %}$0{% endif %}</span>
+                    <span class="text-gray-500 text-sm">/month forever</span>
+                </div>
+                <ul class="space-y-3 text-sm text-gray-700 mb-6">
+                    <li class="flex items-center">✓ 1 Active Event Type</li>
+                    <li class="flex items-center">✓ 1 Availability Schedule</li>
+                    <li class="flex items-center">✓ Unlimited Bookings</li>
+                    <li class="flex items-center">✓ Up to 3 Custom Questions</li>
+                    <li class="flex items-center text-gray-400">✗ Kairos Branding Included</li>
+                    <li class="flex items-center text-gray-400">✗ No Paid Bookings</li>
+                </ul>
+            </div>
+            <div>
+                {% if user_plan_code == 'free' %}
+                    <span class="block w-full py-2.5 px-4 bg-gray-100 text-gray-600 text-center text-sm font-medium rounded-lg">Current Plan</span>
+                {% else %}
+                    <a href="{% url 'subscriptions:billing_settings' %}" class="block w-full py-2.5 px-4 bg-white border border-gray-300 text-gray-700 text-center text-sm font-medium rounded-lg hover:bg-gray-50">Manage Plan</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Pro Plan -->
+        <div class="bg-white border-2 border-teal-600 rounded-xl p-6 flex flex-col justify-between shadow-md relative">
+            <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-teal-600 text-white text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">
+                Most Popular
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-gray-900">Pro</h2>
+                <p class="text-gray-500 text-sm mt-1">Full power for professionals & creators.</p>
+                <div class="mt-4 mb-6">
+                    <span class="text-4xl font-extrabold text-gray-900">{% if currency == 'BDT' %}৳1,200{% else %}$12{% endif %}</span>
+                    <span class="text-gray-500 text-sm">/month</span>
+                </div>
+                <ul class="space-y-3 text-sm text-gray-700 mb-6">
+                    <li class="flex items-center font-medium text-teal-800">✓ Unlimited Event Types</li>
+                    <li class="flex items-center font-medium text-teal-800">✓ Unlimited Availability Schedules</li>
+                    <li class="flex items-center">✓ Collect Payments (Paid Bookings)</li>
+                    <li class="flex items-center">✓ Workflows & Email/SMS Reminders</li>
+                    <li class="flex items-center">✓ Remove Kairos Branding</li>
+                    <li class="flex items-center">✓ Unlimited Custom Questions</li>
+                    <li class="flex items-center">✓ Advanced Analytics & Reporting</li>
+                </ul>
+            </div>
+            <div>
+                {% if user_plan_code == 'pro' %}
+                    <span class="block w-full py-2.5 px-4 bg-teal-50 text-teal-800 border border-teal-200 text-center text-sm font-medium rounded-lg">Active Plan</span>
+                {% else %}
+                    {% if currency == 'BDT' %}
+                        <form action="{% url 'subscriptions:paystation_start' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full py-2.5 px-4 bg-teal-600 text-white text-center text-sm font-medium rounded-lg hover:bg-teal-700 shadow-sm">
+                                Upgrade with PayStation (BDT)
+                            </button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'subscriptions:stripe_checkout' %}" class="block w-full py-2.5 px-4 bg-teal-600 text-white text-center text-sm font-medium rounded-lg hover:bg-teal-700 shadow-sm">
+                            Upgrade with Stripe (USD)
+                        </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Team Plan (Gated) -->
+        <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 flex flex-col justify-between opacity-80">
+            <div>
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-gray-900">Team</h2>
+                    <span class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded font-medium">Coming Soon</span>
+                </div>
+                <p class="text-gray-500 text-sm mt-1">Collective & round-robin scheduling.</p>
+                <div class="mt-4 mb-6">
+                    <span class="text-4xl font-extrabold text-gray-900">{% if currency == 'BDT' %}৳2,500{% else %}$25{% endif %}</span>
+                    <span class="text-gray-500 text-sm">/month</span>
+                </div>
+                <ul class="space-y-3 text-sm text-gray-600 mb-6">
+                    <li class="flex items-center">✓ Everything in Pro</li>
+                    <li class="flex items-center">✓ Collective Team Event Types</li>
+                    <li class="flex items-center">✓ Round-Robin Host Allocation</li>
+                    <li class="flex items-center">✓ Centralized Admin Billing</li>
+                </ul>
+            </div>
+            <div>
+                <button disabled class="w-full py-2.5 px-4 bg-gray-200 text-gray-500 text-center text-sm font-medium rounded-lg cursor-not-allowed">
+                    Available Soon
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="max-w-3xl mx-auto border-t border-gray-200 pt-12">
+        <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">Frequently Asked Questions</h2>
+        <dl class="space-y-6">
+            <div>
+                <dt class="text-lg font-medium text-gray-900">What happens to my bookings and event types if I downgrade?</dt>
+                <dd class="mt-2 text-gray-600">
+                    Your existing bookings and data are <strong>never deleted</strong>. If your subscription lapses, extra event types beyond the free limit become read-only and hidden from your public profile. When you resubscribe, all your event types are automatically restored exactly as they were.
+                </dd>
+            </div>
+            <div>
+                <dt class="text-lg font-medium text-gray-900">Can I cancel anytime?</dt>
+                <dd class="mt-2 text-gray-600">
+                    Yes. You can cancel your subscription at any time directly from your billing settings or via the Stripe Customer Portal. There are no cancellation fees or retention gauntlets.
+                </dd>
+            </div>
+            <div>
+                <dt class="text-lg font-medium text-gray-900">Do you take a cut of my meeting payments?</dt>
+                <dd class="mt-2 text-gray-600">
+                    If you connect your Stripe account, Kairos charges 0% platform fee. If you use Kairos's PayStation fallback route, a 3% service fee applies to collect funds on your behalf. Read the detailed breakdown in your <a href="{% url 'payments:connect_dashboard' %}" class="text-teal-600 underline">Payment Settings</a>.
+                </dd>
+            </div>
+            <div>
+                <dt class="text-lg font-medium text-gray-900">How do BDT subscriptions renew?</dt>
+                <dd class="mt-2 text-gray-600">
+                    BDT plans renew manually. Before each billing cycle ends, you will receive an invoice email with a payment link. You also get a 7-day grace period after period expiry before any plan features pause.
+                </dd>
+            </div>
+        </dl>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Billing & Subscriptions — Kairos{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8 px-4">
+    <h1 class="text-2xl font-semibold text-gray-900 mb-6">Billing & Subscription</h1>
+
+    <!-- Current Subscription Overview Card -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-6 mb-6">
+            <div>
+                <div class="flex items-center space-x-3 mb-1">
+                    <h2 class="text-xl font-bold text-gray-900">{{ plan.name }} Plan</h2>
+                    {% if subscription.effective_plan_code == 'pro' %}
+                        <span class="bg-teal-100 text-teal-800 text-xs px-2.5 py-0.5 rounded-full font-medium uppercase">Active Pro</span>
+                    {% else %}
+                        <span class="bg-gray-100 text-gray-700 text-xs px-2.5 py-0.5 rounded-full font-medium uppercase">Free Plan</span>
+                    {% endif %}
+                </div>
+                <p class="text-sm text-gray-500">
+                    Provider: <span class="font-medium text-gray-700">{{ subscription.get_provider_display }}</span> |
+                    Status: <span class="font-medium text-gray-700">{{ subscription.get_status_display }}</span>
+                </p>
+            </div>
+            <div>
+                {% if subscription.effective_plan_code == 'free' %}
+                    <a href="{% url 'subscriptions:pricing' %}" class="inline-flex items-center px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 shadow-sm">
+                        Upgrade to Pro
+                    </a>
+                {% elif subscription.provider == 'stripe_billing' %}
+                    <a href="{% url 'subscriptions:stripe_portal' %}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 shadow-sm">
+                        Manage via Stripe Portal
+                    </a>
+                {% elif subscription.provider == 'paystation' %}
+                    <form action="{% url 'subscriptions:paystation_start' %}" method="post" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 shadow-sm">
+                            Renew BDT Subscription
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if subscription.provider == 'paystation' %}
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-800 flex items-start space-x-3">
+            <svg class="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+                <p class="font-semibold">BDT Subscription Renewal Notice:</p>
+                <p class="mt-0.5">
+                    BDT plans renew manually. Before each billing cycle ends, you will receive an invoice link via email to complete your renewal. You also enjoy a 7-day grace period after period expiry.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Dates & Details -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <div>
+                <span class="text-gray-500 block">Current Period Start:</span>
+                <span class="font-medium text-gray-900">
+                    {% if subscription.current_period_start %}{{ subscription.current_period_start|date:"M d, Y" }}{% else %}—{% endif %}
+                </span>
+            </div>
+            <div>
+                <span class="text-gray-500 block">Current Period End / Renewal:</span>
+                <span class="font-medium text-gray-900">
+                    {% if subscription.current_period_end %}{{ subscription.current_period_end|date:"M d, Y" }}{% else %}—{% endif %}
+                </span>
+            </div>
+            <div>
+                <span class="text-gray-500 block">Cancellation Status:</span>
+                <span class="font-medium text-gray-900">
+                    {% if subscription.cancel_at_period_end %}Cancelling at end of period{% else %}Auto-renew active{% endif %}
+                </span>
+            </div>
+        </div>
+
+        {% if subscription.effective_plan_code == 'pro' and not subscription.cancel_at_period_end %}
+        <div class="mt-4 text-right">
+            <a href="{% url 'subscriptions:cancel' %}" class="text-xs text-gray-500 hover:text-red-600 underline">
+                Cancel subscription
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Usage & Limits Section -->
+    <h2 class="text-lg font-medium text-gray-900 mb-4">Plan Usage & Limits</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-700">Active Event Types</span>
+                <span class="text-xs font-mono font-semibold text-gray-900">
+                    {{ event_types_count }} / {% if plan.limits.max_event_types == inf %}Unlimited{% else %}{{ plan.limits.max_event_types }}{% endif %}
+                </span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-teal-600 h-2 rounded-full" style="width: {% if plan.limits.max_event_types == inf %}20%{% else %}{% if event_types_count >= 1 %}100%{% else %}0%{% endif %}{% endif %};"></div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-700">Schedules</span>
+                <span class="text-xs font-mono font-semibold text-gray-900">
+                    {{ schedules_count }} / {% if plan.limits.max_schedules == inf %}Unlimited{% else %}{{ plan.limits.max_schedules }}{% endif %}
+                </span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-teal-600 h-2 rounded-full" style="width: {% if plan.limits.max_schedules == inf %}20%{% else %}{% if schedules_count >= 1 %}100%{% else %}0%{% endif %}{% endif %};"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscription History Audit Log -->
+    <h2 class="text-lg font-medium text-gray-900 mb-4">Subscription History</h2>
+    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
+                <tr>
+                    <th class="py-3 px-4">Date & Time</th>
+                    <th class="py-3 px-4">Event</th>
+                    <th class="py-3 px-4">Previous Status</th>
+                    <th class="py-3 px-4">New Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 text-gray-700">
+                {% for event in subscription.events.all %}
+                <tr>
+                    <td class="py-3 px-4 font-mono text-xs text-gray-500">{{ event.created_at|date:"Y-m-d H:i" }}</td>
+                    <td class="py-3 px-4 font-medium text-gray-900">{{ event.event_type }}</td>
+                    <td class="py-3 px-4 text-xs">{{ event.previous_status|default:"—" }}</td>
+                    <td class="py-3 px-4 text-xs font-semibold">{{ event.new_status }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="py-6 text-center text-gray-500 text-sm">No subscription events recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
