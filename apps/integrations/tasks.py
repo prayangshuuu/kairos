@@ -256,10 +256,10 @@ def create_calendar_event(self, booking_id: int):
     try:
         booking = Booking.objects.get(id=booking_id)
     except Booking.DoesNotExist:
-        return
+        return booking_id
         
     if BookingReference.objects.filter(booking=booking, kind="calendar_event").exists():
-        return
+        return booking_id
         
     write_target = SelectedCalendar.objects.filter(
         connection__user=booking.host,
@@ -271,7 +271,7 @@ def create_calendar_event(self, booking_id: int):
     if not write_target:
         booking.sync_status = Booking.SyncStatusChoices.NOT_APPLICABLE
         booking.save(update_fields=['sync_status'])
-        return
+        return booking_id
         
     try:
         client = GoogleCalendarClient(write_target.connection)
