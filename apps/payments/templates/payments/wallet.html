@@ -1,0 +1,368 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Host Wallet — Kairos{% endblock %}
+
+{% block app_content %}
+<div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <div class="md:flex md:items-center md:justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Host Wallet</h1>
+            <p class="mt-1 text-sm text-slate-600">
+                {% if wallet_mode == "custodial" %}
+                    Kairos-collected earnings, settlement, and manual payouts.
+                {% elif wallet_mode == "non_custodial" %}
+                    Transaction history for bookings paid via Stripe. Kairos does not hold these funds.
+                {% elif wallet_mode == "mixed" %}
+                    Combined transaction history — PayStation (custodial) and Stripe (non-custodial).
+                {% else %}
+                    No transactions yet.
+                {% endif %}
+            </p>
+        </div>
+        <div class="mt-4 md:mt-0 flex space-x-3">
+            <a href="{% url 'payments:wallet_statement_csv' %}" class="inline-flex items-center px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 shadow-sm">
+                <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Export CSV
+            </a>
+            <a href="{% url 'payments:wallet_statement_pdf' %}" target="_blank" class="inline-flex items-center px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 shadow-sm">
+                <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                Print / View PDF
+            </a>
+        </div>
+    </div>
+
+    {# =========================================================
+       STRIPE CONNECT (NON-CUSTODIAL) NOTICE
+       Displayed when the host has Stripe entries but no custodial ones,
+       OR in the mixed section header.
+       ========================================================= #}
+    {% if has_non_custodial %}
+    <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-start space-x-4">
+        <div class="flex-shrink-0 mt-0.5">
+            <svg class="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <div>
+            <p class="text-sm font-semibold text-blue-900">Payments go directly to your Stripe account. Kairos does not hold these funds.</p>
+            <p class="mt-1 text-sm text-blue-700">
+                Stripe transactions appear below for your bookkeeping reference only.
+                To view your Stripe balance, payouts, and bank transfers, visit your
+                <a href="{{ stripe_dashboard_url }}" target="_blank" rel="noopener noreferrer" class="underline font-medium hover:text-blue-900">Stripe Express dashboard →</a>
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    {# =========================================================
+       NEGATIVE BALANCE WARNING (custodial only)
+       ========================================================= #}
+    {% if is_negative %}
+    <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-xl">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-bold text-red-800">Negative Wallet Balance (৳{{ available_bdt }})</h3>
+                <p class="mt-1 text-sm text-red-700">A refund processed after a payout drove your balance negative. Payout requests are paused until future earnings automatically clear the balance.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# =========================================================
+       PAYSTATION (CUSTODIAL) SECTION
+       Only shown to hosts who have custodial activity.
+       ========================================================= #}
+    {% if has_custodial %}
+    {% if wallet_mode == "mixed" %}
+    <div class="mb-3">
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800 uppercase">PayStation</span>
+            Kairos-Collected Earnings
+        </h2>
+        <p class="text-xs text-slate-500 mt-0.5">These funds were collected by Kairos into its merchant account and are withdrawable by you.</p>
+    </div>
+    {% endif %}
+
+    {# Balance Cards — PayStation only #}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="text-xs font-semibold uppercase tracking-wider text-teal-600 mb-1">Available for Payout</div>
+            <div class="text-3xl font-extrabold text-slate-900">৳{{ available_bdt }}</div>
+            <p class="mt-2 text-xs text-slate-500">
+                PayStation settled funds ready to withdraw (min ৳{{ min_threshold_bdt }}).
+                {% if wallet_mode == "mixed" %}<span class="text-teal-700 font-medium">PayStation only.</span>{% endif %}
+            </p>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="text-xs font-semibold uppercase tracking-wider text-amber-600 mb-1">Pending Balance</div>
+            <div class="text-3xl font-extrabold text-slate-900">৳{{ pending_bdt }}</div>
+            <p class="mt-2 text-xs text-slate-500">Held until meeting completes + refund window closes.</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Total Net Balance
+                {% if wallet_mode == "mixed" %}<span class="text-teal-600">(PayStation only)</span>{% endif %}
+            </div>
+            <div class="text-3xl font-extrabold text-slate-900">৳{{ total_bdt }}</div>
+            <p class="mt-2 text-xs text-slate-500">Sum of all charges, 3% fees, refunds, and payouts.</p>
+        </div>
+    </div>
+
+    {# Settlement Policy Notice #}
+    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-8 flex items-start space-x-3 text-sm text-slate-600">
+        <svg class="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div>
+            <span class="font-semibold text-slate-900">Settlement Rule:</span>
+            PayStation earnings remain in <strong>Pending Balance</strong> until the scheduled meeting has ended
+            and the event type's cancellation/refund window has elapsed. Once settled, funds automatically
+            transition to your <strong>Available Balance</strong>. This delay exists because a refund after an
+            early payout would create a negative balance.
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        {# Request Payout Card #}
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-lg font-bold text-slate-900 mb-4">Request Payout</h2>
+
+            {% if payout_methods %}
+            <form method="POST" action="{% url 'payments:request_payout' %}">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Select Payout Method</label>
+                    <select name="method_id" class="w-full rounded-xl border-slate-300 text-sm focus:ring-teal-500 focus:border-teal-500">
+                        {% for m in payout_methods %}
+                        <option value="{{ m.id }}">{{ m.get_method_type_display }} — {{ m.account_name }} ({{ m.masked_account_info }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Amount (BDT)</label>
+                    <div class="relative rounded-xl shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 text-sm">৳</div>
+                        <input type="number" step="0.01" min="{{ min_threshold_bdt }}" max="{{ available_bdt }}" name="amount_bdt" value="{{ available_bdt }}" class="w-full pl-7 rounded-xl border-slate-300 text-sm focus:ring-teal-500 focus:border-teal-500">
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Max available: ৳{{ available_bdt }} (min: ৳{{ min_threshold_bdt }})</p>
+                </div>
+
+                <button type="submit" {% if available_cents < min_threshold_cents %}disabled{% endif %} class="w-full inline-flex justify-center items-center px-4 py-2.5 border border-transparent rounded-xl text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors">
+                    Submit Payout Request
+                </button>
+                <p class="mt-2 text-xs text-slate-400 text-center">Disbursement happens manually via bKash / Nagad / bank. This form requests it; Kairos never sends money automatically.</p>
+            </form>
+            {% else %}
+            <div class="text-center py-6">
+                <p class="text-sm text-slate-600 mb-4">You have not added a payout method yet. Add bKash, Nagad, or Bank details below to request payouts.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Manage Payout Methods Card #}
+        <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h2 class="text-lg font-bold text-slate-900 mb-4">Payout Methods</h2>
+
+            {% if payout_methods %}
+            <div class="space-y-3 mb-6">
+                {% for m in payout_methods %}
+                <div class="flex items-center justify-between p-3 border border-slate-200 rounded-xl bg-slate-50">
+                    <div>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800 uppercase mr-2">{{ m.get_method_type_display }}</span>
+                        <span class="font-semibold text-slate-900 text-sm">{{ m.account_name }}</span>
+                        <span class="text-xs text-slate-500 ml-2">({{ m.masked_account_info }})</span>
+                    </div>
+                    <form method="POST" action="{% url 'payments:delete_payout_method' m.id %}" onsubmit="return confirm('Delete this payout method?');">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs text-red-600 hover:text-red-800 font-medium">Remove</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {# Add Payout Method Form #}
+            <form method="POST" action="{% url 'payments:add_payout_method' %}" class="border-t border-slate-200 pt-4">
+                {% csrf_token %}
+                <h3 class="text-sm font-bold text-slate-900 mb-3">Add New Payout Method</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Method Type</label>
+                        <select name="method_type" id="method_type_select" class="w-full rounded-xl border-slate-300 text-sm">
+                            <option value="bkash">bKash (Personal/Agent)</option>
+                            <option value="nagad">Nagad</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Account Holder Name</label>
+                        <input type="text" name="account_name" required placeholder="e.g. John Doe" class="w-full rounded-xl border-slate-300 text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Mobile / Account Number</label>
+                        <input type="text" name="mobile_number" placeholder="017xxxxxxxx" class="w-full rounded-xl border-slate-300 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Bank Name (if Bank Transfer)</label>
+                        <input type="text" name="bank_name" placeholder="e.g. Dutch-Bangla Bank" class="w-full rounded-xl border-slate-300 text-sm">
+                    </div>
+                </div>
+
+                <button type="submit" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800">
+                    Add Payout Method
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {# Payout History #}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b border-slate-200">
+            <h2 class="text-lg font-bold text-slate-900">Payout Request History</h2>
+        </div>
+        {% if payout_requests %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                    <tr>
+                        <th class="px-6 py-3 text-left">ID</th>
+                        <th class="px-6 py-3 text-left">Requested At</th>
+                        <th class="px-6 py-3 text-left">Method</th>
+                        <th class="px-6 py-3 text-right">Amount (BDT)</th>
+                        <th class="px-6 py-3 text-center">Status</th>
+                        <th class="px-6 py-3 text-left">Reference / Notes</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for pr in payout_requests %}
+                    <tr>
+                        <td class="px-6 py-4 font-mono text-slate-600">#{{ pr.id }}</td>
+                        <td class="px-6 py-4 text-slate-600 whitespace-nowrap">{{ pr.requested_at|date:"M j, Y H:i" }}</td>
+                        <td class="px-6 py-4 text-slate-900 font-medium">{{ pr.method.get_method_type_display }}</td>
+                        <td class="px-6 py-4 text-right font-bold text-slate-900">৳{{ pr.amount_cents|floatformat:2 }}</td>
+                        <td class="px-6 py-4 text-center">
+                            {% if pr.status == 'completed' %}
+                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Completed</span>
+                            {% elif pr.status == 'rejected' %}
+                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Rejected</span>
+                            {% elif pr.status == 'approved' or pr.status == 'processing' %}
+                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Processing</span>
+                            {% else %}
+                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Requested</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-slate-600 text-xs">
+                            {% if pr.reference %}<span class="font-mono bg-slate-100 px-2 py-0.5 rounded">Ref: {{ pr.reference }}</span>{% endif %}
+                            {% if pr.rejection_reason %}<span class="text-red-600 font-medium">Reason: {{ pr.rejection_reason }}</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-slate-500 text-sm">No payout requests submitted yet.</div>
+        {% endif %}
+    </div>
+    {% endif %}{# end if has_custodial #}
+
+    {# =========================================================
+       NON-CUSTODIAL STRIPE SECTION (no balance, no payouts)
+       ========================================================= #}
+    {% if has_non_custodial and not has_custodial %}
+    {# Stripe-only host: just a reminder — the notice above covers it. #}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+        <h2 class="text-lg font-bold text-slate-900 mb-2">Your Stripe Payout Settings</h2>
+        <p class="text-sm text-slate-600 mb-4">
+            Because you use Stripe Connect, Kairos does not collect or hold your earnings.
+            All payout settings (bank account, payout schedule, etc.) are managed directly in Stripe.
+        </p>
+        <a href="{{ stripe_dashboard_url }}" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 shadow-sm">
+            <svg class="w-4 h-4 mr-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            Open Stripe Express Dashboard
+        </a>
+    </div>
+    {% endif %}
+
+    {# =========================================================
+       FULL LEDGER STATEMENT (all providers, with provider column)
+       ========================================================= #}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+            <h2 class="text-lg font-bold text-slate-900">Full Ledger Statement</h2>
+            <span class="text-xs text-slate-500">
+                Append-Only Audit Log
+                {% if wallet_mode == "mixed" %} · Provider column visible · Running balance = PayStation only{% endif %}
+            </span>
+        </div>
+        {% if statement_rows %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                    <tr>
+                        <th class="px-6 py-3 text-left">Date (UTC)</th>
+                        {% if wallet_mode != "custodial" %}
+                        <th class="px-6 py-3 text-left">Provider</th>
+                        {% endif %}
+                        <th class="px-6 py-3 text-left">Type</th>
+                        <th class="px-6 py-3 text-left">Description</th>
+                        <th class="px-6 py-3 text-right">Amount (BDT)</th>
+                        <th class="px-6 py-3 text-right">
+                            {% if wallet_mode == "non_custodial" %}—{% else %}Running Balance{% endif %}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for row in statement_rows %}
+                    <tr class="{% if not row.entry.is_custodial %}bg-blue-50/40{% endif %}">
+                        <td class="px-6 py-4 text-slate-500 whitespace-nowrap text-xs">{{ row.entry.created_at|date:"Y-m-d H:i:s" }}</td>
+                        {% if wallet_mode != "custodial" %}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if row.entry.is_custodial %}
+                            <span class="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-teal-100 text-teal-800 uppercase">PayStation</span>
+                            {% else %}
+                            <span class="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 uppercase">Stripe</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex px-2 py-0.5 rounded text-xs font-semibold uppercase
+                                {% if row.entry.entry_type == 'charge' %}bg-green-100 text-green-800
+                                {% elif row.entry.entry_type == 'service_fee' %}bg-slate-100 text-slate-700
+                                {% elif row.entry.entry_type == 'refund' %}bg-red-100 text-red-800
+                                {% elif row.entry.entry_type == 'payout' %}bg-blue-100 text-blue-800
+                                {% elif row.entry.entry_type == 'payout_reversal' %}bg-green-100 text-green-700
+                                {% else %}bg-slate-100 text-slate-800{% endif %}">
+                                {{ row.entry.get_entry_type_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-slate-800 font-medium text-xs">{{ row.entry.description }}</td>
+                        <td class="px-6 py-4 text-right font-mono font-bold text-xs
+                            {% if row.entry.amount_cents > 0 %}text-green-600{% else %}text-slate-700{% endif %}">
+                            {% if row.entry.amount_cents > 0 %}+{% endif %}৳{{ row.entry.amount_cents|floatformat:2 }}
+                        </td>
+                        <td class="px-6 py-4 text-right font-mono text-slate-900 text-xs">
+                            {% if row.running_balance_cents is not None %}
+                            ৳{{ row.running_balance_cents|floatformat:2 }}
+                            {% elif not row.entry.is_custodial %}
+                            <span class="text-slate-400 italic text-xs">in Stripe</span>
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-6 text-center text-slate-500 text-sm">No ledger entries recorded yet.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

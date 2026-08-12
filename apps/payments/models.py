@@ -70,6 +70,8 @@ class Payment(models.Model):
     gateway_fee_cents = models.PositiveIntegerField(default=0)
     net_owed_cents = models.IntegerField(default=0)
     refund_amount_cents = models.PositiveIntegerField(default=0)
+    is_settled = models.BooleanField(default=False, db_index=True)
+    settled_at = models.DateTimeField(null=True, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -174,6 +176,110 @@ class Payout(models.Model):
         return f"Payout {self.id} for {self.host.email} ({self.status})"
 
 
+class PayoutMethod(models.Model):
+    METHOD_BKASH = "bkash"
+    METHOD_NAGAD = "nagad"
+    METHOD_BANK = "bank_transfer"
+
+    METHOD_CHOICES = [
+        (METHOD_BKASH, "bKash"),
+        (METHOD_NAGAD, "Nagad"),
+        (METHOD_BANK, "Bank Transfer"),
+    ]
+
+    host = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payout_methods"
+    )
+    method_type = models.CharField(max_length=30, choices=METHOD_CHOICES)
+    account_name = models.CharField(max_length=100)
+    encrypted_account_details = models.TextField()
+    is_verified = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-is_default", "-created_at"]
+
+    def set_details(self, details_dict: dict):
+        from apps.payments.wallet import encrypt_payload
+        self.encrypted_account_details = encrypt_payload(details_dict)
+
+    def get_details(self) -> dict:
+        from apps.payments.wallet import decrypt_payload
+        return decrypt_payload(self.encrypted_account_details)
+
+    @property
+    def masked_account_info(self) -> str:
+        try:
+            details = self.get_details()
+        except Exception:
+            return "Encrypted Details"
+
+        if self.method_type in [self.METHOD_BKASH, self.METHOD_NAGAD]:
+            mobile = details.get("mobile_number", "")
+            if len(mobile) >= 8:
+                return f"{mobile[:3]}****{mobile[-3:]}"
+            return mobile
+        else:
+            acc = details.get("account_number", "")
+            bank = details.get("bank_name", "")
+            if len(acc) >= 4:
+                return f"{bank} (*{acc[-4:]})"
+            return f"{bank} ({acc})"
+
+    def __str__(self):
+        return f"{self.get_method_type_display()} - {self.account_name} ({self.masked_account_info})"
+
+
+class PayoutRequest(models.Model):
+    STATUS_REQUESTED = "requested"
+    STATUS_APPROVED = "approved"
+    STATUS_PROCESSING = "processing"
+    STATUS_COMPLETED = "completed"
+    STATUS_REJECTED = "rejected"
+    STATUS_CANCELLED = "cancelled"
+
+    STATUS_CHOICES = [
+        (STATUS_REQUESTED, "Requested"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_PROCESSING, "Processing"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_REJECTED, "Rejected"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    host = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="payout_requests"
+    )
+    amount_cents = models.PositiveIntegerField()
+    currency = models.CharField(max_length=3, default="BDT")
+    method = models.ForeignKey(
+        PayoutMethod, on_delete=models.PROTECT, related_name="payout_requests"
+    )
+    status = models.CharField(
+        max_length=30, choices=STATUS_CHOICES, default=STATUS_REQUESTED, db_index=True
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    processed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="processed_payout_requests",
+    )
+    reference = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-requested_at"]
+
+    def __str__(self):
+        return f"PayoutRequest #{self.id} - {self.host.email} - ৳{self.amount_cents / 100:.2f} ({self.status})"
+
+
 class HostLedger(models.Model):
     ENTRY_TYPES = [
         ("charge", "Charge"),
@@ -183,33 +289,82 @@ class HostLedger(models.Model):
         ("refund", "Refund"),
         ("refund_fee_reversal", "Fee Reversal"),
         ("payout", "Payout"),
+        ("payout_reversal", "Payout Reversal"),
         ("adjustment", "Adjustment"),
+    ]
+
+    PROVIDER_PAYSTATION = "paystation"
+    PROVIDER_STRIPE = "stripe"
+    PROVIDER_CHOICES = [
+        (PROVIDER_PAYSTATION, "PayStation"),
+        (PROVIDER_STRIPE, "Stripe Connect"),
     ]
 
     host = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="ledger_entries"
     )
     payment = models.ForeignKey(
-        "Payment", on_delete=models.PROTECT, null=True, blank=True, related_name="ledger_entries"
+        Payment, on_delete=models.PROTECT, null=True, blank=True, related_name="ledger_entries"
+    )
+    payout_request = models.ForeignKey(
+        PayoutRequest, on_delete=models.PROTECT, null=True, blank=True, related_name="ledger_entries"
     )
     payout = models.ForeignKey(
         Payout, on_delete=models.PROTECT, null=True, blank=True, related_name="ledger_entries"
     )
     entry_type = models.CharField(max_length=30, choices=ENTRY_TYPES)
+    # provider: determines whether this entry contributes to the withdrawable balance.
+    # PayStation entries are custodial — Kairos holds the funds.
+    # Stripe entries are informational ONLY — Kairos never held these funds.
+    provider = models.CharField(
+        max_length=30,
+        choices=PROVIDER_CHOICES,
+        default=PROVIDER_PAYSTATION,
+        db_index=True,
+    )
+    # is_custodial: denormalised copy of (provider == "paystation") for fast filtering.
+    # True only for PayStation. Never sum Stripe (is_custodial=False) entries into a balance.
+    is_custodial = models.BooleanField(default=True, db_index=True)
     amount_cents = (
         models.IntegerField()
-    )  # Negative for fees, payouts, and refunds; positive for charges and fee reversals
+    )  # SIGNED IntegerField: Negative for fees, payouts, refunds; positive for charges, reversals
     currency = models.CharField(max_length=3, default="BDT")
     description = models.CharField(max_length=255)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_ledger_entries",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
         if self.pk is not None:
             raise ValueError("HostLedger is append-only. Existing entries cannot be updated.")
+        # Enforce is_custodial consistency with provider before first save.
+        self.is_custodial = (self.provider == self.PROVIDER_PAYSTATION)
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         raise ValueError("HostLedger is append-only. Existing entries cannot be deleted.")
 
     def __str__(self):
-        return f"{self.entry_type} {self.amount_cents} {self.currency} (Host: {self.host.email})"
+        return f"{self.entry_type} {self.amount_cents} {self.currency} [{self.provider}] (Host: {self.host.email})"
+
+
+class WalletReconciliationLog(models.Model):
+    reconciled_at = models.DateTimeField(auto_now_add=True)
+    total_ledger_cents = models.IntegerField()
+    expected_merchant_hold_cents = models.IntegerField()
+    difference_cents = models.IntegerField()
+    is_clean = models.BooleanField()
+    details = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-reconciled_at"]
+
+    def __str__(self):
+        status_str = "CLEAN" if self.is_clean else "MISMATCH"
+        return f"Reconciliation {self.reconciled_at.strftime('%Y-%m-%d %H:%M')}: {status_str} (Diff: {self.difference_cents} cents)"
+

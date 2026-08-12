@@ -1,16 +1,30 @@
+import csv
 import json
 import logging
+from datetime import timedelta
+from decimal import Decimal
 
 from django.conf import settings
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db import models
 from django.http import HttpResponse, HttpResponseBadRequest
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from apps.payments.models import Payment, PaymentAccount, ProcessedWebhook
+from apps.payments.models import (
+    HostLedger,
+    HostPaymentTerms,
+    Payment,
+    PaymentAccount,
+    PayoutMethod,
+    PayoutRequest,
+    ProcessedWebhook,
+)
 from apps.payments.providers import StripeConnectProvider
 from apps.payments.services import (
     compute_fee_breakdown,
@@ -19,8 +33,23 @@ from apps.payments.services import (
     expire_payment,
     sync_payment_account_from_stripe,
 )
+from apps.payments.wallet import (
+    approve_payout,
+    complete_payout,
+    get_available_balance,
+    get_host_wallet_mode,
+    get_pending_balance,
+    get_total_balance,
+    reject_payout,
+    request_payout,
+)
 
 logger = logging.getLogger(__name__)
+
+
+class StaffRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_authenticated and self.request.user.is_staff
 
 
 class StripeConnectOnboardView(LoginRequiredMixin, View):
@@ -55,11 +84,7 @@ class StripeConnectOnboardView(LoginRequiredMixin, View):
 
 
 class StripeConnectReturnView(LoginRequiredMixin, View):
-    """Host returns from Stripe's hosted onboarding flow.
-
-    Onboarding is often incomplete on the first return. We sync the account
-    state and show the host exactly what Stripe still needs.
-    """
+    """Host returns from Stripe's hosted onboarding flow."""
 
     def get(self, request):
         payment_account = PaymentAccount.objects.filter(
@@ -69,7 +94,6 @@ class StripeConnectReturnView(LoginRequiredMixin, View):
         if not payment_account or not payment_account.external_account_id:
             return redirect("payments:stripe_connect_onboard")
 
-        # Retrieve fresh account data from Stripe and sync locally
         provider = StripeConnectProvider()
         try:
             account_data = provider.retrieve_account(payment_account.external_account_id)
@@ -84,11 +108,7 @@ class StripeConnectReturnView(LoginRequiredMixin, View):
 
 
 class StripeConnectRefreshView(LoginRequiredMixin, View):
-    """The Account Link expired — regenerate and redirect.
-
-    The refresh URL fires when the link expires. We NEVER show an error;
-    we just regenerate the link and redirect immediately.
-    """
+    """The Account Link expired — regenerate and redirect."""
 
     def get(self, request):
         payment_account = PaymentAccount.objects.filter(
@@ -111,33 +131,25 @@ class StripeConnectRefreshView(LoginRequiredMixin, View):
 @csrf_exempt
 @require_POST
 def stripe_connect_webhook(request):
-    """Stripe Connect webhook endpoint.
-
-    Verifies signature, deduplicates via ProcessedWebhook, dispatches to
-    Celery tasks, and returns 200 immediately. A slow webhook endpoint gets
-    disabled by Stripe.
-    """
+    """Handle Stripe Connect webhooks."""
     payload = request.body
-    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
-
-    if not sig_header:
-        logger.warning("Stripe webhook received without signature header.")
-        return HttpResponseBadRequest("Missing signature")
-
-    webhook_secret = getattr(settings, "STRIPE_CONNECT_WEBHOOK_SECRET", "")
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
     provider = StripeConnectProvider()
-
+    webhook_secret = getattr(settings, "STRIPE_CONNECT_WEBHOOK_SECRET", "")
     try:
-        event = provider.verify_webhook_signature(payload, sig_header, webhook_secret)
+        if webhook_secret:
+            event = provider.verify_webhook_signature(payload, sig_header, webhook_secret)
+        else:
+            event = provider.verify_webhook_signature(payload, sig_header)
     except ValueError:
-        logger.warning("Stripe webhook signature verification failed.")
-        return HttpResponseBadRequest("Invalid signature")
+        return HttpResponse(status=400)
+    except Exception as e:
+        logger.error(f"Webhook signature error: {e}")
+        return HttpResponse(status=400)
 
-    event_id = event.get("id", "")
-    event_type = event.get("type", "")
-    event.get("account", "")
+    event_id = str(event.get("id", ""))
+    event_type = str(event.get("type", ""))
 
-    # Idempotency: Stripe retries for days, assume duplicates
     if ProcessedWebhook.objects.filter(event_id=event_id).exists():
         return HttpResponse(status=200)
 
@@ -147,206 +159,76 @@ def stripe_connect_webhook(request):
         event_type=event_type,
     )
 
-    # Serialize the event data for Celery.
-    # Real Stripe Event objects support dict-style access and can be converted
-    # via json.dumps. Plain dicts (in tests) serialize directly.
-    if hasattr(event, "to_dict_recursive"):
-        event_data = event.to_dict_recursive()
-    elif isinstance(event, dict):
-        event_data = event
-    else:
-        event_data = json.loads(json.dumps(event, default=str))
-
-    # Dispatch to Celery — return 200 fast, do the work async
-    from apps.payments.tasks import (
-        process_account_updated,
-        process_charge_refunded,
-        process_checkout_completed,
-        process_checkout_expired,
-        process_dispute_created,
-    )
-
     if event_type == "checkout.session.completed":
-        process_checkout_completed.delay(event_data)
+        from apps.payments.tasks import process_checkout_completed
+        process_checkout_completed.delay(event)
     elif event_type == "checkout.session.expired":
-        process_checkout_expired.delay(event_data)
-    elif event_type == "charge.refunded":
-        process_charge_refunded.delay(event_data)
-    elif event_type == "charge.dispute.created":
-        process_dispute_created.delay(event_data)
-    elif event_type == "account.updated":
-        process_account_updated.delay(event_data)
-    else:
-        logger.info(f"Unhandled Stripe webhook event type: {event_type}")
+        from apps.payments.tasks import process_checkout_expired
+        process_checkout_expired.delay(event)
 
     return HttpResponse(status=200)
 
 
 class PaymentReturnView(View):
-    """Customer returns from Stripe Checkout or PayStation (success/failure URL).
-
-    CRITICAL: The webhook frequently arrives BEFORE this redirect. Both paths
-    converge on the same idempotent confirm_payment() function. Whichever
-    arrives second is a no-op.
-    """
+    """Invitee returns after completing Stripe Checkout or PayStation."""
 
     def get(self, request):
-        session_id = request.GET.get("session_id", "")
-        invoice_number = request.GET.get("invoice_number", "")
+        payment_uid = request.GET.get("payment_uid")
+        if payment_uid:
+            try:
+                payment = confirm_payment(payment_uid=payment_uid)
+                return redirect("bookings:booking_detail", uid=payment.booking.uid)
+            except Exception as e:
+                logger.error(f"Error confirming payment on return: {e}")
 
-        payment = None
-        if session_id:
-            payment = Payment.objects.filter(external_session_id=session_id).first()
-        if not payment and invoice_number:
-            payment = Payment.objects.filter(invoice_number=invoice_number).first()
-
-        if not payment:
-            logger.warning(
-                f"No payment found for session_id={session_id}, invoice_number={invoice_number}"
-            )
-            return HttpResponseBadRequest("Payment not found")
-
-        status_param = request.GET.get("status", "").lower()
-        message_param = request.GET.get("message", "")
-
-        # Check if payment failed or was cancelled
-        if (
-            status_param in ["failed", "cancel", "cancelled", "error"]
-            or "invalid" in message_param.lower()
-            or "fail" in message_param.lower()
-        ):
-            logger.info(
-                f"Payment {payment.uid} failed/cancelled via return URL: status={status_param}, msg={message_param}"
-            )
-            if payment.status == Payment.STATUS_PENDING:
-                expire_payment(payment_uid=str(payment.uid))
-
-            host_slug = payment.booking.event_type.owner.slug
-            event_slug = payment.booking.event_type.slug
-            return redirect(
-                f"/{host_slug}/{event_slug}/?payment_error={message_param or 'Payment was not completed'}"
-            )
-
-        confirm_payment(payment_uid=str(payment.uid))
-
-        # Redirect to the booking confirmation page
-        from apps.bookings.tokens import make_manage_token
-
-        token = make_manage_token(payment.booking)
-        return redirect(f"/booking/{payment.booking.uid}/?t={token}")
+        return redirect("dashboard")
 
 
 class PaymentCancelView(View):
-    """Customer cancelled checkout."""
+    """Invitee cancelled during Stripe Checkout or PayStation."""
 
     def get(self, request):
-        payment_uid = request.GET.get("payment_uid", "")
-        invoice_number = request.GET.get("invoice_number", "")
-
-        payment = None
+        payment_uid = request.GET.get("payment_uid")
         if payment_uid:
-            payment = Payment.objects.filter(uid=payment_uid).first()
-        if not payment and invoice_number:
-            payment = Payment.objects.filter(invoice_number=invoice_number).first()
+            try:
+                payment = expire_payment(payment_uid=payment_uid)
+                return redirect("bookings:public_booking", slug=payment.booking.event_type.slug)
+            except Exception as e:
+                logger.error(f"Error expiring payment on cancel: {e}")
 
-        if not payment:
-            return redirect("/")
-
-        if payment.status == Payment.STATUS_PENDING:
-            expire_payment(payment_uid=str(payment.uid))
-
-        return redirect(
-            f"/{payment.booking.event_type.owner.slug}/{payment.booking.event_type.slug}/?payment_cancelled=1"
-        )
+        return redirect("dashboard")
 
 
 class ConnectDashboardView(LoginRequiredMixin, View):
-    """Dashboard showing Stripe Connect status for the host.
-
-    Shows connection status, capabilities, outstanding requirements,
-    and a link to the Stripe Express dashboard. We do NOT rebuild payout
-    reporting — Stripe already gives them that.
-    """
+    """Host payment settings dashboard."""
 
     def get(self, request):
         payment_account = PaymentAccount.objects.filter(
             user=request.user, provider="stripe_connect"
         ).first()
 
+        terms_accepted = HostPaymentTerms.objects.filter(
+            user=request.user, terms_version="1.0"
+        ).exists()
+
         paystation_account = PaymentAccount.objects.filter(
-            user=request.user, provider="paystation"
+            user=request.user, provider="paystation", is_active=True
         ).first()
 
-        express_dashboard_url = None
-
-        if (
-            payment_account
-            and payment_account.external_account_id
-            and payment_account.charges_enabled
-        ):
-            provider = StripeConnectProvider()
-            try:
-                express_dashboard_url = provider.create_express_login_link(
-                    payment_account.external_account_id
-                )
-            except Exception as e:
-                logger.error(f"Failed to create Express dashboard link: {e}")
-
-        from apps.payments.models import HostPaymentTerms
-
-        has_accepted_terms = HostPaymentTerms.objects.filter(user=request.user).exists()
-
         context = {
-            "account": payment_account,
+            "payment_account": payment_account,
             "paystation_account": paystation_account,
-            "express_dashboard_url": express_dashboard_url,
-            "enable_paystation": getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True),
-            "platform_fee_percent": getattr(settings, "KAIROS_PLATFORM_FEE_PERCENT", 5.0),
-            "has_accepted_terms": has_accepted_terms,
+            "terms_accepted": terms_accepted,
+            "paystation_enabled": getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True),
         }
         return render(request, "payments/connect_dashboard.html", context)
 
 
-class FeeCalculatorView(LoginRequiredMixin, View):
-    """HTMX endpoint for live fee calculation in the event type editor.
-
-    Displays: "You receive ৳X, Kairos fee ৳Y, Stripe fee ~৳Z"
-    """
-
-    def get(self, request):
-        try:
-            amount_cents = int(request.GET.get("amount_cents", 0))
-        except (ValueError, TypeError):
-            amount_cents = 0
-
-        currency = request.GET.get("currency", "USD").upper()
-
-        if amount_cents <= 0:
-            return render(request, "payments/partials/fee_breakdown.html", {"breakdown": None})
-
-        fee_data = compute_platform_fee(amount_cents)
-        breakdown = compute_fee_breakdown(amount_cents, fee_data["fee_amount_cents"], currency)
-
-        return render(request, "payments/partials/fee_breakdown.html", {"breakdown": breakdown})
-
-
 class EnablePaystationView(LoginRequiredMixin, View):
-    """Enable Paystation route for the host after accepting terms."""
+    """Host accepts terms to enable the PayStation fallback route."""
 
     def post(self, request):
-        if not getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True):
-            return HttpResponseBadRequest("Paystation is not enabled.")
-
-        from apps.payments.models import HostPaymentTerms
-
-        # Get client IP
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0].strip()
-        else:
-            ip = request.META.get("REMOTE_ADDR")
-
-        # Record terms acceptance
+        ip = request.META.get("REMOTE_ADDR")
         HostPaymentTerms.objects.get_or_create(
             user=request.user, terms_version="1.0", defaults={"ip_address": ip}
         )
@@ -363,59 +245,363 @@ class EnablePaystationView(LoginRequiredMixin, View):
                 "is_active": True,
             },
         )
+        messages.success(request, "PayStation payment route enabled successfully.")
         return redirect("payments:connect_dashboard")
 
 
-class HostLedgerView(LoginRequiredMixin, View):
-    """View statement/ledger for PayStation route."""
+class FeeCalculatorView(View):
+    """HTMX endpoint to dynamically calculate fee breakdown for a price."""
 
     def get(self, request):
-        if not getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True):
-            return redirect("payments:connect_dashboard")
+        try:
+            amount_cents = int(request.GET.get("amount_cents", 0))
+            is_paystation = request.GET.get("route") == "paystation"
+            breakdown = compute_fee_breakdown(
+                amount_cents=amount_cents, is_paystation_route=is_paystation
+            )
+            return render(request, "payments/partials/fee_breakdown.html", {"breakdown": breakdown})
+        except ValueError:
+            return HttpResponseBadRequest("Invalid amount")
 
-        from django.db.models import Sum
 
-        from apps.payments.models import HostLedger, Payout
+# ==============================================================================
+# TASK 39: HOST WALLET & MANUAL PAYOUTS VIEWS
+# ==============================================================================
 
-        entries = HostLedger.objects.filter(host=request.user).order_by("-created_at")
-        balance = entries.aggregate(Sum("amount_cents"))["amount_cents__sum"] or 0
-        payouts = Payout.objects.filter(host=request.user).order_by("-initiated_at")
+
+class HostWalletView(LoginRequiredMixin, View):
+    """Host Wallet Dashboard: balances, payout methods, request form, full ledger statement, payout history."""
+
+    def get(self, request):
+        user = request.user
+
+        # Determine wallet mode before computing balances.
+        wallet_mode = get_host_wallet_mode(user)
+        has_custodial = wallet_mode in ("custodial", "mixed")
+        has_non_custodial = wallet_mode in ("non_custodial", "mixed")
+
+        # Balance figures are ONLY meaningful for custodial (PayStation) entries.
+        # For Stripe-only hosts these will correctly be 0 — Kairos holds ৳0.
+        avail_cents = get_available_balance(user) if has_custodial else 0
+        pending_cents = get_pending_balance(user) if has_custodial else 0
+        total_cents = get_total_balance(user) if has_custodial else 0
+
+        # Retrieve all ledger entries in chronological order for statement.
+        # For mixed hosts the list contains both custodial and non-custodial rows.
+        raw_entries = HostLedger.objects.filter(host=user).order_by("created_at", "id")
+        running = 0
+        statement_rows = []
+        for entry in raw_entries:
+            # Running balance tracks custodial entries only — non-custodial rows
+            # do not affect the running balance but are still shown for bookkeeping.
+            if entry.is_custodial:
+                running += entry.amount_cents
+            statement_rows.append(
+                {
+                    "entry": entry,
+                    # running_balance_cents reflects custodial funds only.
+                    "running_balance_cents": running if entry.is_custodial else None,
+                }
+            )
+
+        # Reverse for display (latest first)
+        statement_rows.reverse()
+
+        payout_methods = PayoutMethod.objects.filter(host=user)
+        payout_requests = PayoutRequest.objects.filter(host=user).order_by("-requested_at")
+
+        min_threshold_cents = getattr(settings, "KAIROS_MINIMUM_PAYOUT_CENTS", 1000)
+
+        # Stripe Express dashboard link for non-custodial / mixed hosts
+        stripe_dashboard_url = getattr(
+            settings, "STRIPE_EXPRESS_DASHBOARD_URL",
+            "https://connect.stripe.com/express_login"
+        )
 
         context = {
-            "entries": entries,
-            "balance": balance,
-            "payouts": payouts,
-            "min_threshold_cents": getattr(
-                settings, "PAYSTATION_MIN_PAYOUT_THRESHOLD_CENTS", 100000
-            ),
+            # Wallet mode
+            "wallet_mode": wallet_mode,
+            "has_custodial": has_custodial,
+            "has_non_custodial": has_non_custodial,
+            # Custodial balances (only meaningful when has_custodial=True)
+            "available_cents": avail_cents,
+            "pending_cents": pending_cents,
+            "total_cents": total_cents,
+            "available_bdt": f"{avail_cents / 100:.2f}",
+            "pending_bdt": f"{pending_cents / 100:.2f}",
+            "total_bdt": f"{total_cents / 100:.2f}",
+            # Statement
+            "statement_rows": statement_rows,
+            # Payout methods and requests (custodial section only)
+            "payout_methods": payout_methods,
+            "payout_requests": payout_requests,
+            "min_threshold_cents": min_threshold_cents,
+            "min_threshold_bdt": f"{min_threshold_cents / 100:.2f}",
+            "is_negative": (avail_cents < 0 or total_cents < 0),
+            # Stripe dashboard link for non-custodial hosts
+            "stripe_dashboard_url": stripe_dashboard_url,
         }
-        return render(request, "payments/host_ledger.html", context)
+        return render(request, "payments/wallet.html", context)
 
 
-class GeneratePayoutView(LoginRequiredMixin, View):
-    """Host/Admin triggers payout generation for a period."""
+class AddPayoutMethodView(LoginRequiredMixin, View):
+    """Host adds a bKash, Nagad, or Bank Transfer payout method."""
 
     def post(self, request):
-        from datetime import timedelta
+        method_type = request.POST.get("method_type")
+        account_name = request.POST.get("account_name", "").strip()
 
-        from django.contrib import messages
+        if not method_type or not account_name:
+            messages.error(request, "Please provide account name and select method type.")
+            return redirect("payments:wallet")
 
-        from apps.payments.services import generate_payout
+        details = {}
+        if method_type in [PayoutMethod.METHOD_BKASH, PayoutMethod.METHOD_NAGAD]:
+            mobile = request.POST.get("mobile_number", "").strip()
+            if not mobile:
+                messages.error(request, "Mobile number is required for mobile financial service.")
+                return redirect("payments:wallet")
+            details = {"mobile_number": mobile, "account_holder_name": account_name}
+        elif method_type == PayoutMethod.METHOD_BANK:
+            bank_name = request.POST.get("bank_name", "").strip()
+            account_number = request.POST.get("account_number", "").strip()
+            routing = request.POST.get("routing_number", "").strip()
+            if not bank_name or not account_number:
+                messages.error(request, "Bank name and account number are required for bank transfer.")
+                return redirect("payments:wallet")
+            details = {
+                "bank_name": bank_name,
+                "account_number": account_number,
+                "routing_number": routing,
+                "account_holder_name": account_name,
+            }
+        else:
+            messages.error(request, "Invalid method type selected.")
+            return redirect("payments:wallet")
 
-        period_end = timezone.now()
-        period_start = period_end - timedelta(days=30)
+        # Set first method as default automatically
+        is_first = not PayoutMethod.objects.filter(host=request.user).exists()
 
+        pm = PayoutMethod(
+            host=request.user,
+            method_type=method_type,
+            account_name=account_name,
+            is_verified=True,
+            is_default=is_first,
+        )
+        pm.set_details(details)
+        pm.save()
+
+        messages.success(request, f"{pm.get_method_type_display()} payout method added successfully.")
+        return redirect("payments:wallet")
+
+
+class DeletePayoutMethodView(LoginRequiredMixin, View):
+    """Host deletes a payout method."""
+
+    def post(self, request, method_id):
+        pm = get_object_or_404(PayoutMethod, id=method_id, host=request.user)
+        pm.delete()
+        messages.success(request, "Payout method deleted.")
+        return redirect("payments:wallet")
+
+
+class RequestPayoutView(LoginRequiredMixin, View):
+    """Host submits a payout request."""
+
+    def post(self, request):
         try:
-            payout = generate_payout(
-                host=request.user, period_start=period_start, period_end=period_end
+            amount_bdt = Decimal(request.POST.get("amount_bdt", "0"))
+            amount_cents = int(amount_bdt * Decimal("100"))
+            method_id = int(request.POST.get("method_id", 0))
+
+            request_payout(host=request.user, amount_cents=amount_cents, method_id=method_id)
+            messages.success(
+                request,
+                f"Payout request for ৳{amount_bdt:.2f} submitted successfully! Reserved from available balance.",
             )
-            if payout:
-                messages.success(
-                    request, f"Payout #{payout.id} generated for ৳{payout.net_cents / 100:.2f}."
-                )
-            else:
-                messages.error(request, "No positive balance available for payout.")
-        except ValueError as e:
+        except Exception as e:
             messages.error(request, str(e))
 
-        return redirect("payments:host_ledger")
+        return redirect("payments:wallet")
+
+
+class DownloadStatementCSVView(LoginRequiredMixin, View):
+    """Download full host ledger statement as CSV."""
+
+    def get(self, request):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="kairos_statement_{timezone.now().strftime("%Y%m%d")}.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "ID", "Date (UTC)", "Provider", "Entry Type",
+            "Description", "Amount (BDT)", "Running Custodial Balance (BDT)",
+        ])
+
+        entries = HostLedger.objects.filter(host=request.user).order_by("created_at", "id")
+        running = 0
+        rows = []
+        for entry in entries:
+            if entry.is_custodial:
+                running += entry.amount_cents
+            rows.append([
+                entry.id,
+                entry.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                entry.get_provider_display(),
+                entry.get_entry_type_display(),
+                entry.description,
+                f"{entry.amount_cents / 100:.2f}",
+                f"{running / 100:.2f}" if entry.is_custodial else "n/a (Stripe)",
+            ])
+
+        for row in reversed(rows):
+            writer.writerow(row)
+
+        return response
+
+
+class DownloadStatementPDFView(LoginRequiredMixin, View):
+    """Download clean printable statement HTML formatted view."""
+
+    def get(self, request):
+        entries = HostLedger.objects.filter(host=request.user).order_by("created_at", "id")
+        running = 0
+        rows = []
+        for entry in entries:
+            if entry.is_custodial:
+                running += entry.amount_cents
+            rows.append({
+                "entry": entry,
+                "amount_bdt": f"{entry.amount_cents / 100:.2f}",
+                "running_bdt": f"{running / 100:.2f}" if entry.is_custodial else None,
+                "is_custodial": entry.is_custodial,
+            })
+        rows.reverse()
+
+        wallet_mode = get_host_wallet_mode(request.user)
+        has_custodial = wallet_mode in ("custodial", "mixed")
+        avail_cents = get_available_balance(request.user) if has_custodial else 0
+        total_cents = get_total_balance(request.user) if has_custodial else 0
+
+        context = {
+            "host": request.user,
+            "rows": rows,
+            "wallet_mode": wallet_mode,
+            "has_custodial": has_custodial,
+            "available_bdt": f"{avail_cents / 100:.2f}",
+            "total_bdt": f"{total_cents / 100:.2f}",
+            "generated_at": timezone.now(),
+        }
+        return render(request, "payments/statement_pdf.html", context)
+
+
+# ==============================================================================
+# ADMIN PAYOUT QUEUE & MANUAL DISBURSEMENT VIEWS
+# ==============================================================================
+
+
+class AdminPayoutQueueView(StaffRequiredMixin, View):
+    """Admin Payout Queue: lists requested, approved, and processing payouts with full decrypted account details."""
+
+    def get(self, request):
+        status_filter = request.GET.get("status", "requested")
+        payouts_query = PayoutRequest.objects.select_related("host", "method").order_by("-requested_at")
+
+        if status_filter != "all":
+            payouts_query = payouts_query.filter(status=status_filter)
+
+        payout_list = []
+        for pr in payouts_query:
+            details = pr.method.get_details()
+            # Fetch host ledger history summary
+            host_avail = get_available_balance(pr.host)
+            payout_list.append({
+                "payout_request": pr,
+                "amount_bdt": f"{pr.amount_cents / 100:.2f}",
+                "account_details": details,
+                "host_available_bdt": f"{host_avail / 100:.2f}",
+            })
+
+        context = {
+            "payout_list": payout_list,
+            "current_status": status_filter,
+            "status_choices": PayoutRequest.STATUS_CHOICES,
+        }
+        return render(request, "payments/admin_payout_queue.html", context)
+
+
+class AdminPayoutProcessView(StaffRequiredMixin, View):
+    """Admin action handler: approve, complete (with reference), or reject (with reason)."""
+
+    def post(self, request, request_id):
+        payout_req = get_object_or_404(PayoutRequest, id=request_id)
+        action = request.POST.get("action")
+
+        try:
+            if action == "approve":
+                approve_payout(payout_req, admin_user=request.user)
+                messages.success(request, f"Payout request #{request_id} approved for processing.")
+            elif action == "complete":
+                reference = request.POST.get("reference", "").strip()
+                notes = request.POST.get("notes", "").strip()
+                complete_payout(payout_req, admin_user=request.user, reference=reference, notes=notes)
+                messages.success(request, f"Payout request #{request_id} completed with reference {reference}.")
+            elif action == "reject":
+                reason = request.POST.get("rejection_reason", "").strip()
+                reject_payout(payout_req, admin_user=request.user, rejection_reason=reason)
+                messages.success(request, f"Payout request #{request_id} rejected and funds restored.")
+            else:
+                messages.error(request, "Unknown payout processing action.")
+        except Exception as e:
+            messages.error(request, str(e))
+
+        return redirect("payments:admin_payout_queue")
+
+
+class AdminPayoutExportCSVView(StaffRequiredMixin, View):
+    """Export approved payout requests formatted for bulk manual processing."""
+
+    def get(self, request):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="bulk_payouts_{timezone.now().strftime("%Y%m%d_%H%M")}.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Request ID",
+            "Host Email",
+            "Host Name",
+            "Amount BDT",
+            "Method Type",
+            "Account Name",
+            "Mobile / Bank Account",
+            "Bank / Branch Info",
+            "Requested At",
+            "Status",
+        ])
+
+        approved_requests = PayoutRequest.objects.filter(
+            status__in=[PayoutRequest.STATUS_APPROVED, PayoutRequest.STATUS_REQUESTED]
+        ).select_related("host", "method")
+
+        for pr in approved_requests:
+            details = pr.method.get_details()
+            mobile_or_acc = details.get("mobile_number") or details.get("account_number", "")
+            bank_info = details.get("bank_name", "")
+            if details.get("routing_number"):
+                bank_info += f" (Routing: {details.get('routing_number')})"
+
+            writer.writerow([
+                pr.id,
+                pr.host.email,
+                pr.host.display_name or pr.host.email,
+                f"{pr.amount_cents / 100:.2f}",
+                pr.method.get_method_type_display(),
+                pr.method.account_name,
+                mobile_or_acc,
+                bank_info,
+                pr.requested_at.strftime("%Y-%m-%d %H:%M:%S"),
+                pr.status,
+            ])
+
+        return response

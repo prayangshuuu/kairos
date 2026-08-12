@@ -265,3 +265,66 @@ def reconcile_payments():
     logger.info(
         f"Payment reconciliation complete: {checked} payments checked, {mismatches} mismatches found"
     )
+
+
+# ==============================================================================
+# TASK 39: WALLET SETTLEMENT BEAT & RECONCILIATION
+# ==============================================================================
+
+
+@shared_task
+def run_settlement_beat():
+    """
+    Settlement beat task — runs periodically (e.g. every 15 minutes).
+    Moves PayStation payments from pending to settled after meeting end + refund window.
+
+    SETTLEMENT RULE: funds become available only after the meeting has passed AND the event
+    type's refund window has closed. Paying out earlier means a later refund creates a negative
+    balance you must chase from someone who has already spent the money.
+
+    Stripe payments are NOT processed here — Kairos never held those funds.
+    """
+    from apps.payments.wallet import settle_pending_payments
+
+    try:
+        settled_count = settle_pending_payments()
+        if settled_count > 0:
+            logger.info(f"Settlement beat: {settled_count} payment(s) marked as settled.")
+        else:
+            logger.debug("Settlement beat: no payments ready for settlement.")
+        return settled_count
+    except Exception as e:
+        logger.error(f"Settlement beat failed: {e}", exc_info=True)
+        raise
+
+
+@shared_task
+def run_wallet_reconciliation():
+    """
+    Daily custodial wallet reconciliation task.
+    Sums all PayStation (custodial) ledger balances and compares against the expected
+    merchant account hold.
+
+    Stripe entries (is_custodial=False) are EXCLUDED ENTIRELY — Kairos never held that money.
+
+    Any mismatch is a bug or a fraud signal. Alerts admin immediately on discrepancy.
+    Logs the result daily even when clean.
+    """
+    from apps.payments.wallet import reconcile_wallets
+
+    try:
+        log = reconcile_wallets()
+        status = "CLEAN" if log.is_clean else f"MISMATCH (diff: {log.difference_cents} cents)"
+        logger.info(
+            f"Wallet reconciliation: {status}. "
+            f"Custodial ledger total: {log.total_ledger_cents} cents. "
+            f"Expected hold: {log.expected_merchant_hold_cents} cents."
+        )
+        return {
+            "is_clean": log.is_clean,
+            "difference_cents": log.difference_cents,
+            "total_ledger_cents": log.total_ledger_cents,
+        }
+    except Exception as e:
+        logger.error(f"Wallet reconciliation failed: {e}", exc_info=True)
+        raise

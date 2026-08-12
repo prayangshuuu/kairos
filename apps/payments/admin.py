@@ -5,9 +5,12 @@ from apps.payments.models import (
     Payment,
     PaymentAccount,
     Payout,
+    PayoutMethod,
+    PayoutRequest,
     ProcessedWebhook,
     ReconciliationFlag,
     SlotHold,
+    WalletReconciliationLog,
 )
 
 
@@ -35,9 +38,10 @@ class PaymentAdmin(admin.ModelAdmin):
         "amount_cents",
         "currency",
         "status",
+        "is_settled",
         "created_at",
     )
-    list_filter = ("provider", "status", "currency", "created_at")
+    list_filter = ("provider", "status", "is_settled", "currency", "created_at")
     search_fields = (
         "uid",
         "booking__uid",
@@ -108,9 +112,93 @@ class PayoutAdmin(admin.ModelAdmin):
     readonly_fields = ("initiated_at", "completed_at")
 
 
+@admin.register(PayoutMethod)
+class PayoutMethodAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "host",
+        "method_type",
+        "account_name",
+        "masked_account_info",
+        "is_verified",
+        "is_default",
+        "created_at",
+    )
+    list_filter = ("method_type", "is_verified", "is_default")
+    search_fields = ("host__email", "account_name")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(PayoutRequest)
+class PayoutRequestAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "host",
+        "amount_cents",
+        "currency",
+        "method",
+        "status",
+        "requested_at",
+        "reference",
+    )
+    list_filter = ("status", "currency", "requested_at")
+    search_fields = ("host__email", "reference", "notes", "rejection_reason")
+    readonly_fields = ("requested_at", "processed_at")
+
+
 @admin.register(HostLedger)
 class HostLedgerAdmin(admin.ModelAdmin):
-    list_display = ("host", "entry_type", "amount_cents", "currency", "created_at")
-    list_filter = ("entry_type", "currency")
+    list_display = (
+        "id",
+        "host",
+        "entry_type",
+        "provider",
+        "is_custodial",
+        "amount_cents",
+        "currency",
+        "description",
+        "created_at",
+    )
+    list_filter = ("entry_type", "provider", "is_custodial", "currency", "created_at")
     search_fields = ("host__email", "description")
-    readonly_fields = ("created_at",)
+    readonly_fields = (
+        "host",
+        "payment",
+        "payout_request",
+        "payout",
+        "entry_type",
+        "provider",
+        "is_custodial",
+        "amount_cents",
+        "currency",
+        "description",
+        "created_by",
+        "created_at",
+    )
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(WalletReconciliationLog)
+class WalletReconciliationLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "reconciled_at",
+        "total_ledger_cents",
+        "expected_merchant_hold_cents",
+        "difference_cents",
+        "is_clean",
+    )
+    list_filter = ("is_clean", "reconciled_at")
+    readonly_fields = (
+        "reconciled_at",
+        "total_ledger_cents",
+        "expected_merchant_hold_cents",
+        "difference_cents",
+        "is_clean",
+        "details",
+    )
