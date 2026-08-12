@@ -37,6 +37,11 @@
               const picker = new window.tui.TimepickerUI(container, {
                 mobile: true,
                 theme: 'basic',
+                incrementMinutes: 30,
+                timeLabel: 'Pick a Start Time',
+                mobileTimeLabel: 'Pick a Start Time',
+                cancelLabel: 'Cancel',
+                okLabel: 'Select'
               });
               picker.create();
               window.kairosTimepickerLoaded = true;
