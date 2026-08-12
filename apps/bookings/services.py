@@ -64,7 +64,31 @@ def reject_booking(
         booking.rejected_at = now
         booking.save(update_fields=['status', 'rejected_by', 'cancellation_reason', 'rejected_at', 'updated_at'])
         
-        # [HOOK: Send rejection notifications]
+        # Send rejection notification
+        from apps.core.tasks import send_email_async
+        host_tz = booking.host.timezone
+        invitee_tz = booking.invitee_timezone or "UTC"
+        context = {
+            "booking_uid": str(booking.uid),
+            "host_name": booking.host.display_name or booking.host.email,
+            "invitee_name": booking.invitee_name,
+            "event_title": booking.event_type.title,
+            "start_at": booking.start_at.isoformat(),
+            "host_tz": host_tz,
+            "invitee_tz": invitee_tz,
+            "reason": reason,
+            "branding_color": booking.event_type.owner.branding_color if hasattr(booking.event_type.owner, 'branding_color') else "#0f172a"
+        }
+        transaction.on_commit(lambda: send_email_async.delay(
+            to_email=booking.invitee_email,
+            subject=f"Update: {booking.event_type.title} with {context['host_name']} was declined",
+            template_name="booking_rejected",
+            context=context,
+            reply_to=booking.host.email,
+            booking_id=booking.id,
+            notification_kind="booking_rejected"
+        ))
+        
         logger.info(f"Booking {booking.uid} rejected by {rejected_by.email if rejected_by else 'system'}")
         
     return booking
@@ -146,7 +170,51 @@ def reschedule_booking(
                 response_status=attendee.response_status
             )
             
-        # [HOOK: Notifications for both parties]
+        # Queue Reschedule emails
+        from apps.core.tasks import send_email_async
+        from apps.bookings.ics import generate_ics_for_booking
+        
+        ics_data = generate_ics_for_booking(new_booking).decode('utf-8')
+        host_tz = new_booking.host.timezone
+        invitee_tz = new_booking.invitee_timezone or "UTC"
+        context = {
+            "booking_uid": str(new_booking.uid),
+            "host_name": new_booking.host.display_name or new_booking.host.email,
+            "invitee_name": new_booking.invitee_name,
+            "event_title": new_booking.event_type.title,
+            "old_start_at": booking.start_at.isoformat(),
+            "new_start_at": new_booking.start_at.isoformat(),
+            "host_tz": host_tz,
+            "invitee_tz": invitee_tz,
+            "reason": reason,
+            "rescheduled_by": rescheduled_by,
+            "branding_color": new_booking.event_type.owner.branding_color if hasattr(new_booking.event_type.owner, 'branding_color') else "#0f172a"
+        }
+        
+        def _trigger_reschedule_notifications(b_id, ics):
+            send_email_async.delay(
+                to_email=new_booking.host.email,
+                subject=f"Rescheduled: {new_booking.event_type.title} with {new_booking.invitee_name}",
+                template_name="booking_rescheduled_host",
+                context=context,
+                reply_to=new_booking.invitee_email,
+                booking_id=b_id,
+                notification_kind="booking_rescheduled_host",
+                ics_data=ics
+            )
+            send_email_async.delay(
+                to_email=new_booking.invitee_email,
+                subject=f"Rescheduled: {new_booking.event_type.title} with {context['host_name']}",
+                template_name="booking_rescheduled_invitee",
+                context=context,
+                reply_to=new_booking.host.email,
+                booking_id=b_id,
+                notification_kind="booking_rescheduled_invitee",
+                ics_data=ics
+            )
+            
+        transaction.on_commit(lambda: _trigger_reschedule_notifications(new_booking.id, ics_data))
+        
         logger.info(f"Booking {booking.uid} rescheduled to {new_booking.uid} by {rescheduled_by}")
         
     return new_booking
@@ -185,14 +253,49 @@ def cancel_booking(
         from apps.integrations.tasks import delete_calendar_event
         from apps.bookings.models import BookingReference
         
-        # Capture the booking ID and look up references when transaction commits
-        def _trigger_deletions(b_id):
+        from apps.core.tasks import send_email_async
+        host_tz = booking.host.timezone
+        invitee_tz = booking.invitee_timezone or "UTC"
+        context = {
+            "booking_uid": str(booking.uid),
+            "host_name": booking.host.display_name or booking.host.email,
+            "invitee_name": booking.invitee_name,
+            "event_title": booking.event_type.title,
+            "start_at": booking.start_at.isoformat(),
+            "host_tz": host_tz,
+            "invitee_tz": invitee_tz,
+            "reason": reason,
+            "cancelled_by": cancelled_by,
+            "branding_color": booking.event_type.owner.branding_color if hasattr(booking.event_type.owner, 'branding_color') else "#0f172a"
+        }
+        
+        def _trigger_cancellations(b_id):
             for ref in BookingReference.objects.filter(booking_id=b_id):
                 delete_calendar_event.delay(ref.id)
                 
-        transaction.on_commit(lambda: _trigger_deletions(booking.id))
+            # Send to host
+            send_email_async.delay(
+                to_email=booking.host.email,
+                subject=f"Cancelled: {booking.event_type.title} with {booking.invitee_name}",
+                template_name="booking_cancelled_host",
+                context=context,
+                reply_to=booking.invitee_email,
+                booking_id=b_id,
+                notification_kind="booking_cancelled_host"
+            )
+            # Send to invitee
+            send_email_async.delay(
+                to_email=booking.invitee_email,
+                subject=f"Cancelled: {booking.event_type.title} with {context['host_name']}",
+                template_name="booking_cancelled_invitee",
+                context=context,
+                reply_to=booking.host.email,
+                booking_id=b_id,
+                notification_kind="booking_cancelled_invitee"
+            )
+                
+        transaction.on_commit(lambda: _trigger_cancellations(booking.id))
         
-        # [HOOK: Notifications go here in task 18. Call celery tasks here]
         logger.info(f"Booking {booking.uid} cancelled by {cancelled_by}. Notifications pending.")
         
     return booking
@@ -284,6 +387,43 @@ def create_booking(
             if status == Booking.StatusChoices.CONFIRMED:
                 from apps.bookings.tasks import process_booking_confirmation
                 transaction.on_commit(lambda: process_booking_confirmation.delay(booking.id))
+            else:
+                from apps.core.tasks import send_email_async
+                host_tz = event_type.owner.timezone
+                invitee_tz = invitee_timezone or "UTC"
+                
+                context = {
+                    "booking_uid": str(booking.uid),
+                    "host_name": event_type.owner.display_name or event_type.owner.email,
+                    "invitee_name": invitee_name,
+                    "event_title": event_type.title,
+                    "start_at": start_at.isoformat(),
+                    "host_tz": host_tz,
+                    "invitee_tz": invitee_tz,
+                    "branding_color": event_type.owner.branding_color if hasattr(event_type.owner, 'branding_color') else "#0f172a"
+                }
+                
+                def _send_pending_emails(b_id):
+                    send_email_async.delay(
+                        to_email=invitee_email,
+                        subject=f"Request sent: {event_type.title} with {context['host_name']}",
+                        template_name="booking_pending_invitee",
+                        context=context,
+                        reply_to=event_type.owner.email,
+                        booking_id=b_id,
+                        notification_kind="booking_pending_invitee"
+                    )
+                    send_email_async.delay(
+                        to_email=event_type.owner.email,
+                        subject=f"Action Required: Pending booking from {invitee_name}",
+                        template_name="booking_pending_host",
+                        context=context,
+                        reply_to=invitee_email,
+                        booking_id=b_id,
+                        notification_kind="booking_pending_host"
+                    )
+                    
+                transaction.on_commit(lambda: _send_pending_emails(booking.id))
     except (IntegrityError, OperationalError) as e:
         if "no_overlapping_bookings_per_host" in str(e) or "deadlock detected" in str(e):
             logger.info(f"Slot {start_at} unavailable due to constraint or deadlock for host {event_type.owner_id}")

@@ -1,0 +1,42 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Action required: Pending request from {{ invitee_name }}{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ host_name }},</p>
+
+<p style="margin: 0 0 30px 0; color: #334155; font-size: 16px; line-height: 1.5;"><strong>{{ invitee_name }}</strong> has requested to meet with you. Please approve or reject this request.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
+    <tr>
+        <td style="padding: 20px;">
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">What</p>
+            <p style="margin: 0 0 20px 0; color: #0f172a; font-size: 18px; font-weight: 500;">{{ event_title }}</p>
+
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">When</p>
+            <p style="margin: 0 0 5px 0; color: #0f172a; font-size: 16px;">
+                <strong>{{ start_at|date:"l, j F Y" }}</strong><br>
+                {{ start_at|date:"g:i A" }} - {{ end_at|date:"g:i A" }} ({{ host_tz }})
+            </p>
+            <p style="margin: 0 0 0 0; color: #64748b; font-size: 14px;">
+                {{ invitee_name }}'s time: {{ start_at|date:"g:i A" }} ({{ invitee_tz }})
+            </p>
+        </td>
+    </tr>
+</table>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 30px;">
+  <tr>
+    <td align="center">
+      <table border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td align="center" style="border-radius: 4px; margin-right: 10px;" bgcolor="{{ branding_color|default:'#10b981' }}">
+            <a href="https://joinkairos.me/dashboard/bookings/" target="_blank" style="font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 4px; padding: 12px 24px; border: 1px solid {{ branding_color|default:'#10b981' }}; display: inline-block;">Approve or Reject</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% endblock %}

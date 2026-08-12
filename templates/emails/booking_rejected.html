@@ -1,0 +1,17 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Update regarding your meeting request with {{ host_name }}{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ invitee_name }},</p>
+
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Unfortunately, <strong>{{ host_name }}</strong> has declined your request for <strong>{{ event_title }}</strong> on {{ start_at|date:"D j M" }}.</p>
+
+{% if reason %}
+<div style="background-color: #f8fafc; border-left: 4px solid {{ branding_color|default:'#94a3b8' }}; padding: 15px 20px; margin-bottom: 30px;">
+    <p style="margin: 0; color: #475569; font-size: 15px; font-style: italic;">"{{ reason }}"</p>
+</div>
+{% endif %}
+
+<p style="margin: 0; color: #334155; font-size: 16px; line-height: 1.5;">You can always try to find another time that works for both of you.</p>
+{% endblock %}

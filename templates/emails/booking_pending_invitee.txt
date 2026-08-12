@@ -1,0 +1,11 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ invitee_name }},
+
+Your request to meet with {{ host_name }} has been sent and is pending their approval. You will receive another email once it is confirmed.
+
+WHAT: {{ event_title }}
+WHEN: {{ start_at|date:"l, j F Y" }} at {{ start_at|date:"g:i A" }} ({{ invitee_tz }})
+      {{ host_name }}'s time: {{ start_at|date:"g:i A" }} ({{ host_tz }})
+{% endblock %}

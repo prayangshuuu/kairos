@@ -1,0 +1,9 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ user_name }},
+
+Attached is your Kairos data export.
+
+This file contains your profile settings, event types, schedules, and a history of your bookings in JSON format.
+{% endblock %}

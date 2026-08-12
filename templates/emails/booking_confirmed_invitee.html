@@ -1,0 +1,57 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Your meeting with {{ host_name }} is confirmed for {{ start_at|date:"D j M" }}.{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ invitee_name }},</p>
+
+<p style="margin: 0 0 30px 0; color: #334155; font-size: 16px; line-height: 1.5;">Your meeting with <strong>{{ host_name }}</strong> is confirmed.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
+    <tr>
+        <td style="padding: 20px;">
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">What</p>
+            <p style="margin: 0 0 20px 0; color: #0f172a; font-size: 18px; font-weight: 500;">{{ event_title }}</p>
+
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">When</p>
+            <p style="margin: 0 0 5px 0; color: #0f172a; font-size: 16px;">
+                <strong>{{ start_at|date:"l, j F Y" }}</strong><br>
+                {{ start_at|date:"g:i A" }} - {{ end_at|date:"g:i A" }} ({{ invitee_tz }})
+            </p>
+            <p style="margin: 0 0 20px 0; color: #64748b; font-size: 14px;">
+                {{ host_name }}'s time: {{ start_at|date:"g:i A" }} ({{ host_tz }})
+            </p>
+
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Where</p>
+            {% if location_type == 'video_conference' and meeting_url %}
+            <p style="margin: 0; color: #0f172a; font-size: 16px;">
+                <a href="{{ meeting_url }}" style="color: #3b82f6; text-decoration: none;">Join Video Call</a>
+            </p>
+            {% else %}
+            <p style="margin: 0; color: #0f172a; font-size: 16px;">{{ location_value|default:"To be determined" }}</p>
+            {% endif %}
+        </td>
+    </tr>
+</table>
+
+{% if location_type == 'video_conference' and meeting_url %}
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 30px;">
+  <tr>
+    <td align="center">
+      <table border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td align="center" style="border-radius: 4px;" bgcolor="{{ branding_color|default:'#0f172a' }}">
+            <a href="{{ meeting_url }}" target="_blank" style="font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 4px; padding: 12px 24px; border: 1px solid {{ branding_color|default:'#0f172a' }}; display: inline-block;">Join Meeting</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+<p style="margin: 0 0 20px 0; color: #64748b; font-size: 14px; text-align: center;">
+    Need to make changes?<br>
+    <a href="#" style="color: #3b82f6; text-decoration: none;">Reschedule</a> or <a href="#" style="color: #3b82f6; text-decoration: none;">Cancel</a>
+</p>
+{% endblock %}

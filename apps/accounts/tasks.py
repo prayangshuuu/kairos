@@ -58,12 +58,16 @@ def export_user_data(user_id):
             'invitee_email': b.invitee_email,
         })
         
-    # Mock sending email with link (in reality, we'd upload to S3 and generate signed URL)
+    # Queue email with attachment
     json_data = json.dumps(data, indent=2)
-    email = EmailMessage(
+    
+    from apps.core.tasks import send_email_async
+    
+    send_email_async.delay(
+        to_email=user.email,
         subject="Your Kairos Data Export",
-        body="Attached is your data export.",
-        to=[user.email]
+        template_name="account_data_export",
+        context={"user_name": user.display_name or user.email},
+        is_transactional=True,
+        attachments=[('kairos_export.json', json_data, 'application/json')]
     )
-    email.attach('kairos_export.json', json_data, 'application/json')
-    email.send()

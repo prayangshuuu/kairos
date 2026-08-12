@@ -1,0 +1,18 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ invitee_name }},
+
+Your meeting "{{ event_title }}" with {{ host_name }} has been rescheduled.
+
+OLD TIME: {{ old_start_at|date:"l, j F Y, g:i A" }} ({{ invitee_tz }})
+
+NEW TIME: {{ new_start_at|date:"l, j F Y" }} at {{ new_start_at|date:"g:i A" }} ({{ invitee_tz }})
+          {{ host_name }}'s time: {{ new_start_at|date:"g:i A" }} ({{ host_tz }})
+
+{% if reason %}
+Reason: "{{ reason }}"
+{% endif %}
+
+Need to make changes? You can reply to this email or contact {{ host_name }}.
+{% endblock %}

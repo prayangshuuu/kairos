@@ -1,0 +1,17 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ invitee_name }},
+
+Your meeting "{{ event_title }}" with {{ host_name }} on {{ start_at|date:"D j M" }} has been cancelled.
+
+{% if cancelled_by == 'host' %}
+This cancellation was made by {{ host_name }}.
+{% endif %}
+
+{% if reason %}
+Reason: "{{ reason }}"
+{% endif %}
+
+You can book a new time here: https://joinkairos.me/{{ host_name|slugify }}
+{% endblock %}

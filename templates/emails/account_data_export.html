@@ -1,0 +1,11 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Your Kairos data export is ready.{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ user_name }},</p>
+
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Attached is your Kairos data export.</p>
+
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">This file contains your profile settings, event types, schedules, and a history of your bookings in JSON format.</p>
+{% endblock %}

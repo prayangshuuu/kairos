@@ -41,3 +41,57 @@ def custom_404(request, exception=None):
 
 def custom_500(request):
     return render(request, '500.html', status=500)
+
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+import logging
+
+logger = logging.getLogger(__name__)
+
+@csrf_exempt
+@require_POST
+def resend_webhook(request):
+    """
+    Webhook endpoint for Resend events (bounces, complaints).
+    """
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+        
+    event_type = payload.get("type")
+    
+    if event_type in ["email.bounced", "email.complained"]:
+        data = payload.get("data", {})
+        to_email = None
+        
+        # Resend payload structure for bounce:
+        # data -> email -> to -> [email]
+        # or data -> to -> [email]
+        
+        if "to" in data:
+            to_email = data["to"][0]
+            
+        message_id = data.get("email_id") or payload.get("created_at")
+        
+        if to_email:
+            from apps.core.models import EmailEvent, BouncedEmail
+            
+            # Log the event
+            EmailEvent.objects.create(
+                recipient=to_email,
+                event_type=event_type,
+                message_id=message_id,
+                payload=payload
+            )
+            
+            # Add to suppression list if it's a hard bounce or complaint
+            # Resend categorizes bounces. Let's assume all webhook bounces are hard or worth suppressing.
+            BouncedEmail.objects.get_or_create(
+                email=to_email,
+                defaults={"reason": f"Resend event: {event_type}"}
+            )
+            logger.info(f"Added {to_email} to suppression list due to {event_type}")
+            
+    return JsonResponse({"status": "ok"})

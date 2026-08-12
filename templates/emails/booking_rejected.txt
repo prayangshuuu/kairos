@@ -1,0 +1,13 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ invitee_name }},
+
+Unfortunately, {{ host_name }} has declined your request for "{{ event_title }}" on {{ start_at|date:"D j M" }}.
+
+{% if reason %}
+Reason: "{{ reason }}"
+{% endif %}
+
+You can always try to find another time that works for both of you.
+{% endblock %}

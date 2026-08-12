@@ -1,0 +1,25 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Action Required: Payment failed for your booking with {{ host_name }}{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ invitee_name }},</p>
+
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Your payment of <strong>{{ currency }} {{ amount }}</strong> for <strong>{{ event_title }}</strong> with <strong>{{ host_name }}</strong> could not be processed.</p>
+
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Because payment failed, this meeting has not been confirmed. Please try booking again with a different payment method.</p>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 30px;">
+  <tr>
+    <td align="center">
+      <table border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td align="center" style="border-radius: 4px;" bgcolor="{{ branding_color|default:'#0f172a' }}">
+            <a href="https://joinkairos.me/{{ host_slug }}" target="_blank" style="font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 4px; padding: 12px 24px; border: 1px solid {{ branding_color|default:'#0f172a' }}; display: inline-block;">Try Booking Again</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{% endblock %}

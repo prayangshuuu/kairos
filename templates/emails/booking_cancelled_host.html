@@ -1,0 +1,20 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Meeting with {{ invitee_name }} cancelled.{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ host_name }},</p>
+
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Your meeting <strong>{{ event_title }}</strong> with <strong>{{ invitee_name }}</strong> on {{ start_at|date:"D j M" }} has been cancelled.</p>
+
+{% if cancelled_by == 'invitee' %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">This cancellation was made by {{ invitee_name }}.</p>
+{% endif %}
+
+{% if reason %}
+<div style="background-color: #f8fafc; border-left: 4px solid {{ branding_color|default:'#94a3b8' }}; padding: 15px 20px; margin-bottom: 30px;">
+    <p style="margin: 0; color: #475569; font-size: 15px; font-style: italic;">"{{ reason }}"</p>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Receipt for your booking with {{ host_name }}{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ invitee_name }},</p>
+
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Here is the receipt for your payment for <strong>{{ event_title }}</strong> with <strong>{{ host_name }}</strong>.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
+    <tr>
+        <td style="padding: 20px;">
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Amount Paid</p>
+            <p style="margin: 0 0 20px 0; color: #0f172a; font-size: 24px; font-weight: 600;">{{ currency }} {{ amount }}</p>
+
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Date</p>
+            <p style="margin: 0 0 5px 0; color: #0f172a; font-size: 16px;">
+                {{ payment_date|date:"l, j F Y" }}
+            </p>
+            
+            {% if receipt_url %}
+            <p style="margin: 15px 0 0 0; color: #0f172a; font-size: 16px;">
+                <a href="{{ receipt_url }}" style="color: #3b82f6; text-decoration: none;">View Full Receipt Online</a>
+            </p>
+            {% endif %}
+        </td>
+    </tr>
+</table>
+{% endblock %}

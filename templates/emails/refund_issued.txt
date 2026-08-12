@@ -1,0 +1,13 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ invitee_name }},
+
+A refund of {{ currency }} {{ amount }} has been issued for your cancelled meeting "{{ event_title }}" with {{ host_name }}.
+
+Refunds can take 5-10 business days to appear on your bank or credit card statement.
+
+{% if receipt_url %}
+View original receipt: {{ receipt_url }}
+{% endif %}
+{% endblock %}

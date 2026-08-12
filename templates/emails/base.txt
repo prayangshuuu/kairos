@@ -1,0 +1,7 @@
+{% block content %}{% endblock %}
+
+--
+Powered by Kairos (https://joinkairos.me)
+{% if not is_transactional %}
+You can unsubscribe at any time.
+{% endif %}

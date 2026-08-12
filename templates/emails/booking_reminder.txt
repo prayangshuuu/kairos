@@ -1,0 +1,18 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ invitee_name }},
+
+This is a reminder for your upcoming meeting with {{ host_name }} in {{ window }}.
+
+WHAT: {{ event_title }}
+WHEN: {{ start_at|date:"l, j F Y" }} at {{ start_at|date:"g:i A" }} ({{ invitee_tz }})
+      {{ host_name }}'s time: {{ start_at|date:"g:i A" }} ({{ host_tz }})
+WHERE: {% if location_type == 'video_conference' and meeting_url %}{{ meeting_url }}{% else %}{{ location_value|default:"To be determined" }}{% endif %}
+
+{% if location_type == 'video_conference' and meeting_url %}
+Join here: {{ meeting_url }}
+{% endif %}
+
+Need to make changes? You can reply to this email or contact {{ host_name }}.
+{% endblock %}

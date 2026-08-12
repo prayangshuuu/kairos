@@ -1,0 +1,36 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Meeting rescheduled: {{ event_title }}{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ host_name }},</p>
+
+<p style="margin: 0 0 30px 0; color: #334155; font-size: 16px; line-height: 1.5;">Your meeting <strong>{{ event_title }}</strong> with <strong>{{ invitee_name }}</strong> has been rescheduled.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
+    <tr>
+        <td style="padding: 20px;">
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; text-decoration: line-through;">Old Time</p>
+            <p style="margin: 0 0 20px 0; color: #94a3b8; font-size: 16px; text-decoration: line-through;">
+                {{ old_start_at|date:"l, j F Y, g:i A" }} ({{ host_tz }})
+            </p>
+
+            <p style="margin: 0 0 10px 0; color: #10b981; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">New Time</p>
+            <p style="margin: 0 0 5px 0; color: #0f172a; font-size: 18px; font-weight: 500;">
+                <strong>{{ new_start_at|date:"l, j F Y" }}</strong><br>
+                {{ new_start_at|date:"g:i A" }} ({{ host_tz }})
+            </p>
+            <p style="margin: 0 0 0 0; color: #64748b; font-size: 14px;">
+                {{ invitee_name }}'s time: {{ new_start_at|date:"g:i A" }} ({{ invitee_tz }})
+            </p>
+        </td>
+    </tr>
+</table>
+
+{% if reason %}
+<div style="background-color: #f8fafc; border-left: 4px solid {{ branding_color|default:'#94a3b8' }}; padding: 15px 20px; margin-bottom: 30px;">
+    <p style="margin: 0; color: #475569; font-size: 15px; font-style: italic;">"{{ reason }}"</p>
+</div>
+{% endif %}
+
+{% endblock %}

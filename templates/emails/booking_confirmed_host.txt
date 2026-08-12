@@ -1,0 +1,16 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ host_name }},
+
+You have a new confirmed booking with {{ invitee_name }}.
+
+WHAT: {{ event_title }}
+WHEN: {{ start_at|date:"l, j F Y" }} at {{ start_at|date:"g:i A" }} - {{ end_at|date:"g:i A" }} ({{ host_tz }})
+      {{ invitee_name }}'s time: {{ start_at|date:"g:i A" }} ({{ invitee_tz }})
+WHERE: {% if location_type == 'video_conference' and meeting_url %}{{ meeting_url }}{% else %}{{ location_value|default:"To be determined" }}{% endif %}
+
+{% if location_type == 'video_conference' and meeting_url %}
+Join here: {{ meeting_url }}
+{% endif %}
+{% endblock %}

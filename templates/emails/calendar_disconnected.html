@@ -1,0 +1,25 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Action Required: Please reconnect your {{ provider }} calendar to Kairos.{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ host_name }},</p>
+
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">We were unable to connect to your <strong>{{ provider }}</strong> calendar. This usually happens if you changed your password or revoked access.</p>
+
+<p style="margin: 0 0 30px 0; color: #334155; font-size: 16px; line-height: 1.5;">To prevent double-booking and ensure new meetings are added to your calendar, please reconnect it as soon as possible.</p>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 30px;">
+  <tr>
+    <td align="center">
+      <table border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td align="center" style="border-radius: 4px;" bgcolor="{{ branding_color|default:'#10b981' }}">
+            <a href="https://joinkairos.me/dashboard/integrations/" target="_blank" style="font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 4px; padding: 12px 24px; border: 1px solid {{ branding_color|default:'#10b981' }}; display: inline-block;">Reconnect Calendar</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+{% endblock %}

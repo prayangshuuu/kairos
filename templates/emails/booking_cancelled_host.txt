@@ -1,0 +1,15 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ host_name }},
+
+Your meeting "{{ event_title }}" with {{ invitee_name }} on {{ start_at|date:"D j M" }} has been cancelled.
+
+{% if cancelled_by == 'invitee' %}
+This cancellation was made by {{ invitee_name }}.
+{% endif %}
+
+{% if reason %}
+Reason: "{{ reason }}"
+{% endif %}
+{% endblock %}

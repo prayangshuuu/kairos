@@ -295,3 +295,11 @@ KAIROS_PLATFORM_FEE_MIN_CENTS = int(env("KAIROS_PLATFORM_FEE_MIN_CENTS", default
 # Stripe requires at least 30 minutes for Checkout Session expiry.
 KAIROS_SLOT_HOLD_TTL_MINUTES = int(env("KAIROS_SLOT_HOLD_TTL_MINUTES", default="30"))
 
+# ---------- Email Infrastructure ----------
+EMAIL_HOST = env("EMAIL_HOST", default="smtp.resend.com")
+EMAIL_PORT = int(env("EMAIL_PORT", default="587"))
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="resend")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Kairos <hello@mail.joinkairos.me>")
+SERVER_EMAIL = env("SERVER_EMAIL", default="server@mail.joinkairos.me")

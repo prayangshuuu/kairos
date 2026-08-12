@@ -17,4 +17,6 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Write emails to local files in development for easy inspection
+EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
+EMAIL_FILE_PATH = BASE_DIR / "tmp" / "emails"

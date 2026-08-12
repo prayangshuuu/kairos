@@ -1,0 +1,11 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ host_name }},
+
+We were unable to connect to your {{ provider }} calendar. This usually happens if you changed your password or revoked access.
+
+To prevent double-booking and ensure new meetings are added to your calendar, please reconnect it as soon as possible.
+
+Reconnect your calendar: https://joinkairos.me/dashboard/integrations/
+{% endblock %}

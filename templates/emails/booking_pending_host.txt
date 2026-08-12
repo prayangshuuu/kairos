@@ -1,0 +1,13 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ host_name }},
+
+{{ invitee_name }} has requested to meet with you. Please approve or reject this request.
+
+WHAT: {{ event_title }}
+WHEN: {{ start_at|date:"l, j F Y" }} at {{ start_at|date:"g:i A" }} - {{ end_at|date:"g:i A" }} ({{ host_tz }})
+      {{ invitee_name }}'s time: {{ start_at|date:"g:i A" }} ({{ invitee_tz }})
+
+Go to your dashboard to approve or reject: https://joinkairos.me/dashboard/bookings/
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Your meeting request with {{ host_name }} has been sent.{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ invitee_name }},</p>
+
+<p style="margin: 0 0 30px 0; color: #334155; font-size: 16px; line-height: 1.5;">Your request to meet with <strong>{{ host_name }}</strong> has been sent and is pending their approval. You will receive another email once it is confirmed.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
+    <tr>
+        <td style="padding: 20px;">
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">What</p>
+            <p style="margin: 0 0 20px 0; color: #0f172a; font-size: 18px; font-weight: 500;">{{ event_title }}</p>
+
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">When</p>
+            <p style="margin: 0 0 5px 0; color: #0f172a; font-size: 16px;">
+                <strong>{{ start_at|date:"l, j F Y" }}</strong><br>
+                {{ start_at|date:"g:i A" }} ({{ invitee_tz }})
+            </p>
+            <p style="margin: 0 0 0 0; color: #64748b; font-size: 14px;">
+                {{ host_name }}'s time: {{ start_at|date:"g:i A" }} ({{ host_tz }})
+            </p>
+        </td>
+    </tr>
+</table>
+{% endblock %}

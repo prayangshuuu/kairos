@@ -20,7 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from apps.accounts import views as account_views
-from apps.core.views import healthz, readyz, custom_bad_request, custom_permission_denied, custom_page_not_found, custom_server_error
+from apps.core.views import healthz, readyz, custom_bad_request, custom_permission_denied, custom_page_not_found, custom_server_error, resend_webhook
 
 handler400 = 'apps.core.views.custom_bad_request'
 handler403 = 'apps.core.views.custom_permission_denied'
@@ -42,6 +42,7 @@ urlpatterns = [
     path('', include('apps.scheduling.urls')),
     path('', include('apps.bookings.urls')),
     path('payments/', include('apps.payments.urls')),
+    path('webhooks/resend/', resend_webhook, name='resend_webhook'),
 ]
 
 handler404 = 'apps.core.views.custom_404'

@@ -1,0 +1,11 @@
+{% extends "emails/base.txt" %}
+
+{% block content %}
+Hi {{ invitee_name }},
+
+Your payment of {{ currency }} {{ amount }} for "{{ event_title }}" with {{ host_name }} could not be processed.
+
+Because payment failed, this meeting has not been confirmed. Please try booking again with a different payment method.
+
+Book again: https://joinkairos.me/{{ host_slug }}
+{% endblock %}

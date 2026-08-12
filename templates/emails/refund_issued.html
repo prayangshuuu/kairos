@@ -1,0 +1,17 @@
+{% extends "emails/base.html" %}
+
+{% block preheader %}Refund processed for your booking with {{ host_name }}{% endblock %}
+
+{% block content %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Hi {{ invitee_name }},</p>
+
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">A refund of <strong>{{ currency }} {{ amount }}</strong> has been issued for your cancelled meeting <strong>{{ event_title }}</strong> with <strong>{{ host_name }}</strong>.</p>
+
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">Refunds can take 5-10 business days to appear on your bank or credit card statement.</p>
+
+{% if receipt_url %}
+<p style="margin: 0 0 20px 0; color: #334155; font-size: 16px; line-height: 1.5;">
+    <a href="{{ receipt_url }}" style="color: #3b82f6; text-decoration: none;">View original receipt</a>
+</p>
+{% endif %}
+{% endblock %}
