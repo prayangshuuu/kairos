@@ -235,13 +235,9 @@ class EventType(models.Model):
 
     @property
     def formatted_price(self):
-        if self.currency.upper() == "BDT":
-            amount = self.price_cents
-            formatted_amount = f"{amount:,.2f}" if amount % 1 else f"{amount:,}"
-            return f"৳{formatted_amount} BDT"
-
         amount = self.price_cents / 100
-        formatted_amount = f"{amount:,.2f}"
+        formatted_amount = f"{int(amount):,}" if amount.is_integer() else f"{amount:,.2f}"
+        
         if self.currency_symbol:
             return f"{self.currency_symbol}{formatted_amount} {self.currency.upper()}"
         return f"{formatted_amount} {self.currency.upper()}"

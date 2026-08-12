@@ -37,7 +37,7 @@
                                     <span>{{ event.get_location_type_display }}</span>
                                     {% if event.is_paid %}
                                     <span>&bull;</span>
-                                    <span class="text-green-600 font-medium">${{ event.price_cents|add:"0" }}</span>
+                                    <span class="text-green-600 font-medium">{{ event.formatted_price }}</span>
                                     {% endif %}
                                 </div>
                                 <div class="mt-2 flex space-x-2">
