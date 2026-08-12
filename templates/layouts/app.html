@@ -27,7 +27,7 @@
             <a href="{% url 'scheduling:schedule_list' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'availability' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Availability
             </a>
-            <a href="{% url 'socialaccount_connections' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if '3rdparty' in request.path or 'social' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
+            <a href="{% url 'integrations:dashboard' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'integrations' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Integrations
             </a>
             <a href="{% url 'accounts:settings_profile' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'settings' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
