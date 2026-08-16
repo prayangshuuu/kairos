@@ -51,6 +51,7 @@ urlpatterns = [
     path("", include("apps.workflows.urls")),
     path("", include("apps.scheduling.urls")),
     path("", include("apps.bookings.urls")),
+    path("", include("apps.routing.urls")),
     path("webhooks/resend/", resend_webhook, name="resend_webhook"),
 ]
 

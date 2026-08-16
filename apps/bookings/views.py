@@ -306,6 +306,15 @@ class BookingStubView(View):
                             now=django_timezone.now(),
                         )
                         cache.set(cache_key, booking.id, 86400)
+                        
+                        routing_response_id = form.cleaned_data.get("routing_response_id")
+                        if routing_response_id:
+                            from apps.routing.models import RoutingFormResponse
+                            routing_response = RoutingFormResponse.objects.filter(id=routing_response_id).first()
+                            if routing_response:
+                                routing_response.booking = booking
+                                routing_response.save()
+                                
                     except SlotUnavailable:
                         # Re-render slot picker with fresh slots
                         d = (
@@ -408,6 +417,32 @@ class BookingStubView(View):
                 "timestamp_token": signer.sign(str(django_timezone.now().timestamp())),
                 "idempotency_token": uuid.uuid4().hex,
             }
+
+            # Handle routing prefill
+            routing_prefill = request.POST.get("routing_prefill") or request.GET.get("routing_prefill")
+            if routing_prefill:
+                try:
+                    prefill_data_str = signer.unsign(routing_prefill)
+                    prefill_data = json.loads(prefill_data_str)
+                    
+                    # Map to the BookingQuestion fields if they match identifier or label
+                    for q in event.questions.all():
+                        field_name = f"question_{q.id}"
+                        # The identifier in RoutingForm is usually slugify(label)
+                        # We try to match prefill keys (which are identifiers) with the question label slugified
+                        from django.utils.text import slugify
+                        q_identifier = slugify(q.label).replace('-', '_')
+                        
+                        if q_identifier in prefill_data:
+                            initial[field_name] = prefill_data[q_identifier]
+                            
+                except Exception:
+                    pass # Invalid signature or JSON, just ignore prefill
+                    
+            routing_response_id = request.POST.get("routing_response_id") or request.GET.get("routing_response_id")
+            if routing_response_id:
+                initial["routing_response_id"] = routing_response_id
+                
             form = BookingForm(initial=initial, event_type=event)
 
             context = {

@@ -53,6 +53,7 @@ class BookingForm(forms.Form):
     )
     timestamp_token = forms.CharField(widget=forms.HiddenInput(), required=True)
     idempotency_token = forms.CharField(widget=forms.HiddenInput(), required=True)
+    routing_response_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
 
     def __init__(self, *args, **kwargs):
         self.event_type = kwargs.pop("event_type", None)

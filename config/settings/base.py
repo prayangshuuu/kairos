@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "apps.subscriptions.apps.SubscriptionsConfig",
     "apps.workflows.apps.WorkflowsConfig",
     "apps.clients.apps.ClientsConfig",
+    "apps.routing.apps.RoutingConfig",
 ]
 
 

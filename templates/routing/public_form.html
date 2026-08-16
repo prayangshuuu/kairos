@@ -1,0 +1,72 @@
+{% extends "layouts/public.html" %}
+
+{% block public_content %}
+<div class="bg-white p-8 rounded-xl shadow-sm border border-surface-200 w-full max-w-xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-surface-900">{{ form.title }}</h1>
+    {% if form.description %}
+      <p class="text-surface-600 mt-2">{{ form.description }}</p>
+    {% endif %}
+  </div>
+
+  <form method="post" action="">
+    {% csrf_token %}
+    
+    {% for field in fields %}
+      <div class="mb-5">
+        <label class="block text-sm font-medium text-surface-700 mb-1" for="{{ field.identifier }}">
+          {{ field.label }} {% if field.is_required %}<span class="text-red-500">*</span>{% endif %}
+        </label>
+        
+        {% if field.help_text %}
+          <p class="text-xs text-surface-500 mb-2">{{ field.help_text }}</p>
+        {% endif %}
+        
+        {% if field.field_type == 'textarea' %}
+          <textarea name="{{ field.identifier }}" id="{{ field.identifier }}" rows="3" {% if field.is_required %}required{% endif %} class="block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"></textarea>
+          
+        {% elif field.field_type == 'select' %}
+          <select name="{{ field.identifier }}" id="{{ field.identifier }}" {% if field.is_required %}required{% endif %} class="block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+            <option value="">---------</option>
+            {% for opt in field.options %}
+              <option value="{{ opt }}">{{ opt }}</option>
+            {% endfor %}
+          </select>
+          
+        {% elif field.field_type == 'multiselect' %}
+          <select name="{{ field.identifier }}" id="{{ field.identifier }}" multiple {% if field.is_required %}required{% endif %} class="block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+            {% for opt in field.options %}
+              <option value="{{ opt }}">{{ opt }}</option>
+            {% endfor %}
+          </select>
+          
+        {% elif field.field_type == 'radio' %}
+          <div class="space-y-2">
+            {% for opt in field.options %}
+              <div class="flex items-center">
+                <input type="radio" name="{{ field.identifier }}" value="{{ opt }}" id="{{ field.identifier }}_{{ forloop.counter }}" {% if field.is_required %}required{% endif %} class="h-4 w-4 text-primary-600 border-surface-300 focus:ring-primary-500">
+                <label for="{{ field.identifier }}_{{ forloop.counter }}" class="ml-2 text-sm text-surface-700">{{ opt }}</label>
+              </div>
+            {% endfor %}
+          </div>
+          
+        {% elif field.field_type == 'checkbox' %}
+          <div class="flex items-center">
+            <input type="checkbox" name="{{ field.identifier }}" value="True" id="{{ field.identifier }}" {% if field.is_required %}required{% endif %} class="h-4 w-4 text-primary-600 border-surface-300 focus:ring-primary-500 rounded">
+            <label for="{{ field.identifier }}" class="ml-2 text-sm text-surface-700">{{ field.label }}</label>
+          </div>
+          
+        {% else %}
+          <input type="{{ field.field_type|default:'text' }}" name="{{ field.identifier }}" id="{{ field.identifier }}" {% if field.is_required %}required{% endif %} class="block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+        {% endif %}
+      </div>
+    {% endfor %}
+    
+    <div class="mt-8">
+      <button type="submit" class="w-full bg-brand-600 border border-transparent rounded-md py-3 px-4 flex items-center justify-center text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
+        Submit
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

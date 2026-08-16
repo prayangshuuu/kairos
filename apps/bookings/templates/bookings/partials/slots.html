@@ -155,16 +155,20 @@
           confirm() {
             const slot = this.slots[this.currentIndex];
             if (!slot) return;
+            
+            // Collect any query params from the URL (e.g. routing_prefill)
+            const urlParams = new URLSearchParams(window.location.search);
+            const extraValues = Object.fromEntries(urlParams.entries());
 
             {% if booking %}
             htmx.ajax('POST', "{% url 'bookings:booking_reschedule' uid=booking.uid %}?t={{ token }}", {
-              values: { slot_time: slot.iso, tz: "{{ visitor_tz }}" },
+              values: { slot_time: slot.iso, tz: "{{ visitor_tz }}", ...extraValues },
               target: '#slots-partial',
               swap: 'outerHTML'
             });
             {% else %}
             htmx.ajax('POST', "{% url 'bookings:booking_stub' host_slug=host.slug event_slug=event.slug %}", {
-              values: { slot: slot.iso, tz: "{{ visitor_tz }}" },
+              values: { slot: slot.iso, tz: "{{ visitor_tz }}", ...extraValues },
               target: '#slots-partial',
               swap: 'outerHTML'
             });
