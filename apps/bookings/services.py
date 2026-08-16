@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from django.db import IntegrityError, OperationalError, transaction
 
 from apps.accounts.models import User
-from apps.bookings.models import Attendee, Booking
+from apps.bookings.models import Attendee, Booking, BLOCKING_STATUSES
 from apps.scheduling.engine import is_slot_available
 from apps.scheduling.models import EventType
 
@@ -411,20 +411,38 @@ def create_booking(
 
     # 3. Live check before writing
     conflicting_users = check_live_conflict_for_users(participating_hosts, start_at, end_at)
-    available_hosts = [u for u in participating_hosts if u not in conflicting_users]
+    
+    # Also check internal conflicts for the exact slot
+    b_before = event_type.buffer_before_minutes
+    b_after = event_type.buffer_after_minutes
+    if strategy != "single":
+        b_before = max(b_before, max((h.buffer_before_minutes for h in hosts_qs), default=0))
+        b_after = max(b_after, max((h.buffer_after_minutes for h in hosts_qs), default=0))
+    
+    req_start = start_at - timedelta(minutes=b_before)
+    req_end = end_at + timedelta(minutes=b_after)
+    
+    internal_conflicts = Booking.objects.filter(
+        host__in=participating_hosts,
+        status__in=BLOCKING_STATUSES,
+        buffered_period__overlap=(req_start, req_end),
+    ).values_list("host_id", flat=True)
+    
+    internally_conflicting_ids = set(internal_conflicts)
+    available_hosts = [u for u in participating_hosts if u not in conflicting_users and u.id not in internally_conflicting_ids]
 
     if strategy == "collective" or strategy == "single":
-        if conflicting_users:
+        if conflicting_users or internally_conflicting_ids:
             logger.info(
-                f"Slot {start_at} unavailable due to live conflict for hosts {conflicting_users}"
+                f"Slot {start_at} unavailable due to live conflict for hosts {conflicting_users} or {internally_conflicting_ids}"
             )
-            raise SlotUnavailable("Slot was just booked on a host's external calendar.")
+            raise SlotUnavailable("Slot was just booked on a host's calendar.")
         assigned_host = event_type.owner
     else:
         # Round Robin assignment
         if not available_hosts:
             logger.info(f"Slot {start_at} unavailable due to live conflict for all round-robin hosts.")
-            raise SlotUnavailable("Slot was just booked on the hosts' external calendars.")
+            raise SlotUnavailable("Slot was just booked on the hosts' calendars.")
             
         # We need to lock the EventTypeHosts to assign fairly
         # Fetch the EventTypeHosts for the available users
