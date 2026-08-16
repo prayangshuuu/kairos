@@ -982,6 +982,11 @@ body {
   margin-bottom: -0.5rem;
 }
 
+.my-1 {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
 .-mb-px {
   margin-bottom: -1px;
 }
@@ -1410,6 +1415,14 @@ body {
 
 .max-w-xs {
   max-width: 20rem;
+}
+
+.max-w-5xl {
+  max-width: 64rem;
+}
+
+.max-w-lg {
+  max-width: 32rem;
 }
 
 .flex-1 {
@@ -1979,6 +1992,11 @@ body {
 .border-gray-300 {
   --tw-border-opacity: 1;
   border-color: rgb(209 213 219 / var(--tw-border-opacity, 1));
+}
+
+.border-red-300 {
+  --tw-border-opacity: 1;
+  border-color: rgb(252 165 165 / var(--tw-border-opacity, 1));
 }
 
 .border-l-amber-500 {

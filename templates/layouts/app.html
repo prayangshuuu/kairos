@@ -123,6 +123,9 @@
                                     {{ membership.team.name }}
                                 </button>
                                 {% endfor %}
+                                
+                                <div class="border-t border-surface-100 my-1"></div>
+                                <a href="{% url 'teams:team_list' %}" class="block px-4 py-2 text-sm text-brand-600 hover:bg-surface-50 font-medium">Manage Teams</a>
                             </form>
                         </div>
                     </div>

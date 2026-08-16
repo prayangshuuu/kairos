@@ -1,0 +1,186 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0
+django: version: 6.1, settings: config.settings.base (from ini)
+rootdir: /Users/prayangshuuu/Desktop/kairos
+configfile: pytest.ini (WARNING: ignoring pytest config in pyproject.toml!)
+plugins: cov-7.1.0, Faker-40.36.0, factoryboy-2.8.1, django-4.14.0
+collected 1 item
+
+apps/teams/tests.py F                                                    [100%]
+
+=================================== FAILURES ===================================
+________________________ TeamCRUDTests.test_list_teams _________________________
+apps/teams/tests.py:118: in test_list_teams
+    self.assertContains(resp, "CRUD Team")
+E   AssertionError: False is not true : Couldn't find 'CRUD Team' in the following response
+E   b'\n<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Manage Teams - Kairos</title>\n    <meta name="description" content="Kairos - Scheduling and paid-appointments platform">\n    \n    <!-- Fonts -->\n    <link rel="preconnect" href="https://fonts.googleapis.com">\n    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\n    \n    <!-- Tailwind CSS -->\n    <link rel="stylesheet" href="/static/css/output.css">\n    \n    <!-- HTMX -->\n    <script src="https://unpkg.com/htmx.org@2.0.0" defer></script>\n    \n    <!-- Alpine.js -->\n    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>\n\n    \n</head>\n<body hx-headers=\'{"X-CSRFToken": "nRZtw7hB0LLPyilokwJEhuzoNfQfA4FWtzRWr9jpcOEd4FTnwbOu0gOM6tIED87k"}\' class="font-sans">\n    \n    <!-- Toast Notifications Container -->\n    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-full max-w-sm"\n         >\n        \n    </div>\n\n    \n<div class="px-4 py-8 sm:px-6 md:py-10 max-w-5xl mx-auto">\n    <div class="flex items-center justify-between mb-8">\n        <div>\n            <h1 class="text-2xl font-bold text-surface-900">Teams</h1>\n            <p class="text-sm text-surface-500 mt-1">Manage the teams you are a member of</p>\n        </div>\n        <a href="/dashboard/teams/new/" class="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">\n            Create Team\n        </a>\n    </div>\n\n    <div class="bg-white shadow-sm border border-surface-200 rounded-lg overflow-hidden">\n        <ul role="list" class="divide-y divide-surface-200">\n            \n                <li class="p-8 text-center text-surface-500 text-sm">\n                    You are not a member of any teams yet. <a href="/dashboard/teams/new/" class="text-brand-600 hover:underline">Create one</a>\n                </li>\n            \n        </ul>\n    </div>\n</div>\n\n\n    <!-- Global HTMX CSRF config -->\n    <script>\n        document.body.addEventListener(\'htmx:configRequest\', (event) => {\n            event.detail.headers[\'X-CSRFToken\'] = \'nRZtw7hB0LLPyilokwJEhuzoNfQfA4FWtzRWr9jpcOEd4FTnwbOu0gOM6tIED87k\';\n        });\n    </script>\n    \n    \n</body>\n</html>\n'
+----------------------------- Captured stderr call -----------------------------
+[2m2026-08-16T21:06:18.575449Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mrequest[0m=[35m'GET /dashboard/teams/'[0m [36muser_agent[0m=[35mNone[0m
+[2m2026-08-16T21:06:18.611706Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m200[0m [36mrequest[0m=[35m'GET /dashboard/teams/'[0m
+------------------------------ Captured log call -------------------------------
+INFO     django_structlog.middlewares.request:request.py:211 {'request': 'GET /dashboard/teams/', 'user_agent': None, 'event': 'request_started', 'timestamp': '2026-08-16T21:06:18.575449Z', 'logger': 'django_structlog.middlewares.request', 'level': 'info'}
+INFO     django_structlog.middlewares.request:request.py:162 {'code': 200, 'request': 'GET /dashboard/teams/', 'event': 'request_finished', 'timestamp': '2026-08-16T21:06:18.611706Z', 'logger': 'django_structlog.middlewares.request', 'level': 'info'}
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394
+  /Users/prayangshuuu/Desktop/kairos/.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394: RemovedInDjango70Warning: The EMAIL_PORT setting is deprecated. Migrate to MAILERS before Django 7.0.
+    dj_settings.DATABASES  # noqa: B018
+
+.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394
+  /Users/prayangshuuu/Desktop/kairos/.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394: RemovedInDjango70Warning: The EMAIL_HOST setting is deprecated. Migrate to MAILERS before Django 7.0.
+    dj_settings.DATABASES  # noqa: B018
+
+.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394
+  /Users/prayangshuuu/Desktop/kairos/.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394: RemovedInDjango70Warning: The EMAIL_BACKEND setting is deprecated. Migrate to MAILERS before Django 7.0.
+    dj_settings.DATABASES  # noqa: B018
+
+.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394
+  /Users/prayangshuuu/Desktop/kairos/.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394: RemovedInDjango70Warning: The EMAIL_USE_TLS setting is deprecated. Migrate to MAILERS before Django 7.0.
+    dj_settings.DATABASES  # noqa: B018
+
+.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394
+  /Users/prayangshuuu/Desktop/kairos/.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394: RemovedInDjango70Warning: The EMAIL_HOST_USER setting is deprecated. Migrate to MAILERS before Django 7.0.
+    dj_settings.DATABASES  # noqa: B018
+
+.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394
+  /Users/prayangshuuu/Desktop/kairos/.venv/lib/python3.14/site-packages/pytest_django/plugin.py:394: RemovedInDjango70Warning: The EMAIL_HOST_PASSWORD setting is deprecated. Migrate to MAILERS before Django 7.0.
+    dj_settings.DATABASES  # noqa: B018
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.14.6-final-0 _______________
+
+Name                                                   Stmts   Miss  Cover   Missing
+------------------------------------------------------------------------------------
+apps/__init__.py                                           0      0   100%
+apps/accounts/__init__.py                                  0      0   100%
+apps/accounts/adapter.py                                  20     20     0%   1-24
+apps/accounts/admin.py                                    10      0   100%
+apps/accounts/apps.py                                      3      0   100%
+apps/accounts/forms.py                                    22      0   100%
+apps/accounts/middleware.py                               11      3    73%   11-23
+apps/accounts/models.py                                  112     43    62%   15-21, 24-26, 29-37, 81-86, 97, 106, 109-111, 115-118, 121, 124-146
+apps/accounts/services.py                                 54     44    19%   17-39, 57-107
+apps/accounts/tasks.py                                    37     37     0%   1-97
+apps/accounts/tests.py                                    56     56     0%   1-111
+apps/accounts/urls.py                                      4      0   100%
+apps/accounts/validators.py                               18     13    28%   7-8, 63-79
+apps/accounts/views.py                                   171    135    21%   15-19, 24-77, 94-132, 145-158, 177-179, 189-243, 252-255, 265-295, 304, 309-310, 313-321, 330, 333-371
+apps/analytics/__init__.py                                 0      0   100%
+apps/analytics/apps.py                                     4      0   100%
+apps/analytics/models.py                                  50      4    92%   47-48, 100-101
+apps/analytics/tasks.py                                   77     77     0%   1-227
+apps/analytics/urls.py                                     4      0   100%
+apps/analytics/utils.py                                   22     22     0%   1-50
+apps/analytics/views.py                                   90     74    18%   19-123, 127-184
+apps/bookings/__init__.py                                  0      0   100%
+apps/bookings/admin.py                                    17      1    94%   25
+apps/bookings/apps.py                                      3      0   100%
+apps/bookings/forms.py                                   175    175     0%   1-379
+apps/bookings/ics.py                                      26     26     0%   1-58
+apps/bookings/models.py                                  159     29    82%   121-137, 140, 145-152, 163, 185-187, 214, 257-259, 266
+apps/bookings/services.py                                233    209    10%   40-57, 67-123, 134-258, 268-364, 379-608, 612-623
+apps/bookings/tasks.py                                   184    184     0%   1-439
+apps/bookings/templatetags/__init__.py                     0      0   100%
+apps/bookings/templatetags/booking_tags.py                40     29    28%   12-20, 25-46, 52
+apps/bookings/tokens.py                                   40     40     0%   1-62
+apps/bookings/urls.py                                      4      0   100%
+apps/bookings/views.py                                   758    669    12%   32-62, 65-83, 88-96, 99-241, 246-254, 257-455, 463-520, 525-543, 554-578, 581-602, 607-625, 630-772, 775-844, 849-876, 881-892, 897-911, 916-923, 928-940, 947-954, 957-973, 986, 991-1119, 1124-1136, 1141-1153, 1158-1179, 1182-1207, 1210-1256, 1261-1265, 1268-1273, 1278-1287, 1290-1338, 1343-1355, 1363-1366, 1369-1372, 1375-1376
+apps/clients/__init__.py                                   0      0   100%
+apps/clients/apps.py                                       4      0   100%
+apps/clients/models.py                                    64     14    78%   12-15, 24, 27, 48, 97, 101-107
+apps/clients/tests.py                                     21     21     0%   1-36
+apps/clients/urls.py                                       4      0   100%
+apps/clients/views.py                                     78     46    41%   15-35, 43, 54-63, 69-97, 106-130
+apps/core/__init__.py                                      0      0   100%
+apps/core/apps.py                                          4      0   100%
+apps/core/exceptions.py                                    8      0   100%
+apps/core/mail.py                                         55     45    18%   34-108
+apps/core/management/__init__.py                           0      0   100%
+apps/core/management/commands/__init__.py                  0      0   100%
+apps/core/management/commands/kairos_selfcheck.py         40     40     0%   1-68
+apps/core/management/commands/send_test_email.py          25     25     0%   1-96
+apps/core/middleware.py                                   21     10    52%   19-43
+apps/core/models.py                                       23      3    87%   20, 34, 48
+apps/core/permissions.py                                  73     59    19%   7-17, 23-40, 47-55, 62-80, 83-87, 95-98, 106-109
+apps/core/tasks.py                                        27     27     0%   1-60
+apps/core/views.py                                        53     34    36%   7, 12-26, 33, 37, 41, 45, 49, 53, 71-106
+apps/integrations/__init__.py                              0      0   100%
+apps/integrations/admin.py                                 0      0   100%
+apps/integrations/apps.py                                  9      1    89%   14
+apps/integrations/conferencing/__init__.py                 0      0   100%
+apps/integrations/conferencing/base.py                    17     17     0%   1-27
+apps/integrations/conferencing/providers.py               51     51     0%   1-100
+apps/integrations/models.py                              103     16    84%   14-17, 74, 92, 115-127, 130, 148, 175
+apps/integrations/services.py                             42     42     0%   1-85
+apps/integrations/tasks.py                               374    374     0%   1-726
+apps/integrations/test_busy_sync.py                      106    106     0%   1-230
+apps/integrations/test_meeting_links.py                   78     78     0%   1-195
+apps/integrations/test_webhooks.py                        74     74     0%   1-160
+apps/integrations/test_writeback.py                      123    123     0%   1-222
+apps/integrations/tests.py                                50     50     0%   1-93
+apps/integrations/urls.py                                  4      0   100%
+apps/integrations/views.py                               200    170    15%   37-123, 128-156, 161-317, 322-348, 354-387
+apps/payments/__init__.py                                  0      0   100%
+apps/payments/admin.py                                    75      9    88%   65-72, 180, 183
+apps/payments/apps.py                                      3      0   100%
+apps/payments/context_processors.py                       17      8    53%   19, 29-48
+apps/payments/models.py                                  258     54    79%   47-48, 96, 112, 122, 141, 180-181, 220-221, 262-263, 266-267, 271-286, 289-290, 350-351, 428-432, 435, 438-439, 454-455, 474-475, 478, 482-483, 487, 491-494, 498, 502, 505
+apps/payments/providers.py                               160    114    29%   67, 70-130, 133-160, 163-177, 180-188, 191-207, 210-223, 226-234, 237-245, 260-263, 270-305, 314-317, 325, 332-334
+apps/payments/routing.py                                  32     32     0%   7-102
+apps/payments/services.py                                198    169    15%   75-79, 92-99, 108-110, 128-196, 202-267, 273-310, 319-378, 383-388, 396-413, 424-443, 452-509
+apps/payments/stripe_config.py                            21     15    29%   14-16, 20-23, 27-30, 34-37, 41
+apps/payments/tasks.py                                   155    155     0%   1-330
+apps/payments/urls.py                                      4      0   100%
+apps/payments/views.py                                   361    298    17%   50, 55-62, 72-110, 117-134, 141-155, 162-196, 203-211, 218-226, 238-244, 247-277, 284-302, 309-330, 337-345, 357-422, 429-486, 493-502, 509-526, 533-567, 574-611, 623-648, 655-676, 683-728
+apps/payments/wallet.py                                  252    211    16%   53-55, 60-62, 67-69, 79-81, 89-94, 103-109, 118-122, 133-167, 177-185, 191, 195, 213-420, 462-485, 496-525, 536-565, 577-654, 659-678, 689-721, 731-773, 786-805, 822-861, 866-867, 877-878
+apps/routing/__init__.py                                   0      0   100%
+apps/routing/admin.py                                      1      0   100%
+apps/routing/apps.py                                       4      0   100%
+apps/routing/engine.py                                   119    106    11%   15-30, 33-85, 93-141, 152-199
+apps/routing/models.py                                    86     23    73%   22, 25-30, 61, 64-72, 98, 101-105, 126
+apps/routing/tests.py                                      1      1     0%   1
+apps/routing/urls.py                                       4      0   100%
+apps/routing/views.py                                     79     55    30%   18-103, 117, 120-133
+apps/scheduling/__init__.py                                0      0   100%
+apps/scheduling/admin.py                                  34      0   100%
+apps/scheduling/apps.py                                    3      0   100%
+apps/scheduling/availability_views.py                    221    180    19%   19, 24-25, 34-69, 74-82, 87-100, 105-132, 137-141, 146-154, 159-171, 176-238, 243-314, 319-322, 327-372
+apps/scheduling/engine.py                                250    239     4%   16-40, 43, 46-80, 90-338, 347-350
+apps/scheduling/forms.py                                  13      1    92%   48
+apps/scheduling/intervals.py                              83     73    12%   15-20, 28-51, 62-98, 105-128, 135-137, 144-145, 152-167
+apps/scheduling/models.py                                219     58    74%   37-47, 51, 54, 83, 111-113, 234, 238-240, 244, 248, 257-262, 266-270, 273-312, 315, 336, 366-380, 387
+apps/scheduling/tasks.py                                  12     12     0%   1-17
+apps/scheduling/tests.py                                   0      0   100%
+apps/scheduling/urls.py                                    5      0   100%
+apps/scheduling/views.py                                 208    159    24%   28-29, 43-66, 69-109, 112, 121-144, 147-199, 202, 207-244, 249-262, 272-285, 290-308, 313-337
+apps/subscriptions/apps.py                                 4      0   100%
+apps/subscriptions/models.py                               0      0   100%
+apps/subscriptions/templatetags/__init__.py                0      0   100%
+apps/subscriptions/templatetags/subscription_tags.py       2      0   100%
+apps/subscriptions/urls.py                                 4      0   100%
+apps/subscriptions/views.py                                5      1    80%   9
+apps/teams/__init__.py                                     0      0   100%
+apps/teams/admin.py                                        7      0   100%
+apps/teams/apps.py                                         3      0   100%
+apps/teams/forms.py                                        7      0   100%
+apps/teams/models.py                                      83     16    81%   20, 23-28, 36-38, 48-50, 79, 104, 108
+apps/teams/services.py                                    28     22    21%   7-27, 30-47
+apps/teams/tests.py                                       90     56    38%   18-21, 25-32, 35-58, 61-83, 86-103, 121-133, 136-147, 150-153
+apps/teams/urls.py                                         4      0   100%
+apps/teams/views.py                                       46     14    70%   11-23, 41-45, 55, 64
+apps/workflows/__init__.py                                 0      0   100%
+apps/workflows/admin.py                                   20      0   100%
+apps/workflows/apps.py                                     5      0   100%
+apps/workflows/engine.py                                  62     50    19%   34-43, 50-58, 62-71, 85-135
+apps/workflows/forms.py                                   32     13    59%   38-42, 58-61, 64-67
+apps/workflows/models.py                                  80     11    86%   56, 59, 95-101, 104, 142, 152
+apps/workflows/services.py                               113     97    14%   26-111, 121-164, 171, 181-197, 204-275
+apps/workflows/tasks.py                                   10     10     0%   1-18
+apps/workflows/tests.py                                  112    112     0%   1-282
+apps/workflows/urls.py                                     4      0   100%
+apps/workflows/views.py                                  160    123    23%   37-70, 79-88, 91-119, 128-146, 149-177, 186-216, 225-234, 243-258, 267-285, 294-335, 352-354, 361-366
+------------------------------------------------------------------------------------
+TOTAL                                                   7894   5813    26%
+=========================== short test summary info ============================
+FAILED apps/teams/tests.py::TeamCRUDTests::test_list_teams - AssertionError: ...
+======================== 1 failed, 6 warnings in 7.08s =========================

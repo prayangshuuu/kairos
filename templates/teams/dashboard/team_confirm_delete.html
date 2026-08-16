@@ -1,0 +1,30 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Delete Team - Kairos{% endblock %}
+
+{% block content %}
+<div class="px-4 py-8 sm:px-6 md:py-10 max-w-lg mx-auto">
+    <div class="bg-white shadow-sm border border-red-200 rounded-lg overflow-hidden">
+        <div class="p-6 sm:p-8">
+            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-6 mx-auto">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            
+            <h1 class="text-xl font-bold text-center text-surface-900 mb-2">Delete Team</h1>
+            <p class="text-center text-surface-600 mb-8">
+                Are you sure you want to delete the team <strong>"{{ object.name }}"</strong>? This action cannot be undone and will permanently remove all associated event types, bookings, and data.
+            </p>
+            
+            <form method="post" class="flex flex-col sm:flex-row gap-3">
+                {% csrf_token %}
+                <a href="{% url 'teams:team_list' %}" class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-surface-300 shadow-sm text-sm font-medium rounded-md text-surface-700 bg-white hover:bg-surface-50 focus:outline-none">
+                    Cancel
+                </a>
+                <button type="submit" class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Yes, delete team
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

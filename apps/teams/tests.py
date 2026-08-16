@@ -101,3 +101,53 @@ class TeamTests(TestCase):
         # Invalid team (not member)
         request.session['active_team_id'] = 999
         self.assertIsNone(get_active_team(request))
+
+from django.urls import reverse
+
+class TeamCRUDTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(email="crud@test.com", slug="crud-user")
+        self.team = Team.objects.create(name="CRUD Team", slug="crud-team", owner=self.user)
+        TeamMembership.objects.create(team=self.team, user=self.user, role='owner', status='active')
+        self.client.force_login(self.user)
+
+    def test_list_teams(self):
+        url = reverse("teams:team_list")
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "CRUD Team")
+
+    def test_create_team(self):
+        url = reverse("teams:team_create")
+        resp = self.client.post(url, {
+            "name": "New Team",
+            "slug": "new-team",
+            "description": "Desc",
+            "brand_colour": "#123456",
+            "timezone": "UTC"
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(Team.objects.filter(slug="new-team").exists())
+        team = Team.objects.get(slug="new-team")
+        self.assertEqual(team.owner, self.user)
+        self.assertTrue(TeamMembership.objects.filter(team=team, user=self.user, role='owner').exists())
+
+    def test_update_team(self):
+        url = reverse("teams:team_update", args=[self.team.pk])
+        resp = self.client.post(url, {
+            "name": "Updated Team",
+            "slug": "updated-team",
+            "description": "Desc",
+            "brand_colour": "#123456",
+            "timezone": "UTC"
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.team.refresh_from_db()
+        self.assertEqual(self.team.name, "Updated Team")
+        self.assertEqual(self.team.slug, "updated-team")
+
+    def test_delete_team(self):
+        url = reverse("teams:team_delete", args=[self.team.pk])
+        resp = self.client.post(url)
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Team.objects.filter(pk=self.team.pk).exists())
