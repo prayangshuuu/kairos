@@ -1,0 +1,8 @@
+Payout Request Declined
+
+Hello {{ host.display_name|default:host.email }},
+
+Your payout request #{{ payout_request.id }} for ৳{{ amount_bdt }} was declined.
+Reason: {{ reason }}
+
+The reserved funds (৳{{ amount_bdt }}) have been fully restored to your available wallet balance.

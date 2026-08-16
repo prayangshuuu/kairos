@@ -185,6 +185,10 @@ class EventType(models.Model):
     reschedule_cutoff_hours = models.PositiveIntegerField(null=True, blank=True)
     confirmation_deadline_hours = models.PositiveIntegerField(null=True, blank=True)
 
+    waitlist_enabled = models.BooleanField(default=False)
+    waitlist_claim_window_minutes = models.PositiveIntegerField(default=30)
+    waitlist_max_size = models.PositiveIntegerField(null=True, blank=True)
+
     price_cents = models.PositiveIntegerField(default=0)
     currency = models.CharField(max_length=3, default="USD")
 

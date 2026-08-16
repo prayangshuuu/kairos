@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2>Payout Completed</h2>
+<p>Hello {{ host.display_name|default:host.email }},</p>
+<p>Your payout request #{{ payout_request.id }} for <strong>৳{{ amount_bdt }}</strong> has been completed.</p>
+<p>Transaction Reference: <strong>{{ reference }}</strong></p>
+<p>Thank you for hosting on Kairos!</p>
+{% endblock %}

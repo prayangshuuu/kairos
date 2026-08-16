@@ -13,7 +13,7 @@ from django.views.generic import DetailView, View
 
 from apps.accounts.models import User
 from apps.analytics.tasks import record_page_view
-from apps.bookings.models import Booking
+from apps.bookings.models import Booking, WaitlistEntry
 from apps.scheduling.engine import get_slots
 from apps.scheduling.models import EventType
 
@@ -188,6 +188,18 @@ class BookingPageView(View):
             prev_year == now_visitor.year and prev_month < now_visitor.month
         )
 
+        offer_waitlist = False
+        if event.waitlist_enabled:
+            future_avail = [d for d in available_dates if d >= today_visitor]
+            no_slots = (not future_avail) or (selected_date and not day_slots)
+            if no_slots:
+                from apps.bookings.models import WaitlistEntry
+                current_size = WaitlistEntry.objects.filter(
+                    event_type=event, status=WaitlistEntry.StatusChoices.WAITING
+                ).count()
+                if event.waitlist_max_size is None or current_size < event.waitlist_max_size:
+                    offer_waitlist = True
+
         context = {
             "host": host,
             "event": event,
@@ -206,6 +218,7 @@ class BookingPageView(View):
             "next_year": next_year,
             "next_month": next_month,
             "is_prev_disabled": is_prev_disabled,
+            "offer_waitlist": offer_waitlist,
             "all_timezones": zoneinfo.available_timezones(),
         }
 
@@ -1027,6 +1040,200 @@ class DashboardBookingsView(LoginRequiredMixin, View):
         if request.headers.get("HX-Request"):
             return render(request, "dashboard/bookings/list_partial.html", context)
         return render(request, "dashboard/bookings/list.html", context)
+
+
+class WaitlistListView(LoginRequiredMixin, View):
+    def get(self, request, slug):
+        event_type = get_object_or_404(EventType, owner=request.user, slug=slug)
+        waitlist_entries = event_type.waitlist_entries.order_by("-created_at")
+        context = {
+            "event_type": event_type,
+            "waitlist_entries": waitlist_entries,
+        }
+        return render(request, "bookings/waitlist_list.html", context)
+
+
+class WaitlistRemoveView(LoginRequiredMixin, View):
+    def post(self, request, uid):
+        from apps.bookings.models import WaitlistEntry
+        entry = get_object_or_404(WaitlistEntry, host=request.user, claim_token=uid)
+        entry.status = WaitlistEntry.StatusChoices.REMOVED
+        entry.save(update_fields=["status", "updated_at"])
+        from django.contrib import messages
+        messages.success(request, f"Removed {entry.invitee_name} from waitlist.")
+        return redirect(request.META.get("HTTP_REFERER", "/dashboard/"))
+
+
+class JoinWaitlistView(View):
+    def get_host_and_event(self, host_slug, event_slug):
+        host = User.objects.filter(slug__iexact=host_slug, is_active=True).first()
+        if not host:
+            raise Http404("Host not found")
+        event = EventType.objects.filter(
+            owner=host, slug__iexact=event_slug, is_active=True
+        ).first()
+        if not event:
+            raise Http404("Event not found")
+        return host, event
+
+    def get(self, request, host_slug, event_slug):
+        host, event = self.get_host_and_event(host_slug, event_slug)
+        if not event.waitlist_enabled:
+            raise Http404("Waitlist not enabled")
+        
+        current_size = WaitlistEntry.objects.filter(
+            event_type=event, status=WaitlistEntry.StatusChoices.WAITING
+        ).count()
+        if event.waitlist_max_size is not None and current_size >= event.waitlist_max_size:
+            return render(request, "bookings/waitlist_full.html", {"host": host, "event": event})
+            
+        tz_str = request.GET.get("tz", "UTC")
+        if tz_str not in zoneinfo.available_timezones():
+            tz_str = "UTC"
+
+        from apps.bookings.forms import WaitlistForm
+        from django.core.signing import Signer
+
+        form = WaitlistForm(
+            event_type=event,
+            initial={"tz": tz_str, "event_type_id": str(event.id)},
+        )
+        signer = Signer()
+        timestamp = str(datetime.now(UTC).timestamp())
+        form.fields["timestamp_token"].initial = signer.sign(timestamp)
+
+        return render(request, "bookings/join_waitlist.html", {"form": form, "host": host, "event": event})
+
+    def post(self, request, host_slug, event_slug):
+        host, event = self.get_host_and_event(host_slug, event_slug)
+        if not event.waitlist_enabled:
+            raise Http404("Waitlist not enabled")
+
+        current_size = WaitlistEntry.objects.filter(
+            event_type=event, status=WaitlistEntry.StatusChoices.WAITING
+        ).count()
+        if event.waitlist_max_size is not None and current_size >= event.waitlist_max_size:
+            return render(request, "bookings/waitlist_full.html", {"host": host, "event": event})
+
+        from apps.bookings.forms import WaitlistForm
+        form = WaitlistForm(request.POST, event_type=event)
+        if form.is_valid():
+            email = form.cleaned_data["invitee_email"]
+            # Rate limit check (using cache)
+            from django.core.cache import cache
+            rl_key = f"rl_waitlist_{event.id}_{email}"
+            attempts = cache.get(rl_key, 0)
+            if attempts >= 3:
+                return HttpResponse("Too many requests. Please try again later.", status=429)
+            cache.set(rl_key, attempts + 1, 3600)  # 1 hour window
+
+            # Prevent duplicate active entry
+            if WaitlistEntry.objects.filter(
+                event_type=event,
+                invitee_email=email,
+                status__in=[WaitlistEntry.StatusChoices.WAITING, WaitlistEntry.StatusChoices.OFFERED]
+            ).exists():
+                form.add_error("invitee_email", "You are already on the waitlist for this event.")
+                return render(request, "bookings/join_waitlist.html", {"form": form, "host": host, "event": event})
+
+            entry = WaitlistEntry.objects.create(
+                event_type=event,
+                host=host,
+                invitee_name=form.cleaned_data["invitee_name"],
+                invitee_email=email,
+                notes=form.cleaned_data.get("invitee_notes", ""),
+                invitee_timezone=form.cleaned_data["tz"],
+                answers=form.cleaned_data["answers"],
+            )
+            
+            from apps.bookings.tasks import send_waitlist_confirmation
+            send_waitlist_confirmation.delay(entry.id)
+            
+            return render(request, "bookings/join_waitlist_success.html", {"host": host, "event": event, "entry": entry})
+        
+        return render(request, "bookings/join_waitlist.html", {"form": form, "host": host, "event": event})
+
+
+class LeaveWaitlistView(View):
+    def get(self, request, uid):
+        from apps.bookings.models import WaitlistEntry
+        entry = get_object_or_404(WaitlistEntry, claim_token=uid)
+        if entry.status != WaitlistEntry.StatusChoices.WAITING:
+            return render(request, "bookings/leave_waitlist_invalid.html", {"entry": entry})
+        return render(request, "bookings/leave_waitlist_confirm.html", {"entry": entry})
+        
+    def post(self, request, uid):
+        from apps.bookings.models import WaitlistEntry
+        entry = get_object_or_404(WaitlistEntry, claim_token=uid)
+        if entry.status == WaitlistEntry.StatusChoices.WAITING:
+            entry.status = WaitlistEntry.StatusChoices.CANCELLED
+            entry.save(update_fields=["status"])
+        return render(request, "bookings/leave_waitlist_success.html", {"entry": entry})
+
+
+class WaitlistClaimView(View):
+    def get(self, request, uid):
+        from apps.bookings.models import WaitlistEntry
+        from django.utils import timezone
+        
+        entry = get_object_or_404(WaitlistEntry, claim_token=uid)
+        now = timezone.now()
+        
+        if entry.status != WaitlistEntry.StatusChoices.OFFERED or (entry.offer_expires_at and entry.offer_expires_at < now):
+            return render(request, "bookings/waitlist_claim_expired.html", {"entry": entry})
+            
+        return render(request, "bookings/waitlist_claim.html", {"entry": entry})
+        
+    def post(self, request, uid):
+        from apps.bookings.models import WaitlistEntry
+        from apps.bookings.services import create_booking, SlotUnavailable
+        from django.utils import timezone
+        
+        entry = get_object_or_404(WaitlistEntry, claim_token=uid)
+        now = timezone.now()
+        
+        if entry.status != WaitlistEntry.StatusChoices.OFFERED or (entry.offer_expires_at and entry.offer_expires_at < now):
+            return render(request, "bookings/waitlist_claim_expired.html", {"entry": entry})
+            
+        entry.status = WaitlistEntry.StatusChoices.CLAIMED
+        entry.save(update_fields=["status", "updated_at"])
+        
+        try:
+            booking = create_booking(
+                event_type=entry.event_type,
+                start_at=entry.offered_booking_slot,
+                invitee_name=entry.invitee_name,
+                invitee_email=entry.invitee_email,
+                invitee_timezone=entry.invitee_timezone,
+                answers=entry.answers,
+                notes=entry.notes,
+                guest_emails=[],
+                now=now,
+            )
+            
+            if booking.status == Booking.StatusChoices.PENDING_PAYMENT:
+                from apps.payments.routing import select_provider
+                from apps.payments.services import create_payment_for_booking
+                from django.urls import reverse
+
+                payment = create_payment_for_booking(booking=booking)
+                provider = select_provider(booking.event_type)
+                success_url = request.build_absolute_uri(reverse("payments:payment_return"))
+                cancel_url = request.build_absolute_uri(
+                    f"{reverse('payments:payment_cancel')}?payment_uid={payment.uid}"
+                )
+                checkout_result = provider.create_checkout(payment, success_url, cancel_url)
+                payment.external_session_id = checkout_result.session_id
+                payment.save(update_fields=["external_session_id"])
+
+                return redirect(checkout_result.url)
+                
+            return redirect("bookings:booking_confirmation", uid=booking.uid)
+            
+        except SlotUnavailable:
+            entry.status = WaitlistEntry.StatusChoices.OFFERED
+            entry.save(update_fields=["status", "updated_at"])
+            return render(request, "bookings/waitlist_claim_expired.html", {"entry": entry})
 
 
 class DashboardBookingNoShowView(LoginRequiredMixin, View):

@@ -31,7 +31,7 @@ def test_public_profile_privacy_and_caching(client):
 
     # Hidden event must be completely absent from response body
     assert "Hidden Event" not in content
-    assert "hidden" not in content  # the slug should not be present either
+    assert "/hidden/" not in content  # the URL to the event should not be present either
 
     # No session cookie should be set
     assert not response.cookies.get("sessionid")

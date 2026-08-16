@@ -1,7 +1,7 @@
 from django import forms
 
 from apps.scheduling.models import EventType
-from apps.workflows.engine import ALLOWED_TEMPLATE_VARIABLES, validate_template_string
+from apps.workflows.engine import validate_template_string
 from apps.workflows.models import Workflow, WorkflowStep
 
 

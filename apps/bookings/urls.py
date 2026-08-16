@@ -16,6 +16,11 @@ from .views import (
     DashboardBookingRescheduleView,
     DashboardBookingsView,
     PublicProfileView,
+    WaitlistListView,
+    WaitlistRemoveView,
+    JoinWaitlistView,
+    LeaveWaitlistView,
+    WaitlistClaimView,
 )
 
 app_name = "bookings"
@@ -58,6 +63,25 @@ urlpatterns = [
     path("<slug:host_slug>/<slug:event_slug>/", BookingPageView.as_view(), name="booking_page"),
     path(
         "<slug:host_slug>/<slug:event_slug>/stub/", BookingStubView.as_view(), name="booking_stub"
+    ),
+    path(
+        "<slug:host_slug>/<slug:event_slug>/waitlist/join/", JoinWaitlistView.as_view(), name="join_waitlist"
+    ),
+    path(
+        "waitlist/leave/<uuid:uid>/", LeaveWaitlistView.as_view(), name="leave_waitlist"
+    ),
+    path(
+        "waitlist/claim/<uuid:uid>/", WaitlistClaimView.as_view(), name="waitlist_claim"
+    ),
+    path(
+        "dashboard/bookings/waitlist/<slug:slug>/",
+        WaitlistListView.as_view(),
+        name="waitlist_list",
+    ),
+    path(
+        "dashboard/bookings/waitlist/remove/<uuid:uid>/",
+        WaitlistRemoveView.as_view(),
+        name="waitlist_remove",
     ),
     # Catch-all slug MUST be last
     path("<slug:slug>/", PublicProfileView.as_view(), name="public_profile"),

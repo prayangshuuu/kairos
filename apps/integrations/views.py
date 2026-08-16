@@ -34,16 +34,73 @@ REQUIRED_SCOPES = [
 
 @login_required
 def dashboard(request):
-    connections = request.user.calendar_connections.all()
+    from apps.integrations.models import ConferenceConnection, SelectedCalendar
+    from apps.payments.models import HostPaymentTerms, PaymentAccount
 
-    # Identify which providers are connected
-    connected_providers = {conn.provider: conn for conn in connections}
+    # ── Calendar ─────────────────────────────────────────────────────────────
+    cal_connections = list(request.user.calendar_connections.prefetch_related("calendars").all())
+    connected_cal = {conn.provider: conn for conn in cal_connections}
+
+    google_conn = connected_cal.get("google")
+    # A "broken" calendar connection: row exists but is_active=False or has a last_error
+    google_broken = google_conn and (not google_conn.is_active or bool(google_conn.last_error))
+    google_healthy = google_conn and google_conn.is_active and not google_conn.last_error
+
+    # Write-target warning: no calendar has is_write_target=True
+    has_write_target = google_conn and SelectedCalendar.objects.filter(
+        connection__user=request.user, is_write_target=True
+    ).exists() if google_healthy else False
+
+    # ── Conferencing ─────────────────────────────────────────────────────────
+    zoom_conn = ConferenceConnection.objects.filter(
+        user=request.user, provider="zoom"
+    ).first()
+    # Google Meet is provided via the Google Calendar OAuth — no separate auth
+    google_meet_available = bool(google_healthy)
+
+    # ── Payments ─────────────────────────────────────────────────────────────
+    stripe_account = PaymentAccount.objects.filter(
+        user=request.user, provider="stripe_connect"
+    ).first()
+    paystation_account = PaymentAccount.objects.filter(
+        user=request.user, provider="paystation", is_active=True
+    ).first()
+    terms_accepted = HostPaymentTerms.objects.filter(user=request.user).exists()
+    paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
+
+    stripe_platform_configured = True
+    if request.user.is_staff:
+        from apps.payments.stripe_config import stripe_is_configured
+
+        stripe_platform_configured = stripe_is_configured()
+
+    # Stripe status detail
+    stripe_status = "not_connected"
+    if stripe_account:
+        if stripe_account.charges_enabled:
+            stripe_status = "active"
+        else:
+            stripe_status = "incomplete"  # account row exists but onboarding unfinished
 
     context = {
-        "google_conn": connected_providers.get("google"),
-        "microsoft_conn": connected_providers.get("microsoft"),
-        "caldav_conn": connected_providers.get("caldav"),
-        "apple_conn": connected_providers.get("apple"),
+        # Calendar
+        "google_conn": google_conn,
+        "google_broken": google_broken,
+        "google_healthy": google_healthy,
+        "has_write_target": has_write_target,
+        "microsoft_conn": connected_cal.get("microsoft"),
+        "caldav_conn": connected_cal.get("caldav"),
+        "apple_conn": connected_cal.get("apple"),
+        # Conferencing
+        "google_meet_available": google_meet_available,
+        "zoom_conn": zoom_conn,
+        # Payments
+        "stripe_account": stripe_account,
+        "stripe_status": stripe_status,
+        "paystation_account": paystation_account,
+        "terms_accepted": terms_accepted,
+        "paystation_enabled": paystation_enabled,
+        "stripe_platform_configured": stripe_platform_configured,
     }
     return render(request, "integrations/dashboard.html", context)
 

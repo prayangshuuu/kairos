@@ -39,6 +39,9 @@ class EventTypeForm(forms.ModelForm):
             "price_cents",
             "currency",
             "payment_provider",
+            "waitlist_enabled",
+            "waitlist_claim_window_minutes",
+            "waitlist_max_size",
         ]
 
     def __init__(self, *args, **kwargs):

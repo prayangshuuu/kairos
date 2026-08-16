@@ -1,13 +1,11 @@
 import csv
-import json
 import logging
-from datetime import timedelta
 from decimal import Decimal
 
+import stripe
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db import models
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -19,20 +17,20 @@ from django.views.decorators.http import require_POST
 from apps.payments.models import (
     HostLedger,
     HostPaymentTerms,
-    Payment,
     PaymentAccount,
     PayoutMethod,
     PayoutRequest,
+    PlatformStripeSettings,
     ProcessedWebhook,
 )
 from apps.payments.providers import StripeConnectProvider
 from apps.payments.services import (
     compute_fee_breakdown,
-    compute_platform_fee,
     confirm_payment,
     expire_payment,
     sync_payment_account_from_stripe,
 )
+from apps.payments.stripe_config import get_stripe_webhook_secret
 from apps.payments.wallet import (
     approve_payout,
     complete_payout,
@@ -52,6 +50,21 @@ class StaffRequiredMixin(UserPassesTestMixin):
         return self.request.user.is_authenticated and self.request.user.is_staff
 
 
+def _report_stripe_not_configured(request):
+    """Stripe auth failed — tell staff how to fix it in-app; tell everyone else who to ask."""
+    if request.user.is_staff:
+        messages.error(
+            request,
+            "Stripe isn't configured for this Kairos instance yet. "
+            "Add your platform's Stripe API keys in Settings → Stripe.",
+        )
+    else:
+        messages.error(
+            request,
+            "Payments aren't set up on this Kairos instance yet. Please contact your administrator.",
+        )
+
+
 class StripeConnectOnboardView(LoginRequiredMixin, View):
     """Start or resume Stripe Connect Express onboarding for the logged-in host."""
 
@@ -63,14 +76,24 @@ class StripeConnectOnboardView(LoginRequiredMixin, View):
         ).first()
 
         if not payment_account:
-            account_id = provider.create_connected_account(request.user)
+            try:
+                account_id = provider.create_connected_account(request.user)
+            except stripe.error.AuthenticationError:
+                _report_stripe_not_configured(request)
+                return redirect("integrations:dashboard")
+
             payment_account = PaymentAccount.objects.create(
                 user=request.user,
                 provider="stripe_connect",
                 external_account_id=account_id,
             )
         elif not payment_account.external_account_id:
-            account_id = provider.create_connected_account(request.user)
+            try:
+                account_id = provider.create_connected_account(request.user)
+            except stripe.error.AuthenticationError:
+                _report_stripe_not_configured(request)
+                return redirect("integrations:dashboard")
+
             payment_account.external_account_id = account_id
             payment_account.save(update_fields=["external_account_id", "updated_at"])
 
@@ -79,8 +102,12 @@ class StripeConnectOnboardView(LoginRequiredMixin, View):
         return_url = settings.WEBHOOK_BASE_URL + reverse("payments:stripe_connect_return")
         refresh_url = settings.WEBHOOK_BASE_URL + reverse("payments:stripe_connect_refresh")
 
-        link_url = provider.create_account_link(account_id, return_url, refresh_url)
-        return redirect(link_url)
+        try:
+            link_url = provider.create_account_link(account_id, return_url, refresh_url)
+            return redirect(link_url)
+        except stripe.error.AuthenticationError:
+            _report_stripe_not_configured(request)
+            return redirect("integrations:dashboard")
 
 
 class StripeConnectReturnView(LoginRequiredMixin, View):
@@ -135,7 +162,7 @@ def stripe_connect_webhook(request):
     payload = request.body
     sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
     provider = StripeConnectProvider()
-    webhook_secret = getattr(settings, "STRIPE_CONNECT_WEBHOOK_SECRET", "")
+    webhook_secret = get_stripe_webhook_secret()
     try:
         if webhook_secret:
             event = provider.verify_webhook_signature(payload, sig_header, webhook_secret)
@@ -199,6 +226,57 @@ class PaymentCancelView(View):
         return redirect("dashboard")
 
 
+class PlatformStripeSettingsView(LoginRequiredMixin, StaffRequiredMixin, View):
+    """
+    Staff-only: configure this self-hosted instance's own Stripe Connect platform
+    credentials. Every Kairos deployment talks to a different Stripe platform account,
+    so these are entered here (encrypted at rest) instead of requiring a .env edit
+    and a server restart.
+    """
+
+    def get(self, request):
+        cfg = PlatformStripeSettings.load()
+        context = {
+            "cfg": cfg,
+            "has_secret_key": bool(cfg.secret_key),
+            "has_webhook_secret": bool(cfg.webhook_secret),
+        }
+        return render(request, "payments/platform_stripe_settings.html", context)
+
+    def post(self, request):
+        cfg = PlatformStripeSettings.load()
+
+        secret_key = request.POST.get("secret_key", "").strip()
+        webhook_secret = request.POST.get("webhook_secret", "").strip()
+        publishable_key = request.POST.get("publishable_key", "").strip()
+
+        if secret_key:
+            try:
+                stripe.Account.retrieve(api_key=secret_key)
+            except stripe.error.AuthenticationError:
+                messages.error(
+                    request,
+                    "That secret key was rejected by Stripe. Double-check it and try again — nothing was saved.",
+                )
+                return redirect("payments:platform_stripe_settings")
+            except stripe.error.APIConnectionError:
+                logger.warning("Could not reach Stripe to verify a new platform key; saving unverified.")
+                messages.warning(
+                    request, "Couldn't reach Stripe to verify the key, so it was saved unverified."
+                )
+            cfg.secret_key = secret_key
+
+        if webhook_secret:
+            cfg.webhook_secret = webhook_secret
+
+        cfg.publishable_key = publishable_key
+        cfg.updated_by = request.user
+        cfg.save()
+
+        messages.success(request, "Stripe platform settings saved.")
+        return redirect("payments:platform_stripe_settings")
+
+
 class ConnectDashboardView(LoginRequiredMixin, View):
     """Host payment settings dashboard."""
 
@@ -246,6 +324,9 @@ class EnablePaystationView(LoginRequiredMixin, View):
             },
         )
         messages.success(request, "PayStation payment route enabled successfully.")
+        next_url = request.POST.get("next")
+        if next_url:
+            return redirect(next_url)
         return redirect("payments:connect_dashboard")
 
 

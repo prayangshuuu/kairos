@@ -1,0 +1,17 @@
+{% extends "emails/base.html" %}
+
+{% block content %}
+<p>Hi {{ invitee_name }},</p>
+
+<p>You have been successfully added to the waitlist for <strong>{{ event_title }}</strong> with <strong>{{ host_name }}</strong>.</p>
+
+<p>If a time slot becomes available, we will notify you right away.</p>
+
+<p>
+  If you no longer wish to remain on the waitlist, you can 
+  <a href="{{ site_url }}{% url 'bookings:leave_waitlist' uid=claim_token %}">remove yourself here</a>.
+</p>
+
+<p>Thanks,</p>
+<p>The Kairos Team</p>
+{% endblock %}

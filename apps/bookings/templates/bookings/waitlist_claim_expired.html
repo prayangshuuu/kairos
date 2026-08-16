@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Offer Expired{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto mt-10 p-6 bg-white shadow-md rounded-lg text-center">
+    <h1 class="text-2xl font-bold mb-4 text-red-600">Offer Expired</h1>
+    <p class="mb-4">We're sorry, but the slot offered to you for <strong>{{ entry.event_type.title }}</strong> has expired or is no longer available.</p>
+</div>
+{% endblock %}

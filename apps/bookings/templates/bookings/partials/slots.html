@@ -184,6 +184,14 @@
         </svg>
         <p class="text-sm font-medium text-surface-600">No times available</p>
         <p class="text-xs mt-1">Try selecting a different date.</p>
+        {% if offer_waitlist %}
+          <div class="mt-6 w-full max-w-[240px]">
+            <a href="{% url 'bookings:join_waitlist' host_slug=host.slug event_slug=event.slug %}" 
+               class="block w-full py-3 text-center rounded-2xl bg-brand-50 text-brand-700 font-bold text-sm border border-brand-200 shadow-sm transition-all hover:bg-brand-100 hover:border-brand-300 active:scale-95">
+              Join Waitlist
+            </a>
+          </div>
+        {% endif %}
       </div>
     {% endif %}
 

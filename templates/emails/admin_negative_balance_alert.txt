@@ -1,0 +1,6 @@
+[ALERT] Negative Wallet Balance Detected
+
+Host: {{ host.email }}
+Current Available Balance: ৳{{ balance_bdt }}
+
+Payout requests for this host have been automatically blocked until future earnings clear the negative balance.

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Stripe Platform Settings — Kairos{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-8 px-4">
+    <a href="{% url 'integrations:dashboard' %}" class="text-sm text-surface-500 hover:text-brand-600 transition-colors font-medium">&larr; Back to integrations</a>
+
+    <h1 class="text-2xl font-semibold mt-3 mb-1">Stripe Platform Settings</h1>
+    <p class="text-sm text-surface-500 mb-6">
+        This Kairos instance's own Stripe Connect platform credentials. These are separate from any
+        individual host's Stripe account — they're the keys this deployment uses to create and manage
+        Stripe Connect Express accounts for hosts. Values are stored encrypted and are never displayed
+        again after saving.
+    </p>
+
+    <form method="post" class="bg-white border border-surface-200 rounded-lg p-6 space-y-5">
+        {% csrf_token %}
+
+        <div>
+            <label for="secret_key" class="block text-sm font-medium text-surface-700 mb-1">Secret key</label>
+            {% if has_secret_key %}
+                <p class="text-xs text-surface-500 mb-1.5">Currently set: <span class="font-mono">{{ cfg.masked_secret_key }}</span></p>
+            {% endif %}
+            <input type="password" id="secret_key" name="secret_key" autocomplete="off"
+                   placeholder="{% if has_secret_key %}Leave blank to keep the current key{% else %}sk_live_...{% endif %}"
+                   class="w-full rounded-md border border-surface-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <p class="text-xs text-surface-400 mt-1">Verified against Stripe before it's saved.</p>
+        </div>
+
+        <div>
+            <label for="publishable_key" class="block text-sm font-medium text-surface-700 mb-1">Publishable key</label>
+            <input type="text" id="publishable_key" name="publishable_key" autocomplete="off"
+                   value="{{ cfg.publishable_key }}" placeholder="pk_live_..."
+                   class="w-full rounded-md border border-surface-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+
+        <div>
+            <label for="webhook_secret" class="block text-sm font-medium text-surface-700 mb-1">Connect webhook signing secret</label>
+            {% if has_webhook_secret %}
+                <p class="text-xs text-surface-500 mb-1.5">Currently set: <span class="font-mono">{{ cfg.masked_webhook_secret }}</span></p>
+            {% endif %}
+            <input type="password" id="webhook_secret" name="webhook_secret" autocomplete="off"
+                   placeholder="{% if has_webhook_secret %}Leave blank to keep the current secret{% else %}whsec_...{% endif %}"
+                   class="w-full rounded-md border border-surface-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <p class="text-xs text-surface-400 mt-1">
+                From the Connect webhook endpoint in your Stripe Dashboard pointed at
+                <span class="font-mono">{{ request.scheme }}://{{ request.get_host }}{% url 'payments:stripe_connect_webhook' %}</span>.
+            </p>
+        </div>
+
+        <div class="pt-2">
+            <button type="submit" class="bg-brand-600 text-white px-5 py-2.5 rounded-md hover:bg-brand-700 transition font-medium text-sm">
+                Save
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

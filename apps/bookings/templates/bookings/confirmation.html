@@ -12,7 +12,7 @@
     <div class="p-8 text-center border-b border-surface-200 
       {% if booking.status == 'confirmed' %}bg-green-50
       {% elif booking.status == 'pending' %}bg-yellow-50
-      {% elif booking.status == 'pending_payment' %}bg-blue-50
+      {% elif booking.status == 'pending_payment' %}bg-brand-50
       {% elif booking.status == 'cancelled' %}bg-red-50
       {% else %}bg-surface-50{% endif %}">
       
@@ -22,27 +22,27 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900">Booking Confirmed!</h2>
-        <p class="mt-2 text-sm text-gray-600">You are scheduled with {{ booking.host.get_full_name|default:booking.host.email }}.</p>
+        <h2 class="text-2xl font-bold text-surface-900">Booking Confirmed!</h2>
+        <p class="mt-2 text-sm text-surface-600">You are scheduled with {{ booking.host.get_full_name|default:booking.host.email }}.</p>
       {% elif booking.status == 'pending' %}
         <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
           <svg class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900">Pending Host Approval</h2>
-        <p class="mt-2 text-sm text-gray-600">Your request has been sent to {{ booking.host.get_full_name|default:booking.host.email }} and the time is held meanwhile.</p>
+        <h2 class="text-2xl font-bold text-surface-900">Pending Host Approval</h2>
+        <p class="mt-2 text-sm text-surface-600">Your request has been sent to {{ booking.host.get_full_name|default:booking.host.email }} and the time is held meanwhile.</p>
       {% elif booking.status == 'pending_payment' %}
 
-        <h2 class="text-2xl font-bold text-gray-900">Awaiting Payment</h2>
+        <h2 class="text-2xl font-bold text-surface-900">Awaiting Payment</h2>
       {% elif booking.status == 'cancelled' %}
         <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
           <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900">Booking Cancelled</h2>
-        <p class="mt-2 text-sm text-gray-600">This meeting has been cancelled.</p>
+        <h2 class="text-2xl font-bold text-surface-900">Booking Cancelled</h2>
+        <p class="mt-2 text-sm text-surface-600">This meeting has been cancelled.</p>
         <div class="mt-6">
           <a href="{% url 'bookings:booking_page' host_slug=booking.host.slug event_slug=booking.event_type.slug %}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700">
             Book Again
@@ -53,16 +53,16 @@
 
     <!-- Details -->
     <div class="px-8 py-6">
-      <h3 class="text-lg leading-6 font-medium text-gray-900 mb-6">Meeting Details</h3>
+      <h3 class="text-lg leading-6 font-medium text-surface-900 mb-6">Meeting Details</h3>
       
       <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
         <div class="sm:col-span-1">
-          <dt class="text-sm font-medium text-gray-500">Event</dt>
-          <dd class="mt-1 text-sm text-gray-900">{{ booking.event_type.title }} ({{ booking.event_type.duration_minutes }} min)</dd>
+          <dt class="text-sm font-medium text-surface-500">Event</dt>
+          <dd class="mt-1 text-sm text-surface-900">{{ booking.event_type.title }} ({{ booking.event_type.duration_minutes }} min)</dd>
         </div>
         <div class="sm:col-span-1">
-          <dt class="text-sm font-medium text-gray-500">Host</dt>
-          <dd class="mt-1 text-sm text-gray-900 flex items-center">
+          <dt class="text-sm font-medium text-surface-500">Host</dt>
+          <dd class="mt-1 text-sm text-surface-900 flex items-center">
             {% if booking.host.avatar %}
               <img src="{{ booking.host.avatar.url }}" alt="{{ booking.host.email }}" class="w-6 h-6 rounded-full mr-2">
             {% endif %}
@@ -71,8 +71,8 @@
         </div>
         
         <div class="sm:col-span-2">
-          <dt class="text-sm font-medium text-gray-500">When</dt>
-          <dd class="mt-1 text-sm text-gray-900">
+          <dt class="text-sm font-medium text-surface-500">When</dt>
+          <dd class="mt-1 text-sm text-surface-900">
             {% timezone booking.invitee_timezone %}
               <div class="font-semibold">{{ booking.start_at|date:"l, F j, Y" }}</div>
               <div>{{ booking.start_at|time:"g:i A" }} - {{ booking.end_at|time:"g:i A" }} ({{ booking.invitee_timezone }})</div>
@@ -80,14 +80,14 @@
             
             {% if booking.invitee_timezone != host_tz %}
               {% timezone host_tz %}
-                <div class="text-xs text-gray-500 mt-1">
+                <div class="text-xs text-surface-500 mt-1">
                   Host time: {{ booking.start_at|time:"g:i A" }} - {{ booking.end_at|time:"g:i A" }} ({{ host_tz }})
                 </div>
               {% endtimezone %}
             {% endif %}
             
             {% if booking.rescheduled_from %}
-              <div class="mt-2 text-xs text-gray-500">
+              <div class="mt-2 text-xs text-surface-500">
                 Rescheduled from:
                 {% for old_booking in booking.reschedule_chain %}
                   {% timezone booking.invitee_timezone %}
@@ -100,8 +100,8 @@
         </div>
 
         <div class="sm:col-span-2">
-          <dt class="text-sm font-medium text-gray-500">Location</dt>
-          <dd id="location-details" class="mt-1 text-sm text-gray-900"
+          <dt class="text-sm font-medium text-surface-500">Location</dt>
+          <dd id="location-details" class="mt-1 text-sm text-surface-900"
             {% if not booking.meeting_url %}
               {% if booking.location_type == 'google_meet' or booking.location_type == 'jitsi' or booking.location_type == 'zoom' %}
                 hx-get="{% url 'bookings:booking_confirmation' uid=booking.uid %}?t={{ token }}"
@@ -118,8 +118,8 @@
                 </a>
               </div>
             {% elif booking.location_type == 'google_meet' or booking.location_type == 'jitsi' or booking.location_type == 'zoom' %}
-              <div class="flex items-center gap-2 text-gray-600">
-                <svg class="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <div class="flex items-center gap-2 text-surface-600">
+                <svg class="animate-spin h-4 w-4 text-surface-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -137,15 +137,15 @@
         
         {% if booking.invitee_notes %}
         <div class="sm:col-span-2">
-          <dt class="text-sm font-medium text-gray-500">Notes</dt>
-          <dd class="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{{ booking.invitee_notes }}</dd>
+          <dt class="text-sm font-medium text-surface-500">Notes</dt>
+          <dd class="mt-1 text-sm text-surface-900 whitespace-pre-wrap">{{ booking.invitee_notes }}</dd>
         </div>
         {% endif %}
         
         {% if booking.answers %}
         <div class="sm:col-span-2">
-          <dt class="text-sm font-medium text-gray-500 mb-2">Additional Information</dt>
-          <dd class="text-sm text-gray-900 space-y-2">
+          <dt class="text-sm font-medium text-surface-500 mb-2">Additional Information</dt>
+          <dd class="text-sm text-surface-900 space-y-2">
             {% for key, val in booking.answers.items %}
               <div>
                 <span class="font-medium">{{ val.label|default:key }}:</span> 
@@ -164,16 +164,16 @@
 
     <!-- Actions -->
     {% if booking.status != 'cancelled' %}
-      <div class="bg-gray-50 px-8 py-6 border-t border-surface-200 flex flex-col sm:flex-row sm:justify-between items-center space-y-4 sm:space-y-0">
+      <div class="bg-surface-50 px-8 py-6 border-t border-surface-200 flex flex-col sm:flex-row sm:justify-between items-center space-y-4 sm:space-y-0">
         
         <div class="flex space-x-3">
-          <a href="{% url 'bookings:booking_ics' uid=booking.uid %}?t={{ token }}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+          <a href="{% url 'bookings:booking_ics' uid=booking.uid %}?t={{ token }}" class="inline-flex items-center px-4 py-2 border border-surface-300 shadow-sm text-sm font-medium rounded-md text-surface-700 bg-white hover:bg-surface-50">
             Download .ics
           </a>
-          <a href="{{ google_url }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+          <a href="{{ google_url }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-surface-300 shadow-sm text-sm font-medium rounded-md text-surface-700 bg-white hover:bg-surface-50">
             Google Calendar
           </a>
-          <a href="{{ outlook_url }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+          <a href="{{ outlook_url }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-surface-300 shadow-sm text-sm font-medium rounded-md text-surface-700 bg-white hover:bg-surface-50">
             Outlook
           </a>
         </div>

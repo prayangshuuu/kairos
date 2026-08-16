@@ -1,0 +1,14 @@
+{% extends "layouts/public.html" %}
+{% block title %}You're on the waitlist! | Kairos{% endblock %}
+{% block public_content %}
+<div class="max-w-2xl mx-auto py-10 px-4 text-center">
+  <div class="bg-white rounded-2xl shadow-xl p-10">
+    <div class="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-6">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+    </div>
+    <h1 class="text-3xl font-bold mb-4">You're on the waitlist!</h1>
+    <p class="text-surface-600 text-lg">We've sent a confirmation email to <strong>{{ entry.invitee_email }}</strong>.</p>
+    <p class="text-surface-600 mt-2">If a spot opens up, we will notify you immediately.</p>
+  </div>
+</div>
+{% endblock %}

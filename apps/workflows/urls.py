@@ -1,4 +1,5 @@
 from django.urls import path
+
 from apps.workflows import views
 
 app_name = "workflows"

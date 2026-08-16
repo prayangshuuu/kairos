@@ -1,0 +1,8 @@
+Payout Completed
+
+Hello {{ host.display_name|default:host.email }},
+
+Your payout request #{{ payout_request.id }} for ৳{{ amount_bdt }} has been completed.
+Transaction Reference: {{ reference }}
+
+Thank you for hosting on Kairos!

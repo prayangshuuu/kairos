@@ -38,7 +38,6 @@ dev = [
     "pytest-django",
     "pytest-cov",
     "ruff",
-    "django-debug-toolbar",
 ]
 
 [tool.ruff]

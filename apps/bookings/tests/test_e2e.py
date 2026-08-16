@@ -20,6 +20,7 @@ def test_e2e_happy_path(client, host_with_schedule):
     # 4. Submits form
     import uuid
     from datetime import timedelta
+
     from django.core.signing import Signer
     from django.utils import timezone
 

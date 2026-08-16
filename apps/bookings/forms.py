@@ -261,3 +261,118 @@ class BookingForm(forms.Form):
 
         cleaned_data["answers"] = answers
         return cleaned_data
+
+
+class WaitlistForm(forms.Form):
+    invitee_name = forms.CharField(
+        max_length=150,
+        required=True,
+        label="Name",
+        widget=forms.TextInput(
+            attrs={
+                "class": "block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            }
+        ),
+    )
+    invitee_email = forms.EmailField(
+        required=True,
+        label="Email",
+        widget=forms.EmailInput(
+            attrs={
+                "class": "block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            }
+        ),
+    )
+    invitee_notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": "block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm",
+            }
+        ),
+        label="Additional notes",
+    )
+
+    tz = forms.CharField(widget=forms.HiddenInput(), required=True)
+    event_type_id = forms.CharField(widget=forms.HiddenInput(), required=True)
+    
+    # Anti-abuse
+    website = forms.CharField(
+        required=False,
+        label="",
+        widget=forms.TextInput(
+            attrs={"style": "display:none;", "tabindex": "-1", "autocomplete": "off"}
+        ),
+    )
+    timestamp_token = forms.CharField(widget=forms.HiddenInput(), required=True)
+
+    def __init__(self, *args, **kwargs):
+        self.event_type = kwargs.pop("event_type", None)
+        super().__init__(*args, **kwargs)
+
+        if self.event_type:
+            self.fields["invitee_notes"].label = "Please share anything that will help prepare for our meeting"
+
+            # Add dynamic questions
+            for q in self.event_type.questions.all().order_by("order"):
+                field_name = f"question_{q.id}"
+
+                f_kwargs = {
+                    "label": q.label,
+                    "help_text": q.help_text,
+                    "required": q.is_required,
+                }
+
+                if q.field_type == "text":
+                    field = forms.CharField(
+                        **f_kwargs,
+                        widget=forms.TextInput(
+                            attrs={"class": "block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"}
+                        ),
+                    )
+                elif q.field_type == "textarea":
+                    f_kwargs["widget"] = forms.Textarea(
+                        attrs={"rows": 3, "class": "block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"}
+                    )
+                    field = forms.CharField(**f_kwargs)
+                else:
+                    # Simplify other fields for Waitlist if needed, or just default to CharField
+                    field = forms.CharField(
+                        **f_kwargs,
+                        widget=forms.TextInput(
+                            attrs={"class": "block w-full rounded-md border-surface-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"}
+                        ),
+                    )
+
+                self.fields[field_name] = field
+                field.question_obj = q
+
+    def clean_website(self):
+        val = self.cleaned_data.get("website")
+        if val:
+            raise ValidationError("Invalid request.")
+        return val
+
+    def clean_timestamp_token(self):
+        val = self.cleaned_data.get("timestamp_token")
+        signer = Signer()
+        try:
+            original = signer.unsign(val)
+            timestamp = float(original)
+            if datetime.now(UTC).timestamp() - timestamp < 2.0:
+                raise ValidationError("You are submitting too fast. Please try again.")
+        except (BadSignature, SignatureExpired, ValueError):
+            raise ValidationError("Session expired or invalid. Please reload the page.")
+        return val
+
+    def clean(self):
+        cleaned_data = super().clean()
+        answers = {}
+        if self.event_type:
+            for q in self.event_type.questions.all():
+                field_name = f"question_{q.id}"
+                if field_name in cleaned_data:
+                    answers[str(q.id)] = {"label": q.label, "value": cleaned_data[field_name]}
+        cleaned_data["answers"] = answers
+        return cleaned_data

@@ -1,0 +1,7 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2>[ADMIN] New Payout Request</h2>
+<p>Host {{ host.email }} has requested a payout of <strong>৳{{ amount_bdt }}</strong> via {{ method_name }}.</p>
+<p>Request ID: #{{ payout_request.id }}</p>
+<p>Please review and disburse the money manually in the Kairos Admin Payout Queue.</p>
+{% endblock %}

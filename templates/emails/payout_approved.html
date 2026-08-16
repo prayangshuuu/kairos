@@ -1,0 +1,7 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2>Payout Request Approved</h2>
+<p>Hello {{ host.display_name|default:host.email }},</p>
+<p>Your payout request #{{ payout_request.id }} for <strong>৳{{ amount_bdt }}</strong> has been approved and is currently being processed for manual disbursement.</p>
+<p>You will receive another update with the final transaction reference once transfer is completed.</p>
+{% endblock %}

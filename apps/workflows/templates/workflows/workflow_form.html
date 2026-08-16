@@ -4,85 +4,85 @@
 {% block content %}
 <div class="max-w-4xl mx-auto py-8 px-4">
     <div class="mb-6 flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900">{% if is_edit %}Edit Workflow{% else %}Create Custom Workflow{% endif %}</h1>
-        <a href="{% url 'workflows:list' %}" class="text-sm text-gray-600 hover:text-gray-900">← Back to Workflows</a>
+        <h1 class="text-2xl font-bold text-surface-900">{% if is_edit %}Edit Workflow{% else %}Create Custom Workflow{% endif %}</h1>
+        <a href="{% url 'workflows:list' %}" class="text-sm text-surface-600 hover:text-surface-900">← Back to Workflows</a>
     </div>
 
     <form method="post" action="" class="space-y-6" id="workflow-form">
         {% csrf_token %}
 
-        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
-            <h2 class="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">Workflow Configuration</h2>
+        <div class="bg-white border border-surface-200 rounded-xl p-6 shadow-sm space-y-4">
+            <h2 class="text-lg font-semibold text-surface-900 border-b border-surface-100 pb-3">Workflow Configuration</h2>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Workflow Name</label>
+                <label class="block text-sm font-medium text-surface-700 mb-1">Workflow Name</label>
                 {{ workflow_form.name }}
                 {% if workflow_form.name.errors %}<p class="text-red-500 text-xs mt-1">{{ workflow_form.name.errors.0 }}</p>{% endif %}
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Trigger Event</label>
+                    <label class="block text-sm font-medium text-surface-700 mb-1">Trigger Event</label>
                     {{ workflow_form.trigger }}
                     {% if workflow_form.trigger.errors %}<p class="text-red-500 text-xs mt-1">{{ workflow_form.trigger.errors.0 }}</p>{% endif %}
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Time Offset (Minutes)</label>
+                    <label class="block text-sm font-medium text-surface-700 mb-1">Time Offset (Minutes)</label>
                     {{ workflow_form.offset_minutes }}
-                    <p class="text-xs text-gray-500 mt-1">Use negative values for 'before event' (e.g., -1440 = 24 hours before).</p>
+                    <p class="text-xs text-surface-500 mt-1">Use negative values for 'before event' (e.g., -1440 = 24 hours before).</p>
                     {% if workflow_form.offset_minutes.errors %}<p class="text-red-500 text-xs mt-1">{{ workflow_form.offset_minutes.errors.0 }}</p>{% endif %}
                 </div>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Applies To Event Types</label>
+                <label class="block text-sm font-medium text-surface-700 mb-1">Applies To Event Types</label>
                 {{ workflow_form.event_types }}
-                <p class="text-xs text-gray-500 mt-1">Hold Cmd/Ctrl to select multiple. Leave empty to apply to all event types.</p>
+                <p class="text-xs text-surface-500 mt-1">Hold Cmd/Ctrl to select multiple. Leave empty to apply to all event types.</p>
             </div>
 
             <div class="flex items-center space-x-2 pt-2">
                 {{ workflow_form.is_active }}
-                <label for="{{ workflow_form.is_active.id_for_label }}" class="text-sm text-gray-700 font-medium">Enable this workflow</label>
+                <label for="{{ workflow_form.is_active.id_for_label }}" class="text-sm text-surface-700 font-medium">Enable this workflow</label>
             </div>
         </div>
 
         <!-- Step Configuration -->
-        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
-            <h2 class="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">Notification Step</h2>
+        <div class="bg-white border border-surface-200 rounded-xl p-6 shadow-sm space-y-4">
+            <h2 class="text-lg font-semibold text-surface-900 border-b border-surface-100 pb-3">Notification Step</h2>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Channel</label>
+                    <label class="block text-sm font-medium text-surface-700 mb-1">Channel</label>
                     {{ step_form.channel }}
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Recipient</label>
+                    <label class="block text-sm font-medium text-surface-700 mb-1">Recipient</label>
                     {{ step_form.recipient }}
                 </div>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Subject Template</label>
+                <label class="block text-sm font-medium text-surface-700 mb-1">Subject Template</label>
                 {{ step_form.subject_template }}
                 {% if step_form.subject_template.errors %}<p class="text-red-500 text-xs mt-1">{{ step_form.subject_template.errors.0 }}</p>{% endif %}
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Body Template</label>
+                <label class="block text-sm font-medium text-surface-700 mb-1">Body Template</label>
                 {{ step_form.body_template }}
                 {% if step_form.body_template.errors %}<p class="text-red-500 text-xs mt-1">{{ step_form.body_template.errors.0 }}</p>{% endif %}
             </div>
 
             <!-- Variable Picker Pills -->
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                <span class="text-xs font-semibold text-gray-700 block mb-2">Available Template Variables (Click to Insert):</span>
+            <div class="bg-surface-50 p-4 rounded-lg border border-surface-100">
+                <span class="text-xs font-semibold text-surface-700 block mb-2">Available Template Variables (Click to Insert):</span>
                 <div class="flex flex-wrap gap-1.5">
                     {% for var_name, var_desc in allowed_variables.items %}
                     <button type="button"
                             onclick="insertVariable('{ {{ var_name }} }')"
                             title="{{ var_desc }}"
-                            class="px-2.5 py-1 bg-white border border-gray-200 text-xs text-teal-700 font-mono rounded hover:bg-teal-50 hover:border-teal-300 transition-colors">
+                            class="px-2.5 py-1 bg-white border border-surface-200 text-xs text-teal-700 font-mono rounded hover:bg-teal-50 hover:border-teal-300 transition-colors">
                         { {{ var_name }} }
                     </button>
                     {% endfor %}
@@ -90,16 +90,16 @@
             </div>
 
             <!-- Live Preview Container -->
-            <div class="pt-4 border-t border-gray-100">
-                <h3 class="text-sm font-medium text-gray-900 mb-2">Live Rendered Preview</h3>
-                <div id="preview-container" class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 font-sans">
-                    <p class="text-gray-400 italic">Type a subject and body above to see live preview...</p>
+            <div class="pt-4 border-t border-surface-100">
+                <h3 class="text-sm font-medium text-surface-900 mb-2">Live Rendered Preview</h3>
+                <div id="preview-container" class="p-4 bg-surface-50 border border-surface-200 rounded-lg text-sm text-surface-700 font-sans">
+                    <p class="text-surface-400 italic">Type a subject and body above to see live preview...</p>
                 </div>
             </div>
         </div>
 
         <div class="flex items-center justify-end space-x-3 pt-4">
-            <a href="{% url 'workflows:list' %}" class="py-2.5 px-4 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">Cancel</a>
+            <a href="{% url 'workflows:list' %}" class="py-2.5 px-4 bg-surface-100 text-surface-700 text-sm font-medium rounded-lg hover:bg-surface-200">Cancel</a>
             <button type="submit" class="py-2.5 px-4 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 shadow-sm">Save Workflow</button>
         </div>
     </form>

@@ -1,0 +1,7 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2>[ALERT] Negative Wallet Balance Detected</h2>
+<p>Host: {{ host.email }}</p>
+<p>Current Available Balance: <strong>৳{{ balance_bdt }}</strong></p>
+<p>Payout requests for this host have been automatically blocked until future earnings clear the negative balance.</p>
+{% endblock %}

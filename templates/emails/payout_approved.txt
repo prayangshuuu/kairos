@@ -1,0 +1,7 @@
+Payout Request Approved
+
+Hello {{ host.display_name|default:host.email }},
+
+Your payout request #{{ payout_request.id }} for ৳{{ amount_bdt }} has been approved and is being processed for manual disbursement.
+
+You will receive another update with the final transaction reference once transfer is completed.

@@ -6,8 +6,8 @@
 {% block app_content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6">
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-semibold text-gray-900">Bookings</h1>
-        <a href="?{{ request.GET.urlencode }}&export=csv" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+        <h1 class="text-2xl font-semibold text-surface-900">Bookings</h1>
+        <a href="?{{ request.GET.urlencode }}&export=csv" class="inline-flex items-center px-4 py-2 border border-surface-300 shadow-sm text-sm font-medium rounded-md text-surface-700 bg-white hover:bg-surface-50">
             Export CSV
         </a>
     </div>
@@ -17,12 +17,12 @@
         <input type="hidden" name="tab" value="{{ tab }}">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700">Search</label>
-                <input type="text" name="q" value="{{ search_q|default:'' }}" placeholder="Name or email..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                <label class="block text-sm font-medium text-surface-700">Search</label>
+                <input type="text" name="q" value="{{ search_q|default:'' }}" placeholder="Name or email..." class="mt-1 block w-full rounded-md border-surface-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700">Date Range</label>
-                <select name="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" onchange="document.getElementById('filter-form').dispatchEvent(new Event('submit'))">
+                <label class="block text-sm font-medium text-surface-700">Date Range</label>
+                <select name="date" class="mt-1 block w-full rounded-md border-surface-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm" onchange="document.getElementById('filter-form').dispatchEvent(new Event('submit'))">
                     <option value="">All time</option>
                     <option value="this_week" {% if current_date == 'this_week' %}selected{% endif %}>This week</option>
                     <option value="this_month" {% if current_date == 'this_month' %}selected{% endif %}>This month</option>
@@ -30,35 +30,35 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700">Event Type</label>
-                <select name="event_type" multiple class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" onchange="document.getElementById('filter-form').dispatchEvent(new Event('submit'))">
+                <label class="block text-sm font-medium text-surface-700">Event Type</label>
+                <select name="event_type" multiple class="mt-1 block w-full rounded-md border-surface-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm" onchange="document.getElementById('filter-form').dispatchEvent(new Event('submit'))">
                     {% for et in event_types %}
                     <option value="{{ et.id }}" {% if et.id in current_event_types %}selected{% endif %}>{{ et.title }}</option>
                     {% endfor %}
                 </select>
-                <p class="text-xs text-gray-500 mt-1">Hold Cmd/Ctrl to select multiple</p>
+                <p class="text-xs text-surface-500 mt-1">Hold Cmd/Ctrl to select multiple</p>
             </div>
         </div>
         <div class="flex justify-end">
-            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">Apply Filters</button>
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700">Apply Filters</button>
         </div>
     </form>
 
     <!-- Tabs -->
-    <div class="border-b border-gray-200 mb-6">
+    <div class="border-b border-surface-200 mb-6">
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
             {% with query_string=request.GET.urlencode|default:"" %}
-            <a href="?{{ query_string|safe }}&tab=upcoming" class="{% if tab == 'upcoming' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center">
-                Upcoming <span class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ counts.upcoming }}</span>
+            <a href="?{{ query_string|safe }}&tab=upcoming" class="{% if tab == 'upcoming' %}border-brand-500 text-brand-600{% else %}border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center">
+                Upcoming <span class="ml-2 bg-surface-100 text-surface-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ counts.upcoming }}</span>
             </a>
-            <a href="?{{ query_string|safe }}&tab=pending" class="{% if tab == 'pending' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center">
-                Pending <span class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ counts.pending }}</span>
+            <a href="?{{ query_string|safe }}&tab=pending" class="{% if tab == 'pending' %}border-brand-500 text-brand-600{% else %}border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center">
+                Pending <span class="ml-2 bg-surface-100 text-surface-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ counts.pending }}</span>
             </a>
-            <a href="?{{ query_string|safe }}&tab=past" class="{% if tab == 'past' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center">
-                Past <span class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ counts.past }}</span>
+            <a href="?{{ query_string|safe }}&tab=past" class="{% if tab == 'past' %}border-brand-500 text-brand-600{% else %}border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center">
+                Past <span class="ml-2 bg-surface-100 text-surface-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ counts.past }}</span>
             </a>
-            <a href="?{{ query_string|safe }}&tab=cancelled" class="{% if tab == 'cancelled' %}border-blue-500 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center">
-                Cancelled <span class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ counts.cancelled }}</span>
+            <a href="?{{ query_string|safe }}&tab=cancelled" class="{% if tab == 'cancelled' %}border-brand-500 text-brand-600{% else %}border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center">
+                Cancelled <span class="ml-2 bg-surface-100 text-surface-900 py-0.5 px-2.5 rounded-full text-xs font-medium">{{ counts.cancelled }}</span>
             </a>
             {% endwith %}
         </nav>

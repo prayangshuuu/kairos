@@ -8,10 +8,9 @@ from django.conf import settings
 from django.utils import timezone
 from paystation import PayStation
 
-logger = logging.getLogger(__name__)
+from apps.payments.stripe_config import get_stripe_secret_key
 
-# Set the Stripe API key at the module level
-stripe.api_key = getattr(settings, "STRIPE_SECRET_KEY", "")
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -61,6 +60,11 @@ class PaymentProvider(ABC):
 class StripeConnectProvider(PaymentProvider):
     name = "stripe_connect"
     is_marketplace = True
+
+    def __init__(self):
+        # Read this instance's platform key fresh on each instantiation, so a
+        # key saved via the settings page takes effect without a restart.
+        stripe.api_key = get_stripe_secret_key()
 
     def create_checkout(self, payment, success_url: str, cancel_url: str) -> CheckoutResult:
         try:

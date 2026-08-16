@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
@@ -7,20 +7,16 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.bookings.models import Booking
 from apps.bookings.services import cancel_booking, create_booking, reschedule_booking
 from apps.scheduling.models import EventType, Schedule
-from apps.workflows.engine import ALLOWED_TEMPLATE_VARIABLES, validate_template_string
+from apps.workflows.engine import validate_template_string
 from apps.workflows.models import (
     Workflow,
     WorkflowExecution,
-    WorkflowStep,
 )
 from apps.workflows.services import (
-    cancel_workflow_executions_for_booking,
     ensure_default_workflows_for_user,
     execute_due_workflows,
-    schedule_workflow_executions_for_booking,
 )
 
 

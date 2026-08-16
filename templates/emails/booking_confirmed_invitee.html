@@ -25,7 +25,7 @@
             <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Where</p>
             {% if meeting_url %}
             <p style="margin: 0; color: #0f172a; font-size: 16px;">
-                <a href="{{ meeting_url }}" style="color: #3b82f6; text-decoration: none;">Join Video Call</a>
+                <a href="{{ meeting_url }}" style="color: #0d9488; text-decoration: none;">Join Video Call</a>
             </p>
             {% else %}
             <p style="margin: 0; color: #0f172a; font-size: 16px;">{{ location_value|default:"To be determined" }}</p>
@@ -40,8 +40,8 @@
     <td align="center">
       <table border="0" cellspacing="0" cellpadding="0">
         <tr>
-          <td align="center" style="border-radius: 4px;" bgcolor="{{ branding_color|default:'#0f172a' }}">
-            <a href="{{ meeting_url }}" target="_blank" style="font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 4px; padding: 12px 24px; border: 1px solid {{ branding_color|default:'#0f172a' }}; display: inline-block;">Join Meeting</a>
+          <td align="center" style="border-radius: 4px;" bgcolor="{{ branding_color|default:'#0d9488' }}">
+            <a href="{{ meeting_url }}" target="_blank" style="font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 4px; padding: 12px 24px; border: 1px solid {{ branding_color|default:'#0d9488' }}; display: inline-block;">Join Meeting</a>
           </td>
         </tr>
       </table>
@@ -52,6 +52,6 @@
 
 <p style="margin: 0 0 20px 0; color: #64748b; font-size: 14px; text-align: center;">
     Need to make changes?<br>
-    <a href="#" style="color: #3b82f6; text-decoration: none;">Reschedule</a> or <a href="#" style="color: #3b82f6; text-decoration: none;">Cancel</a>
+    <a href="#" style="color: #0d9488; text-decoration: none;">Reschedule</a> or <a href="#" style="color: #0d9488; text-decoration: none;">Cancel</a>
 </p>
 {% endblock %}

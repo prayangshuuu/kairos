@@ -1,0 +1,10 @@
+Payout Request Received
+
+Hello {{ host.display_name|default:host.email }},
+
+Your payout request for ৳{{ amount_bdt }} via {{ method_name }} ({{ account_info }}) has been submitted and is under review.
+
+Request ID: #{{ payout_request.id }}
+Requested at: {{ payout_request.requested_at|date:"F j, Y, g:i a" }}
+
+We will disburse the funds manually and send you a confirmation with the transaction reference as soon as it is processed.

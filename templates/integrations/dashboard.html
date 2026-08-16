@@ -1,138 +1,306 @@
 {% extends "layouts/app.html" %}
 
-{% block title %}Integrations - Kairos{% endblock %}
+{% block title %}Integrations — Kairos{% endblock %}
 
 {% block app_content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-6">
-    <div class="lg:grid lg:grid-cols-12 lg:gap-x-5">
-        <aside class="py-6 px-2 sm:px-6 lg:py-0 lg:px-0 lg:col-span-3">
-            <nav class="space-y-1">
-                <a href="{% url 'integrations:dashboard' %}" class="bg-gray-50 text-brand-700 hover:text-brand-700 hover:bg-white group rounded-md px-3 py-2 flex items-center text-sm font-medium">
-                    Calendars
-                </a>
-                <span class="text-gray-400 group rounded-md px-3 py-2 flex items-center text-sm font-medium cursor-not-allowed">
-                    Conferencing
-                </span>
-                <span class="text-gray-400 group rounded-md px-3 py-2 flex items-center text-sm font-medium cursor-not-allowed">
-                    Payments
-                </span>
-            </nav>
-        </aside>
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 animate-fade-in-up">
 
-        <div class="space-y-6 sm:px-6 lg:px-0 lg:col-span-9">
-            {% if messages %}
-                <div class="space-y-3">
-                    {% for message in messages %}
-                        <div class="rounded-md p-4 text-sm {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}" role="alert">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <div class="shadow sm:rounded-md sm:overflow-hidden bg-white p-6">
-                <h2 class="text-lg font-medium text-gray-900">Calendar Integrations</h2>
-                <p class="mt-1 text-sm text-gray-500">Connect calendars to block busy time and create booking events automatically.</p>
-
-                <div class="mt-6 divide-y divide-gray-200">
-                    <div class="pb-5">
-                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="flex min-w-0 items-start">
-                                <svg class="h-8 w-8 flex-shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                                </svg>
-                                <div class="ml-4 min-w-0">
-                                    <h3 class="text-sm font-medium text-gray-900">Google Calendar</h3>
-                                    <p class="mt-1 text-sm text-gray-500">Sync availability and write new bookings to your calendar.</p>
-                                    {% if google_conn %}
-                                        <p class="mt-2 truncate text-sm font-medium text-gray-900">{{ google_conn.external_account_email }}</p>
-                                        <p class="text-xs text-gray-500">Connected {{ google_conn.created_at|date:"M j, Y" }}</p>
-                                    {% else %}
-                                        <p class="mt-2 text-sm font-medium text-gray-900">Not connected</p>
-                                        <p class="text-xs text-gray-500">Connect Google Calendar to enable busy-time blocking.</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <div class="flex flex-shrink-0 items-center gap-3 sm:ml-6">
-                                {% if google_conn %}
-                                    <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700">Connected</span>
-                                    <form action="{% url 'integrations:google_disconnect' %}" method="post" onsubmit="return confirm('Disconnecting will stop busy-time blocking and automatic event creation. Existing events will remain on your calendar but will no longer be updated. Are you sure you want to disconnect?');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
-                                            Disconnect
-                                        </button>
-                                    </form>
-                                {% else %}
-                                    <a href="{% url 'integrations:google_connect' %}" class="rounded-md border border-transparent bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
-                                        Connect
-                                    </a>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        {% if google_conn and google_conn.last_error %}
-                            <div class="mt-4 rounded-md border border-red-100 bg-red-50 p-4 text-sm text-red-700">
-                                <p class="font-medium">Sync error</p>
-                                <p class="mt-1">{{ google_conn.last_error }}</p>
-                                <a href="{% url 'integrations:google_connect' %}" class="mt-2 inline-block font-medium text-red-700 underline hover:text-red-800">Reconnect account</a>
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="py-5">
-                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="flex min-w-0 items-start">
-                                <svg class="h-8 w-8 flex-shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <rect x="2" y="2" width="9" height="9" fill="#F25022"/>
-                                    <rect x="13" y="2" width="9" height="9" fill="#7FBA00"/>
-                                    <rect x="2" y="13" width="9" height="9" fill="#00A4EF"/>
-                                    <rect x="13" y="13" width="9" height="9" fill="#FFB900"/>
-                                </svg>
-                                <div class="ml-4 min-w-0">
-                                    <h3 class="text-sm font-medium text-gray-900">Microsoft Outlook</h3>
-                                    <p class="mt-1 text-sm text-gray-500">Sync availability and write new bookings to Outlook.</p>
-                                </div>
-                            </div>
-                            <span class="inline-flex w-max items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">Coming soon</span>
-                        </div>
-                    </div>
-
-                    <div class="py-5">
-                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="flex min-w-0 items-start">
-                                <svg class="h-8 w-8 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <div class="ml-4 min-w-0">
-                                    <h3 class="text-sm font-medium text-gray-900">CalDAV Server</h3>
-                                    <p class="mt-1 text-sm text-gray-500">Connect calendars from providers that support CalDAV.</p>
-                                </div>
-                            </div>
-                            <span class="inline-flex w-max items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">Coming soon</span>
-                        </div>
-                    </div>
-
-                    <div class="pt-5">
-                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="flex min-w-0 items-start">
-                                <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-gray-900 text-sm font-semibold text-white" aria-hidden="true">
-                                    A
-                                </div>
-                                <div class="ml-4 min-w-0">
-                                    <h3 class="text-sm font-medium text-gray-900">Apple Calendar</h3>
-                                    <p class="mt-1 text-sm text-gray-500">Sync iCloud calendar availability for booking pages.</p>
-                                </div>
-                            </div>
-                            <span class="inline-flex w-max items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">Coming soon</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  {# ── Flash messages ──────────────────────────────────────────────────── #}
+  {% if messages %}
+    <div class="mb-6 space-y-2">
+      {% for message in messages %}
+        <div class="rounded-lg px-4 py-3 text-sm font-medium
+          {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+          {% else %}bg-emerald-50 text-emerald-700 border border-emerald-200{% endif %}">
+          {{ message }}
         </div>
+      {% endfor %}
     </div>
+  {% endif %}
+
+  <div class="mb-10">
+      <h1 class="text-3xl font-bold text-surface-900 tracking-tight mb-2">Integrations</h1>
+      <p class="text-base text-surface-500">Connect the services Kairos uses to create meetings, sync calendars, and collect payments.</p>
+  </div>
+
+  <!-- ========================================================================
+       SECTION 1 — CALENDARS
+       ======================================================================== -->
+  <section class="mb-12">
+    <div class="flex items-center justify-between mb-6 border-b border-surface-200 pb-2">
+      <h2 class="text-sm font-bold uppercase tracking-widest text-surface-500">Calendars</h2>
+      {% if google_healthy and not has_write_target %}
+        <a href="{% url 'integrations:dashboard' %}" class="text-xs text-amber-600 font-medium hover:underline flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          No write-target calendar
+        </a>
+      {% endif %}
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      {# — Google Calendar — #}
+      <div class="bg-white border border-surface-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-brand-200 transition-all flex flex-col h-full group">
+        <div class="flex items-center gap-3 mb-4">
+            <svg class="h-8 w-8 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            <h3 class="text-base font-semibold text-surface-900">Google Calendar</h3>
+        </div>
+        
+        <div class="text-sm text-surface-500 mb-6 flex-grow space-y-1">
+            {% if google_healthy %}
+                <p class="font-medium text-surface-700 truncate" title="{{ google_conn.external_account_email }}">{{ google_conn.external_account_email }}</p>
+                <p class="text-xs">Connected {{ google_conn.created_at|date:"M j, Y" }}</p>
+                {% if google_conn.last_synced_at %}<p class="text-xs">Synced {{ google_conn.last_synced_at|timesince }} ago</p>{% endif %}
+            {% elif google_broken %}
+                <p class="font-medium text-surface-700 truncate">{{ google_conn.external_account_email }}</p>
+                <p class="text-xs text-red-600 font-medium">{% if google_conn.last_error %}{{ google_conn.last_error }}{% else %}Connection inactive{% endif %}</p>
+            {% else %}
+                <p>Not connected — connect to block busy time and auto-create booking events.</p>
+            {% endif %}
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-surface-100 mt-auto">
+            {% if google_healthy %}
+              <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">Connected</span>
+              <form action="{% url 'integrations:google_disconnect' %}" method="post" onsubmit="return confirm('Disconnecting will stop busy-time blocking and automatic event creation. Continue?')">
+                {% csrf_token %}
+                <button type="submit" class="text-sm text-surface-500 hover:text-red-600 transition-colors font-medium">Disconnect</button>
+              </form>
+            {% elif google_broken %}
+              <span class="inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 border border-red-200">Error</span>
+              <a href="{% url 'integrations:google_connect' %}" class="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors">Reconnect</a>
+            {% else %}
+              <span class="inline-flex items-center rounded-full bg-surface-100 px-2.5 py-1 text-xs font-semibold text-surface-500 border border-surface-200">Disconnected</span>
+              <a href="{% url 'integrations:google_connect' %}" class="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors">Connect</a>
+            {% endif %}
+        </div>
+      </div>
+
+      {# — Microsoft / Apple / CalDAV — #}
+      <div class="bg-white border border-surface-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-brand-200 transition-all flex flex-col h-full group opacity-70 hover:opacity-100">
+        <div class="flex items-center gap-3 mb-4">
+            <svg class="h-8 w-8 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="2" y="2" width="9" height="9" fill="#F25022"/><rect x="13" y="2" width="9" height="9" fill="#7FBA00"/>
+              <rect x="2" y="13" width="9" height="9" fill="#00A4EF"/><rect x="13" y="13" width="9" height="9" fill="#FFB900"/>
+            </svg>
+            <h3 class="text-base font-semibold text-surface-900">Outlook / Apple / CalDAV</h3>
+        </div>
+        <div class="text-sm text-surface-500 mb-6 flex-grow space-y-1">
+            <p>Sync Outlook, Apple iCloud, and CalDAV servers.</p>
+        </div>
+        <div class="flex items-center justify-between pt-4 border-t border-surface-100 mt-auto">
+            <span class="inline-flex items-center rounded-full bg-surface-100 px-2.5 py-1 text-xs font-semibold text-surface-500 border border-surface-200 text-surface-400">Coming soon</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       SECTION 2 — CONFERENCING
+       ======================================================================== -->
+  <section class="mb-12">
+    <div class="flex items-center justify-between mb-6 border-b border-surface-200 pb-2">
+      <h2 class="text-sm font-bold uppercase tracking-widest text-surface-500">Conferencing</h2>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      {# — Google Meet — #}
+      <div class="bg-white border border-surface-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-brand-200 transition-all flex flex-col h-full group">
+        <div class="flex items-center gap-3 mb-4">
+            <svg class="h-8 w-8 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 8v8H5V8h10m1-2H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4V5.5l-4 4V7a1 1 0 0 0-1-1z" fill="#00897B"/>
+            </svg>
+            <h3 class="text-base font-semibold text-surface-900">Google Meet</h3>
+        </div>
+        <div class="text-sm text-surface-500 mb-6 flex-grow space-y-1">
+            {% if google_meet_available %}
+                <p class="font-medium text-surface-700 truncate">Via {{ google_conn.external_account_email }}</p>
+                <p class="text-xs">Provided via your Google Calendar connection. No separate setup required.</p>
+            {% else %}
+                <p>Generates a unique Meet link for each booking. Requires connecting Google Calendar in the section above.</p>
+            {% endif %}
+        </div>
+        <div class="flex items-center justify-between pt-4 border-t border-surface-100 mt-auto">
+            {% if google_meet_available %}
+              <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">Available</span>
+            {% else %}
+              <span class="inline-flex items-center rounded-full bg-surface-100 px-2.5 py-1 text-xs font-semibold text-surface-500 border border-surface-200">Not available</span>
+            {% endif %}
+        </div>
+      </div>
+
+      {# — Zoom — #}
+      <div class="bg-white border border-surface-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-brand-200 transition-all flex flex-col h-full group">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="h-8 w-8 flex-shrink-0 rounded-xl bg-blue-500 flex items-center justify-center text-white text-sm font-bold shadow-sm">Zo</div>
+            <h3 class="text-base font-semibold text-surface-900">Zoom</h3>
+        </div>
+        <div class="text-sm text-surface-500 mb-6 flex-grow space-y-1">
+            {% if zoom_conn and zoom_conn.is_active %}
+                <p class="font-medium text-surface-700 truncate">{{ zoom_conn.external_account_email }}</p>
+                <p class="text-xs">Connected {{ zoom_conn.created_at|date:"M j, Y" }}</p>
+            {% elif zoom_conn and not zoom_conn.is_active %}
+                <p class="font-medium text-surface-700 truncate">{{ zoom_conn.external_account_email }}</p>
+                <p class="text-xs text-red-600 font-medium">Connection inactive or token expired</p>
+            {% else %}
+                <p>Connect your Zoom account to automatically generate and attach meeting links to bookings.</p>
+            {% endif %}
+        </div>
+        <div class="flex items-center justify-between pt-4 border-t border-surface-100 mt-auto">
+            {% if zoom_conn and zoom_conn.is_active %}
+              <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">Connected</span>
+              <button class="text-sm text-surface-500 hover:text-red-600 transition-colors font-medium" disabled>Disconnect</button>
+            {% elif zoom_conn and not zoom_conn.is_active %}
+              <span class="inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 border border-red-200">Error</span>
+              <button class="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors" disabled>Reconnect</button>
+            {% else %}
+              <span class="inline-flex items-center rounded-full bg-surface-100 px-2.5 py-1 text-xs font-semibold text-surface-500 border border-surface-200 text-surface-400">Coming soon</span>
+              <button class="inline-flex items-center rounded-lg bg-surface-300 px-4 py-2 text-sm font-semibold text-white shadow-sm cursor-not-allowed" disabled>Connect</button>
+            {% endif %}
+        </div>
+      </div>
+
+      {# — Jitsi — #}
+      <div class="bg-white border border-surface-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-brand-200 transition-all flex flex-col h-full group">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="h-8 w-8 flex-shrink-0 rounded-xl bg-brand-700 flex items-center justify-center text-white text-sm font-bold shadow-sm">Ji</div>
+            <h3 class="text-base font-semibold text-surface-900">Jitsi Meet</h3>
+        </div>
+        <div class="text-sm text-surface-500 mb-6 flex-grow space-y-1">
+            <p>Uses meet.jit.si to generate a unique open meeting room per booking.</p>
+            <p class="text-xs">No account needed. Always available.</p>
+        </div>
+        <div class="flex items-center justify-between pt-4 border-t border-surface-100 mt-auto">
+            <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">Always available</span>
+        </div>
+      </div>
+
+      {# — Microsoft Teams — #}
+      <div class="bg-white border border-surface-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-brand-200 transition-all flex flex-col h-full group opacity-70 hover:opacity-100">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="h-8 w-8 flex-shrink-0 rounded-xl bg-indigo-500 flex items-center justify-center text-white text-sm font-bold shadow-sm">T</div>
+            <h3 class="text-base font-semibold text-surface-900">Microsoft Teams</h3>
+        </div>
+        <div class="text-sm text-surface-500 mb-6 flex-grow space-y-1">
+            <p>Automatically generate Teams meeting links for your bookings.</p>
+        </div>
+        <div class="flex items-center justify-between pt-4 border-t border-surface-100 mt-auto">
+            <span class="inline-flex items-center rounded-full bg-surface-100 px-2.5 py-1 text-xs font-semibold text-surface-500 border border-surface-200 text-surface-400">Coming soon</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       SECTION 3 — PAYMENTS
+       ======================================================================== -->
+  <section class="mb-12">
+    <div class="flex items-center justify-between mb-6 border-b border-surface-200 pb-2">
+      <h2 class="text-sm font-bold uppercase tracking-widest text-surface-500">Payments</h2>
+      <a href="{% url 'payments:wallet' %}" class="text-sm text-brand-600 font-semibold hover:text-brand-700 transition-colors">
+        View wallet &amp; payouts &rarr;
+      </a>
+    </div>
+
+    {% if not stripe_platform_configured %}
+    <div class="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+      <p class="text-sm text-amber-800">
+        <span class="font-semibold">Stripe isn't configured for this instance.</span>
+        Hosts can't connect Stripe accounts until platform keys are added.
+      </p>
+      <a href="{% url 'payments:platform_stripe_settings' %}"
+         class="inline-flex flex-shrink-0 items-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 transition-colors">
+        Configure Stripe
+      </a>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      {# — Stripe Connect — #}
+      <div class="bg-white border border-surface-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-brand-200 transition-all flex flex-col h-full group">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="h-8 w-8 flex-shrink-0 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">St</div>
+            <h3 class="text-base font-semibold text-surface-900">Stripe Connect</h3>
+        </div>
+        <div class="text-sm text-surface-500 mb-6 flex-grow space-y-1">
+            {% if stripe_status == "active" %}
+                <p class="font-medium text-surface-700">Account: {{ stripe_account.external_account_id }}</p>
+                <p class="text-xs">{% if stripe_account.default_currency %}{{ stripe_account.default_currency|upper }}{% endif %} {% if stripe_account.country %}· {{ stripe_account.country }}{% endif %}</p>
+            {% elif stripe_status == "incomplete" %}
+                <p class="font-medium text-amber-600">Onboarding incomplete</p>
+                <p class="text-xs">Complete Stripe onboarding to start accepting payments.</p>
+            {% else %}
+                <p>Connect your own Stripe account. Funds are paid directly to you. No Kairos fee. Available in most countries.</p>
+            {% endif %}
+        </div>
+        <div class="flex items-center justify-between pt-4 border-t border-surface-100 mt-auto">
+            {% if stripe_status == "active" %}
+              <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">Connected</span>
+              <a href="{% url 'payments:connect_dashboard' %}" class="text-sm text-surface-500 hover:text-brand-600 transition-colors font-medium">Manage &rarr;</a>
+            {% elif stripe_status == "incomplete" %}
+              <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 border border-amber-200">Incomplete</span>
+              <a href="{% url 'payments:stripe_connect_onboard' %}" class="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors">Resume</a>
+            {% else %}
+              <span class="inline-flex items-center rounded-full bg-surface-100 px-2.5 py-1 text-xs font-semibold text-surface-500 border border-surface-200">Disconnected</span>
+              <a href="{% url 'payments:stripe_connect_onboard' %}" class="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors">Connect</a>
+            {% endif %}
+        </div>
+      </div>
+
+      {# — Kairos Payments (PayStation) — #}
+      {% if paystation_enabled %}
+      <div class="bg-white border border-surface-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-brand-200 transition-all flex flex-col h-full group">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="h-8 w-8 flex-shrink-0 rounded-xl bg-surface-900 flex items-center justify-center text-white text-sm font-bold shadow-sm">KP</div>
+            <h3 class="text-base font-semibold text-surface-900">Kairos Payments via PayStation</h3>
+        </div>
+        <div class="text-sm text-surface-500 mb-6 flex-grow space-y-1">
+            {% if paystation_account and paystation_account.is_active and terms_accepted %}
+                <p class="font-medium text-surface-700">Active</p>
+                <p class="text-xs">Payouts via <a href="{% url 'payments:wallet' %}" class="underline hover:text-brand-600">your wallet</a>.</p>
+            {% else %}
+                <p>Kairos collects on your behalf and pays out. 3% service charge. BDT only. No account needed.</p>
+            {% endif %}
+        </div>
+        <div class="flex items-center justify-between pt-4 border-t border-surface-100 mt-auto">
+            {% if paystation_account and paystation_account.is_active and terms_accepted %}
+              <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">Active</span>
+              <a href="{% url 'payments:wallet' %}" class="text-sm text-surface-500 hover:text-brand-600 transition-colors font-medium">Wallet &rarr;</a>
+            {% else %}
+              <span class="inline-flex items-center rounded-full bg-surface-100 px-2.5 py-1 text-xs font-semibold text-surface-500 border border-surface-200">Not enabled</span>
+              <form action="{% url 'payments:enable_paystation' %}" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{% url 'integrations:dashboard' %}">
+                  <button type="submit" class="inline-flex items-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors">
+                      Enable
+                  </button>
+              </form>
+            {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </section>
+
 </div>
+
+<style>
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up {
+        animation: fadeInUp 0.4s ease-out forwards;
+    }
+</style>
 {% endblock %}

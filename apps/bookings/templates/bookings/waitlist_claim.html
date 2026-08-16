@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Claim Slot - {{ entry.event_type.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto mt-10 p-6 bg-white shadow-md rounded-lg">
+    <h1 class="text-2xl font-bold mb-4">Claim Your Slot</h1>
+    <p class="mb-4">Hello {{ entry.invitee_name }},</p>
+    <p class="mb-4">A slot has opened up for <strong>{{ entry.event_type.title }}</strong> with {{ entry.host.display_name|default:entry.host.email }}.</p>
+    
+    <div class="mb-6 p-4 bg-slate-50 rounded border border-slate-200">
+        <p class="text-lg font-semibold">{{ entry.offered_booking_slot|date:"D, M j, Y \a\t g:i A" }}</p>
+        <p class="text-sm text-slate-500 mt-2">This offer expires at {{ entry.offer_expires_at|date:"g:i A T" }}</p>
+    </div>
+    
+    <form method="post" action="{% url 'bookings:waitlist_claim' entry.claim_token %}">
+        {% csrf_token %}
+        <button type="submit" class="w-full py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+            Claim Slot
+        </button>
+    </form>
+</div>
+{% endblock %}

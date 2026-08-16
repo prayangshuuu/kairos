@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2>Payout Request Received</h2>
+<p>Hello {{ host.display_name|default:host.email }},</p>
+<p>Your payout request for <strong>৳{{ amount_bdt }}</strong> via {{ method_name }} ({{ account_info }}) has been submitted and is currently under review by our admin team.</p>
+<p>Request ID: #{{ payout_request.id }}<br>Requested at: {{ payout_request.requested_at|date:"F j, Y, g:i a" }}</p>
+<p>We will disburse the funds manually and send you a confirmation with the transaction reference as soon as it is processed.</p>
+{% endblock %}

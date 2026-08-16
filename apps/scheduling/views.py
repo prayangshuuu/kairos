@@ -25,13 +25,49 @@ class EventTypeListView(OwnerRequiredMixin, ListView):
     context_object_name = "event_types"
 
     def get_queryset(self):
-        return super().get_queryset().order_by("title")
+        from django.db.models import Count, Q
+        return super().get_queryset().annotate(
+            waitlist_count=Count(
+                "waitlist_entries",
+                filter=Q(waitlist_entries__status="waiting")
+            )
+        ).order_by("title")
 
 
 class EventTypeCreateView(LoginRequiredMixin, CreateView):
     model = EventType
     form_class = EventTypeForm
     template_name = "scheduling/eventtype_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from apps.integrations.models import CalendarConnection, ConferenceConnection
+        from apps.payments.models import HostPaymentTerms, PaymentAccount
+
+        # Check Google Meet (via Google Calendar)
+        google_cal = CalendarConnection.objects.filter(
+            user=self.request.user, provider="google", is_active=True
+        ).first()
+        context["google_meet_available"] = bool(google_cal and not google_cal.last_error)
+
+        # Check Zoom
+        context["zoom_connected"] = ConferenceConnection.objects.filter(
+            user=self.request.user, provider="zoom", is_active=True
+        ).exists()
+
+        # Check Payments
+        stripe_acc = PaymentAccount.objects.filter(
+            user=self.request.user, provider="stripe_connect", is_active=True, charges_enabled=True
+        ).first()
+        context["stripe_active"] = bool(stripe_acc)
+
+        paystation_acc = PaymentAccount.objects.filter(
+            user=self.request.user, provider="paystation", is_active=True
+        ).first()
+        terms = HostPaymentTerms.objects.filter(user=self.request.user).exists()
+        context["paystation_active"] = bool(paystation_acc and terms)
+
+        return context
 
     def form_valid(self, form):
         form.instance.owner = self.request.user
@@ -83,6 +119,36 @@ class EventTypeUpdateView(OwnerRequiredMixin, UpdateView):
     model = EventType
     form_class = EventTypeForm
     template_name = "scheduling/eventtype_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from apps.integrations.models import CalendarConnection, ConferenceConnection
+        from apps.payments.models import HostPaymentTerms, PaymentAccount
+
+        # Check Google Meet (via Google Calendar)
+        google_cal = CalendarConnection.objects.filter(
+            user=self.request.user, provider="google", is_active=True
+        ).first()
+        context["google_meet_available"] = bool(google_cal and not google_cal.last_error)
+
+        # Check Zoom
+        context["zoom_connected"] = ConferenceConnection.objects.filter(
+            user=self.request.user, provider="zoom", is_active=True
+        ).exists()
+
+        # Check Payments
+        stripe_acc = PaymentAccount.objects.filter(
+            user=self.request.user, provider="stripe_connect", is_active=True, charges_enabled=True
+        ).first()
+        context["stripe_active"] = bool(stripe_acc)
+
+        paystation_acc = PaymentAccount.objects.filter(
+            user=self.request.user, provider="paystation", is_active=True
+        ).first()
+        terms = HostPaymentTerms.objects.filter(user=self.request.user).exists()
+        context["paystation_active"] = bool(paystation_acc and terms)
+
+        return context
 
     def form_valid(self, form):
         response = super().form_valid(form)

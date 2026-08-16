@@ -1,0 +1,8 @@
+[URGENT] Wallet Reconciliation Discrepancy Detected
+
+Reconciliation timestamp: {{ log.reconciled_at|date:"F j, Y, g:i a" }}
+Total Ledger Cents: {{ log.total_ledger_cents }}
+Expected Merchant Hold Cents: {{ log.expected_merchant_hold_cents }}
+Discrepancy: ৳{{ diff_bdt }}
+
+Please inspect the system logs and database entries immediately!

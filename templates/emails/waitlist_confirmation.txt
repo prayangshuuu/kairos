@@ -1,0 +1,11 @@
+Hi {{ invitee_name }},
+
+You have been successfully added to the waitlist for {{ event_title }} with {{ host_name }}.
+
+If a time slot becomes available, we will notify you right away.
+
+If you no longer wish to remain on the waitlist, you can remove yourself using this link:
+{{ site_url }}{% url 'bookings:leave_waitlist' uid=claim_token %}
+
+Thanks,
+The Kairos Team

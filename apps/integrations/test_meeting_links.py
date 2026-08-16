@@ -71,11 +71,19 @@ def test_google_meet_idempotency(booking, connection):
             "id": "meet123",
             "conferenceData": {
                 "createRequest": {"status": {"statusCode": "success"}},
-                "entryPoints": [{"uri": "https://meet.google.com/abc-defg-hij"}],
+                "entryPoints": [{"uri": "https://meet.google.com/abc-defg-hij", "entryPointType": "video"}],
+            },
+        }
+        mock_instance.service.events().patch().execute.return_value = {
+            "id": "meet123",
+            "conferenceData": {
+                "createRequest": {"status": {"statusCode": "success"}},
+                "entryPoints": [{"uri": "https://meet.google.com/abc-defg-hij", "entryPointType": "video"}],
             },
         }
 
         create_calendar_event(booking.id)
+        create_conference_link(booking.id)
 
         assert (
             BookingReference.objects.filter(booking=booking, kind="video_conference").count() == 1
@@ -92,7 +100,7 @@ def test_google_meet_idempotency(booking, connection):
                 "id": "meet123",
                 "conferenceData": {
                     "createRequest": {"status": {"statusCode": "success"}},
-                    "entryPoints": [{"uri": "https://meet.google.com/abc-defg-hij"}],
+                    "entryPoints": [{"uri": "https://meet.google.com/abc-defg-hij", "entryPointType": "video"}],
                 },
             }
 
@@ -109,7 +117,7 @@ def test_google_meet_idempotency(booking, connection):
                         "id": "meet123",
                         "conferenceData": {
                             "createRequest": {"status": {"statusCode": "success"}},
-                            "entryPoints": [{"uri": "https://meet.google.com/abc-defg-hij"}],
+                            "entryPoints": [{"uri": "https://meet.google.com/abc-defg-hij", "entryPointType": "video"}],
                         },
                     }
                 )
@@ -121,6 +129,7 @@ def test_google_meet_idempotency(booking, connection):
 
         BookingReference.objects.all().delete()  # Clean up to test idempotency re-creating reference
         create_calendar_event(booking.id)
+        create_conference_link(booking.id)
 
         assert (
             BookingReference.objects.filter(booking=booking, kind="video_conference").count() == 1
@@ -143,12 +152,16 @@ def test_google_meet_creation_fails_gracefully(booking, connection):
             "id": "meet123",
             "conferenceData": {"createRequest": {"status": {"statusCode": "failed"}}},
         }
+        mock_instance.service.events().patch().execute.return_value = {
+            "id": "meet123",
+            "conferenceData": {"createRequest": {"status": {"statusCode": "failed"}}},
+        }
 
         create_calendar_event(booking.id)
+        create_conference_link(booking.id)
 
         booking.refresh_from_db()
-        assert booking.meeting_url == ""
-        assert "Meeting link could not be generated" in booking.location_value
+        assert "meet.jit.si" in booking.meeting_url
         # Should not fail booking sync
         assert booking.sync_status == Booking.SyncStatusChoices.SYNCED
 

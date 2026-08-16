@@ -1,0 +1,79 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Waitlist for {{ event_type.title }} - Kairos{% endblock %}
+
+{% block app_content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8">
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-surface-900 tracking-tight">Waitlist: {{ event_type.title }}</h1>
+            <p class="mt-1 text-sm text-surface-500">Manage invitees waiting for an open slot.</p>
+        </div>
+        <div>
+            <a href="{% url 'scheduling:eventtype_list' %}" class="text-sm font-medium text-brand-600 hover:text-brand-500">
+                &larr; Back to Event Types
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="mb-6 space-y-3">
+        {% for message in messages %}
+        <div class="p-4 rounded-lg flex items-start {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% else %}bg-green-50 text-green-800 border border-green-200{% endif %}">
+            <span class="text-sm font-medium">{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="bg-white shadow overflow-hidden sm:rounded-md border border-surface-200">
+        <ul role="list" class="divide-y divide-surface-200">
+            {% for entry in waitlist_entries %}
+            <li>
+                <div class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-medium text-brand-600 truncate">{{ entry.invitee_name }}</p>
+                        <div class="ml-2 flex-shrink-0 flex space-x-2">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if entry.status == 'waiting' %}bg-amber-100 text-amber-800
+                                {% elif entry.status == 'offered' %}bg-blue-100 text-blue-800
+                                {% elif entry.status == 'claimed' %}bg-green-100 text-green-800
+                                {% elif entry.status == 'expired' %}bg-gray-100 text-gray-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ entry.get_status_display }}
+                            </span>
+                            {% if entry.status == 'waiting' %}
+                            <form method="POST" action="{% url 'bookings:waitlist_remove' entry.claim_token %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="text-xs font-medium text-red-600 hover:text-red-900 ml-2" onsubmit="return confirm('Are you sure?')">Remove</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-2 sm:flex sm:justify-between">
+                        <div class="sm:flex sm:space-x-4">
+                            <p class="flex items-center text-sm text-surface-500">
+                                <svg class="flex-shrink-0 mr-1.5 h-4 w-4 text-surface-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                {{ entry.invitee_email }}
+                            </p>
+                            <p class="mt-2 flex items-center text-sm text-surface-500 sm:mt-0">
+                                <svg class="flex-shrink-0 mr-1.5 h-4 w-4 text-surface-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Joined: {{ entry.created_at|date:"M j, Y g:i A" }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            {% empty %}
+            <li class="px-4 py-8 text-center text-surface-500 text-sm">
+                No one is on the waitlist yet.
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

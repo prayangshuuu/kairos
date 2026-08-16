@@ -3,12 +3,12 @@
 {% block title %}Sign up with Google - Kairos{% endblock %}
 
 {% block public_content %}
-<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+<div class="min-h-screen bg-surface-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-surface-900">
             Sign up with Google
         </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
+        <p class="mt-2 text-center text-sm text-surface-600">
             You are about to use your Google account to log in to Kairos.
         </p>
     </div>
@@ -26,7 +26,7 @@
                 {% for field in form %}
                 {% if not field.is_hidden %}
                 <div>
-                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-surface-700">
                         {{ field.label }}
                     </label>
                     <div class="mt-1">
@@ -43,7 +43,7 @@
 
                 <div>
                     <button type="submit"
-                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
                         Complete Sign up
                     </button>
                 </div>

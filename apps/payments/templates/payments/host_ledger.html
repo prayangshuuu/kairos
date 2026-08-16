@@ -11,14 +11,14 @@
     </div>
 
     <!-- Balance & Payout Generation Card -->
-    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8 shadow-sm">
+    <div class="bg-white border border-surface-200 rounded-lg p-6 mb-8 shadow-sm">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Current Un-payout-ed Balance</h2>
-                <p class="text-4xl font-bold {% if balance < 0 %}text-red-600{% else %}text-gray-900{% endif %}">
+                <h2 class="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Current Un-payout-ed Balance</h2>
+                <p class="text-4xl font-bold {% if balance < 0 %}text-red-600{% else %}text-surface-900{% endif %}">
                     ৳{{ balance|default:"0" }}
                 </p>
-                <p class="text-xs text-gray-500 mt-2">
+                <p class="text-xs text-surface-500 mt-2">
                     Minimum payout threshold: ৳{{ min_threshold_cents|default:100000|divisibleby:100|default:"1,000" }}
                 </p>
             </div>
@@ -28,7 +28,7 @@
                     <button type="submit" 
                             {% if balance < min_threshold_cents or balance <= 0 %}disabled{% endif %}
                             class="px-5 py-2.5 rounded-md font-medium text-sm text-white transition 
-                                   {% if balance >= min_threshold_cents and balance > 0 %}bg-indigo-600 hover:bg-indigo-700 cursor-pointer{% else %}bg-gray-300 cursor-not-allowed{% endif %}">
+                                   {% if balance >= min_threshold_cents and balance > 0 %}bg-indigo-600 hover:bg-indigo-700 cursor-pointer{% else %}bg-surface-300 cursor-not-allowed{% endif %}">
                         Generate Payout Statement
                     </button>
                 </form>
@@ -36,7 +36,7 @@
         </div>
 
         <!-- Manual Disbursement Notice -->
-        <div class="mt-5 pt-4 border-t border-gray-100 bg-amber-50 border-l-4 border-l-amber-500 p-3 rounded-r text-xs text-amber-900">
+        <div class="mt-5 pt-4 border-t border-surface-100 bg-amber-50 border-l-4 border-l-amber-500 p-3 rounded-r text-xs text-amber-900">
             <strong>Disbursement Notice:</strong> Payout disbursement is processed manually and out-of-band by our finance team via bank transfer or mobile financial service (bKash/Nagad). Kairos records payout statements here; the system does not perform automated bank transfers.
         </div>
     </div>
@@ -45,9 +45,9 @@
     {% if payouts %}
     <div class="mb-8">
         <h2 class="text-lg font-medium mb-4">Payout Statements</h2>
-        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50 text-xs font-medium text-gray-500 uppercase">
+        <div class="bg-white border border-surface-200 rounded-lg overflow-hidden">
+            <table class="min-w-full divide-y divide-surface-200 text-sm">
+                <thead class="bg-surface-50 text-xs font-medium text-surface-500 uppercase">
                     <tr>
                         <th class="px-6 py-3 text-left">ID</th>
                         <th class="px-6 py-3 text-left">Period</th>
@@ -55,11 +55,11 @@
                         <th class="px-6 py-3 text-right">Net Amount</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 bg-white">
+                <tbody class="divide-y divide-surface-200 bg-white">
                     {% for payout in payouts %}
                     <tr>
-                        <td class="px-6 py-4 font-mono font-medium text-gray-900">#{{ payout.id }}</td>
-                        <td class="px-6 py-4 text-gray-600">
+                        <td class="px-6 py-4 font-mono font-medium text-surface-900">#{{ payout.id }}</td>
+                        <td class="px-6 py-4 text-surface-600">
                             {{ payout.period_start|date:"M j" }} - {{ payout.period_end|date:"M j, Y" }}
                         </td>
                         <td class="px-6 py-4">
@@ -70,7 +70,7 @@
                                 {{ payout.status }} (Manual Transfer)
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-right font-medium text-gray-900">
+                        <td class="px-6 py-4 text-right font-medium text-surface-900">
                             ৳{{ payout.net_cents }}
                         </td>
                     </tr>
@@ -84,9 +84,9 @@
     <!-- Ledger Activity Table -->
     <h2 class="text-lg font-medium mb-4">Ledger Activity</h2>
     {% if entries %}
-        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50 text-xs font-medium text-gray-500 uppercase">
+        <div class="bg-white border border-surface-200 rounded-lg overflow-hidden">
+            <table class="min-w-full divide-y divide-surface-200 text-sm">
+                <thead class="bg-surface-50 text-xs font-medium text-surface-500 uppercase">
                     <tr>
                         <th class="px-6 py-3 text-left">Date</th>
                         <th class="px-6 py-3 text-left">Type</th>
@@ -94,10 +94,10 @@
                         <th class="px-6 py-3 text-right">Amount</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 bg-white">
+                <tbody class="divide-y divide-surface-200 bg-white">
                     {% for entry in entries %}
                     <tr>
-                        <td class="px-6 py-4 text-gray-500 whitespace-nowrap">
+                        <td class="px-6 py-4 text-surface-500 whitespace-nowrap">
                             {{ entry.created_at|date:"M j, Y, g:i a" }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -105,13 +105,13 @@
                                 {% if entry.entry_type == 'charge' %}bg-green-100 text-green-800
                                 {% elif entry.entry_type == 'service_fee' %}bg-amber-100 text-amber-800
                                 {% elif entry.entry_type == 'refund_fee_reversal' %}bg-teal-100 text-teal-800
-                                {% elif entry.entry_type == 'payout' %}bg-blue-100 text-blue-800
+                                {% elif entry.entry_type == 'payout' %}bg-brand-100 text-brand-800
                                 {% elif entry.entry_type == 'refund' %}bg-red-100 text-red-800
-                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {% else %}bg-surface-100 text-surface-800{% endif %}">
                                 {{ entry.get_entry_type_display }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-gray-900">
+                        <td class="px-6 py-4 text-surface-900">
                             {{ entry.description }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap font-mono font-medium text-right {% if entry.amount_cents < 0 %}text-red-600{% else %}text-green-600{% endif %}">
@@ -123,8 +123,8 @@
             </table>
         </div>
     {% else %}
-        <div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <p class="text-gray-500">No ledger activity recorded yet.</p>
+        <div class="bg-surface-50 border border-dashed border-surface-300 rounded-lg p-8 text-center">
+            <p class="text-surface-500">No ledger activity recorded yet.</p>
         </div>
     {% endif %}
 </div>

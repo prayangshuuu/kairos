@@ -1,14 +1,23 @@
 {% extends "layouts/public.html" %}
 {% block content %}
-<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8 text-center">
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Forbidden
-        </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
-            You do not have permission to access this resource.
-        </p>
-        <a href="/" class="text-brand-600 hover:text-brand-500 font-medium">Return Home</a>
+<div class="min-h-screen flex items-center justify-center bg-surface-50 p-4">
+    <div class="bg-white rounded-2xl shadow-sm border border-surface-200 p-8 sm:p-12 text-center max-w-md w-full mx-auto" style="animation: fadeInUp 0.4s ease-out forwards;">
+        <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-surface-900 mb-2">403 - Forbidden</h2>
+        <p class="text-surface-500 mb-8">You don't have permission to access this resource.</p>
+        <a href="/" class="inline-flex items-center justify-center gap-2 px-6 py-2.5 font-medium text-white bg-brand-600 rounded-lg shadow-sm hover:bg-brand-700 transition-colors">
+            Return Home
+        </a>
     </div>
 </div>
+<style>
+    @keyframes fadeInUp {{
+        from {{ opacity: 0; transform: translateY(10px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
+    }}
+</style>
 {% endblock %}

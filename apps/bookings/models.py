@@ -164,19 +164,27 @@ class Attendee(models.Model):
 
 
 class NotificationLog(models.Model):
-    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="notifications")
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="notifications", null=True, blank=True)
+    waitlist_entry = models.ForeignKey("WaitlistEntry", on_delete=models.CASCADE, related_name="notifications", null=True, blank=True)
     kind = models.CharField(max_length=100)
     sent_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["booking", "kind"], name="unique_notification_kind_per_booking"
+                fields=["booking", "kind"], name="unique_notification_kind_per_booking",
+                condition=models.Q(booking__isnull=False)
+            ),
+            models.UniqueConstraint(
+                fields=["waitlist_entry", "kind"], name="unique_notification_kind_per_waitlist_entry",
+                condition=models.Q(waitlist_entry__isnull=False)
             )
         ]
 
     def __str__(self):
-        return f"{self.kind} for {self.booking_id}"
+        if self.booking:
+            return f"{self.kind} for {self.booking_id}"
+        return f"{self.kind} for waitlist entry {self.waitlist_entry_id}"
 
 
 class BookingReference(models.Model):
@@ -204,3 +212,55 @@ class BookingReference(models.Model):
 
     def __str__(self):
         return f"{self.kind} for booking {self.booking.uid}"
+
+
+class WaitlistEntry(models.Model):
+    class StatusChoices(models.TextChoices):
+        WAITING = "waiting", "Waiting"
+        OFFERED = "offered", "Offered"
+        CLAIMED = "claimed", "Claimed"
+        EXPIRED = "expired", "Expired"
+        CANCELLED = "cancelled", "Cancelled"
+        REMOVED = "removed", "Removed"
+
+    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE, related_name="waitlist_entries")
+    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="waitlist_entries")
+
+    invitee_name = models.CharField(max_length=150)
+    invitee_email = models.EmailField(db_index=True)
+    invitee_phone = models.CharField(max_length=50, blank=True, null=True)
+    invitee_timezone = models.CharField(max_length=64)
+    notes = models.TextField(blank=True)
+    answers = models.JSONField(default=dict, blank=True)
+
+    preferred_dates = models.JSONField(default=list, blank=True)
+    preferred_time_ranges = models.JSONField(default=list, blank=True)
+
+    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.WAITING)
+
+    offered_at = models.DateTimeField(null=True, blank=True)
+    offer_expires_at = models.DateTimeField(null=True, blank=True)
+    offered_booking_slot = models.DateTimeField(null=True, blank=True)
+
+    claim_token = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["event_type", "status", "created_at"]),
+        ]
+
+    @property
+    def position(self):
+        if self.status != self.StatusChoices.WAITING:
+            return None
+        return WaitlistEntry.objects.filter(
+            event_type=self.event_type,
+            status=self.StatusChoices.WAITING,
+            created_at__lt=self.created_at
+        ).count() + 1
+
+    def __str__(self):
+        return f"{self.invitee_name} - {self.event_type.title} ({self.status})"

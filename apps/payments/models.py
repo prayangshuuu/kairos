@@ -3,6 +3,8 @@ import uuid
 from django.conf import settings
 from django.db import models
 
+from apps.integrations.models import DedicatedKeyEncryptedTextField
+
 
 class PaymentAccount(models.Model):
     user = models.ForeignKey(
@@ -367,4 +369,54 @@ class WalletReconciliationLog(models.Model):
     def __str__(self):
         status_str = "CLEAN" if self.is_clean else "MISMATCH"
         return f"Reconciliation {self.reconciled_at.strftime('%Y-%m-%d %H:%M')}: {status_str} (Diff: {self.difference_cents} cents)"
+
+
+class PlatformStripeSettings(models.Model):
+    """
+    Singleton (pk=1) holding this self-hosted instance's own Stripe Connect platform
+    credentials. Every Kairos deployment has a different Stripe platform account, so
+    these live in the DB (editable by staff in-app) instead of a shared .env file.
+    """
+
+    secret_key = DedicatedKeyEncryptedTextField(blank=True, null=True)
+    publishable_key = models.CharField(max_length=255, blank=True, default="")
+    webhook_secret = DedicatedKeyEncryptedTextField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def load(cls) -> "PlatformStripeSettings":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.secret_key)
+
+    @staticmethod
+    def _mask(value: str | None) -> str:
+        if not value:
+            return ""
+        tail = value[-4:] if len(value) > 4 else value
+        return f"{'•' * 8}{tail}"
+
+    @property
+    def masked_secret_key(self) -> str:
+        return self._mask(self.secret_key)
+
+    @property
+    def masked_webhook_secret(self) -> str:
+        return self._mask(self.webhook_secret)
+
+    def __str__(self):
+        return "Platform Stripe Settings"
 

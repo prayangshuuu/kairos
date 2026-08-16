@@ -31,30 +31,30 @@
         </div>
     </div>
 
-    {# =========================================================
+    <!-- =========================================================
        STRIPE CONNECT (NON-CUSTODIAL) NOTICE
        Displayed when the host has Stripe entries but no custodial ones,
        OR in the mixed section header.
-       ========================================================= #}
+       ========================================================= -->
     {% if has_non_custodial %}
-    <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-5 flex items-start space-x-4">
+    <div class="mb-6 bg-brand-50 border border-brand-200 rounded-xl p-5 flex items-start space-x-4">
         <div class="flex-shrink-0 mt-0.5">
-            <svg class="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <svg class="h-5 w-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </div>
         <div>
-            <p class="text-sm font-semibold text-blue-900">Payments go directly to your Stripe account. Kairos does not hold these funds.</p>
-            <p class="mt-1 text-sm text-blue-700">
+            <p class="text-sm font-semibold text-brand-900">Payments go directly to your Stripe account. Kairos does not hold these funds.</p>
+            <p class="mt-1 text-sm text-brand-700">
                 Stripe transactions appear below for your bookkeeping reference only.
                 To view your Stripe balance, payouts, and bank transfers, visit your
-                <a href="{{ stripe_dashboard_url }}" target="_blank" rel="noopener noreferrer" class="underline font-medium hover:text-blue-900">Stripe Express dashboard →</a>
+                <a href="{{ stripe_dashboard_url }}" target="_blank" rel="noopener noreferrer" class="underline font-medium hover:text-brand-900">Stripe Express dashboard →</a>
             </p>
         </div>
     </div>
     {% endif %}
 
-    {# =========================================================
+    <!-- =========================================================
        NEGATIVE BALANCE WARNING (custodial only)
-       ========================================================= #}
+       ========================================================= -->
     {% if is_negative %}
     <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-xl">
         <div class="flex">
@@ -69,10 +69,10 @@
     </div>
     {% endif %}
 
-    {# =========================================================
+    <!-- =========================================================
        PAYSTATION (CUSTODIAL) SECTION
        Only shown to hosts who have custodial activity.
-       ========================================================= #}
+       ========================================================= -->
     {% if has_custodial %}
     {% if wallet_mode == "mixed" %}
     <div class="mb-3">
@@ -250,7 +250,7 @@
                             {% elif pr.status == 'rejected' %}
                             <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">Rejected</span>
                             {% elif pr.status == 'approved' or pr.status == 'processing' %}
-                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Processing</span>
+                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-brand-100 text-brand-800">Processing</span>
                             {% else %}
                             <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Requested</span>
                             {% endif %}
@@ -270,9 +270,9 @@
     </div>
     {% endif %}{# end if has_custodial #}
 
-    {# =========================================================
+    <!-- =========================================================
        NON-CUSTODIAL STRIPE SECTION (no balance, no payouts)
-       ========================================================= #}
+       ========================================================= -->
     {% if has_non_custodial and not has_custodial %}
     {# Stripe-only host: just a reminder — the notice above covers it. #}
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
@@ -289,9 +289,9 @@
     </div>
     {% endif %}
 
-    {# =========================================================
+    <!-- =========================================================
        FULL LEDGER STATEMENT (all providers, with provider column)
-       ========================================================= #}
+       ========================================================= -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
             <h2 class="text-lg font-bold text-slate-900">Full Ledger Statement</h2>
@@ -319,14 +319,14 @@
                 </thead>
                 <tbody class="divide-y divide-slate-200">
                     {% for row in statement_rows %}
-                    <tr class="{% if not row.entry.is_custodial %}bg-blue-50/40{% endif %}">
+                    <tr class="{% if not row.entry.is_custodial %}bg-brand-50/40{% endif %}">
                         <td class="px-6 py-4 text-slate-500 whitespace-nowrap text-xs">{{ row.entry.created_at|date:"Y-m-d H:i:s" }}</td>
                         {% if wallet_mode != "custodial" %}
                         <td class="px-6 py-4 whitespace-nowrap">
                             {% if row.entry.is_custodial %}
                             <span class="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-teal-100 text-teal-800 uppercase">PayStation</span>
                             {% else %}
-                            <span class="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 uppercase">Stripe</span>
+                            <span class="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-brand-100 text-brand-800 uppercase">Stripe</span>
                             {% endif %}
                         </td>
                         {% endif %}
@@ -335,7 +335,7 @@
                                 {% if row.entry.entry_type == 'charge' %}bg-green-100 text-green-800
                                 {% elif row.entry.entry_type == 'service_fee' %}bg-slate-100 text-slate-700
                                 {% elif row.entry.entry_type == 'refund' %}bg-red-100 text-red-800
-                                {% elif row.entry.entry_type == 'payout' %}bg-blue-100 text-blue-800
+                                {% elif row.entry.entry_type == 'payout' %}bg-brand-100 text-brand-800
                                 {% elif row.entry.entry_type == 'payout_reversal' %}bg-green-100 text-green-700
                                 {% else %}bg-slate-100 text-slate-800{% endif %}">
                                 {{ row.entry.get_entry_type_display }}

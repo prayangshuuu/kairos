@@ -1,0 +1,13 @@
+{% extends "layouts/public.html" %}
+{% block title %}Removed from Waitlist | Kairos{% endblock %}
+{% block public_content %}
+<div class="max-w-2xl mx-auto py-10 px-4 text-center">
+  <div class="bg-white rounded-2xl shadow-xl p-10">
+    <div class="w-16 h-16 bg-surface-100 text-surface-600 rounded-full flex items-center justify-center mx-auto mb-6">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+    </div>
+    <h1 class="text-3xl font-bold mb-4">You've been removed</h1>
+    <p class="text-surface-600 text-lg">You are no longer on the waitlist for <strong>{{ entry.event_type.title }}</strong>.</p>
+  </div>
+</div>
+{% endblock %}

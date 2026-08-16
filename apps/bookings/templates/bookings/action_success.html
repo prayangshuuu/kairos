@@ -7,14 +7,14 @@
       <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
         <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
       </div>
-      <h2 class="text-2xl font-bold text-gray-900 mb-2">Booking Approved</h2>
-      <p class="text-gray-600">The meeting with {{ booking.invitee_name }} has been confirmed. A calendar invitation has been sent.</p>
+      <h2 class="text-2xl font-bold text-surface-900 mb-2">Booking Approved</h2>
+      <p class="text-surface-600">The meeting with {{ booking.invitee_name }} has been confirmed. A calendar invitation has been sent.</p>
     {% else %}
       <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
         <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </div>
-      <h2 class="text-2xl font-bold text-gray-900 mb-2">Booking Rejected</h2>
-      <p class="text-gray-600">The meeting with {{ booking.invitee_name }} has been rejected and the slot has been freed.</p>
+      <h2 class="text-2xl font-bold text-surface-900 mb-2">Booking Rejected</h2>
+      <p class="text-surface-600">The meeting with {{ booking.invitee_name }} has been rejected and the slot has been freed.</p>
     {% endif %}
   </div>
 </div>

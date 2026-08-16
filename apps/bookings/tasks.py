@@ -324,3 +324,121 @@ def _queue_reminder(booking, window: str):
         booking_id=booking.id,
         notification_kind=f"invitee_reminder_{window}",
     )
+
+
+@shared_task
+def send_waitlist_confirmation(entry_id: int):
+    try:
+        from apps.bookings.models import WaitlistEntry
+        entry = WaitlistEntry.objects.get(id=entry_id)
+    except WaitlistEntry.DoesNotExist:
+        return
+
+    from apps.core.tasks import send_email_async
+    
+    context = {
+        "invitee_name": entry.invitee_name,
+        "event_title": entry.event_type.title,
+        "host_name": entry.host.display_name or entry.host.email,
+        "claim_token": str(entry.claim_token),
+        "branding_color": entry.event_type.owner.branding_color if hasattr(entry.event_type.owner, "branding_color") else "#0f172a",
+    }
+
+    send_email_async.delay(
+        to_email=entry.invitee_email,
+        subject=f"You're on the waitlist for {entry.event_type.title}",
+        template_name="waitlist_confirmation",
+        context=context,
+        reply_to=entry.host.email,
+    )
+
+
+@shared_task
+def autofill_waitlist(event_type_id: int, freed_start_at_iso: str, cascade_count: int = 0):
+    if cascade_count >= 3:
+        return
+
+    from django.utils.dateparse import parse_datetime
+    from apps.scheduling.models import EventType
+    from apps.bookings.models import WaitlistEntry
+    from django.utils import timezone
+    from apps.scheduling.engine import is_slot_available
+    from apps.core.tasks import send_email_async
+    from django.db import transaction
+    
+    freed_start_at = parse_datetime(freed_start_at_iso)
+    if not freed_start_at: return
+
+    try:
+        event_type = EventType.objects.get(id=event_type_id)
+    except EventType.DoesNotExist: return
+    
+    now = timezone.now()
+    if not is_slot_available(event_type, freed_start_at, now): return
+    
+    with transaction.atomic():
+        entry = WaitlistEntry.objects.filter(
+            event_type=event_type,
+            status=WaitlistEntry.StatusChoices.WAITING
+        ).order_by("created_at").select_for_update(skip_locked=True).first()
+        
+        if not entry:
+            return
+            
+        claim_window = event_type.waitlist_claim_window_minutes
+        
+        entry.status = WaitlistEntry.StatusChoices.OFFERED
+        entry.offered_at = now
+        entry.offer_expires_at = now + timedelta(minutes=claim_window)
+        entry.offered_booking_slot = freed_start_at
+        
+        entry.answers["_cascade_count"] = cascade_count
+        entry.save(update_fields=["status", "offered_at", "offer_expires_at", "offered_booking_slot", "answers", "updated_at"])
+        
+        context = {
+            "invitee_name": entry.invitee_name,
+            "event_title": event_type.title,
+            "host_name": entry.host.display_name or entry.host.email,
+            "claim_token": str(entry.claim_token),
+            "start_at": freed_start_at.isoformat(),
+            "expires_at": entry.offer_expires_at.isoformat(),
+            "branding_color": event_type.owner.branding_color if hasattr(event_type.owner, "branding_color") else "#0f172a",
+        }
+
+        transaction.on_commit(lambda: send_email_async.delay(
+            to_email=entry.invitee_email,
+            subject=f"An opening is available for {event_type.title}",
+            template_name="waitlist_offer",
+            context=context,
+            reply_to=entry.host.email,
+        ))
+
+@shared_task
+def process_expired_waitlist_offers():
+    from apps.bookings.models import WaitlistEntry
+    from django.utils import timezone
+    from django.db import transaction
+    
+    now = timezone.now()
+    expired_entries = WaitlistEntry.objects.filter(
+        status=WaitlistEntry.StatusChoices.OFFERED,
+        offer_expires_at__lte=now
+    )
+    
+    for entry in expired_entries:
+        with transaction.atomic():
+            locked_entry = WaitlistEntry.objects.filter(id=entry.id).select_for_update().first()
+            if not locked_entry or locked_entry.status != WaitlistEntry.StatusChoices.OFFERED:
+                continue
+            
+            locked_entry.status = WaitlistEntry.StatusChoices.EXPIRED
+            locked_entry.save(update_fields=["status", "updated_at"])
+            
+            cascade_count = locked_entry.answers.get("_cascade_count", 0)
+            
+            transaction.on_commit(lambda e=locked_entry, c=cascade_count: autofill_waitlist.delay(
+                e.event_type_id, 
+                e.offered_booking_slot.isoformat(), 
+                c + 1
+            ))
+

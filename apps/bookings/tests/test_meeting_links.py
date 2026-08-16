@@ -121,7 +121,7 @@ def test_conference_creation_failure_graceful(MockClient, booking, calendar_conn
     assert result_id == booking.id
 
     booking.refresh_from_db()
-    assert "failed" in booking.location_value.lower()
+    assert "meet.jit.si" in booking.meeting_url
     # Confirm still sends email (the chain continues)
 
 

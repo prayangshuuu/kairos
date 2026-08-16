@@ -111,6 +111,10 @@ def reject_booking(
                 notification_kind="booking_rejected",
             )
         )
+        
+        from apps.bookings.tasks import autofill_waitlist
+        transaction.on_commit(lambda: autofill_waitlist.delay(booking.event_type_id, booking.start_at.isoformat()))
+
 
         logger.info(
             f"Booking {booking.uid} rejected by {rejected_by.email if rejected_by else 'system'}"
@@ -294,7 +298,10 @@ def cancel_booking(
         )
 
         # Cancel pending workflow executions
-        from apps.workflows.services import cancel_workflow_executions_for_booking, schedule_workflow_executions_for_booking
+        from apps.workflows.services import (
+            cancel_workflow_executions_for_booking,
+            schedule_workflow_executions_for_booking,
+        )
         cancel_workflow_executions_for_booking(booking)
         schedule_workflow_executions_for_booking(booking, trigger="on_booking_cancelled", now=now)
 
@@ -347,6 +354,10 @@ def cancel_booking(
             )
 
         transaction.on_commit(lambda: _trigger_cancellations(booking.id))
+        
+        from apps.bookings.tasks import autofill_waitlist
+        transaction.on_commit(lambda: autofill_waitlist.delay(booking.event_type_id, booking.start_at.isoformat()))
+
 
         logger.info(f"Booking {booking.uid} cancelled by {cancelled_by}. Notifications pending.")
 

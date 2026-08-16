@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2>Payout Request Declined</h2>
+<p>Hello {{ host.display_name|default:host.email }},</p>
+<p>Your payout request #{{ payout_request.id }} for <strong>৳{{ amount_bdt }}</strong> was declined.</p>
+<p>Reason: {{ reason }}</p>
+<p>The reserved funds (৳{{ amount_bdt }}) have been fully restored to your available wallet balance.</p>
+{% endblock %}

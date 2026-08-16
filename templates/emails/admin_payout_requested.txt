@@ -1,0 +1,6 @@
+[ADMIN] New Payout Request
+
+Host {{ host.email }} has requested a payout of ৳{{ amount_bdt }} via {{ method_name }}.
+Request ID: #{{ payout_request.id }}
+
+Please review and disburse the money manually in the Kairos Admin Payout Queue.

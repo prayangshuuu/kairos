@@ -10,7 +10,6 @@ from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.generic import DetailView, View
 
-from django.urls import reverse
 from .engine import get_slots
 from .models import AvailabilityRule, DateOverride, EventType, Schedule
 

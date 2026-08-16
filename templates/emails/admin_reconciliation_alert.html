@@ -1,0 +1,9 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h2>[URGENT] Wallet Reconciliation Discrepancy Detected</h2>
+<p>Reconciliation timestamp: {{ log.reconciled_at|date:"F j, Y, g:i a" }}</p>
+<p>Total Ledger Cents: {{ log.total_ledger_cents }}</p>
+<p>Expected Merchant Hold Cents: {{ log.expected_merchant_hold_cents }}</p>
+<p>Discrepancy: <strong>৳{{ diff_bdt }}</strong></p>
+<p>Please inspect the system logs and database entries immediately!</p>
+{% endblock %}

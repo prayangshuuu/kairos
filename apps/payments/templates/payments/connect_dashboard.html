@@ -8,20 +8,20 @@
     <!-- Two Side-by-Side Cards: Provider Comparison -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <!-- Stripe Card -->
-        <div class="bg-white border border-gray-200 rounded-lg p-6 flex flex-col justify-between">
+        <div class="bg-white border border-surface-200 rounded-lg p-6 flex flex-col justify-between">
             <div>
                 <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-lg font-medium text-gray-900">Stripe Connect</h2>
+                    <h2 class="text-lg font-medium text-surface-900">Stripe Connect</h2>
                     {% if account and account.charges_enabled %}
                         <span class="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded-full font-medium">Connected</span>
                     {% endif %}
                 </div>
-                <p class="text-gray-600 mb-4 text-sm">
+                <p class="text-surface-600 mb-4 text-sm">
                     Paid directly to you. Kairos never holds your money. Requires a Stripe account. Available in most countries.
                 </p>
-                <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 mb-4 text-sm">
-                    <p class="font-semibold text-gray-700 mb-2">Worked example on ৳1,000 booking:</p>
-                    <dl class="space-y-1.5 text-gray-600">
+                <div class="bg-surface-50 border border-surface-100 rounded-lg p-4 mb-4 text-sm">
+                    <p class="font-semibold text-surface-700 mb-2">Worked example on ৳1,000 booking:</p>
+                    <dl class="space-y-1.5 text-surface-600">
                         <div class="flex justify-between">
                             <dt>Invitee pays:</dt>
                             <dd class="font-mono font-medium">৳1,000</dd>
@@ -34,7 +34,7 @@
                             <dt>Kairos platform fee:</dt>
                             <dd class="font-mono">-৳0</dd>
                         </div>
-                        <div class="border-t border-gray-200 pt-1.5 flex justify-between font-semibold text-gray-900">
+                        <div class="border-t border-surface-200 pt-1.5 flex justify-between font-semibold text-surface-900">
                             <dt>You receive:</dt>
                             <dd class="font-mono text-green-700">৳941</dd>
                         </div>
@@ -45,7 +45,7 @@
                 {% if account and account.charges_enabled %}
                     {% if express_dashboard_url %}
                         <a href="{{ express_dashboard_url }}" target="_blank" rel="noopener"
-                           class="w-full inline-block text-center bg-gray-800 text-white px-5 py-2.5 rounded-md hover:bg-gray-900 transition font-medium text-sm">
+                           class="w-full inline-block text-center bg-surface-800 text-white px-5 py-2.5 rounded-md hover:bg-surface-900 transition font-medium text-sm">
                             Open Stripe Dashboard ↗
                         </a>
                     {% else %}
@@ -61,21 +61,21 @@
         </div>
 
         <!-- PayStation Fallback Card -->
-        {% if enable_paystation %}
-        <div class="bg-white border border-gray-200 rounded-lg p-6 flex flex-col justify-between">
+        {% if paystation_enabled %}
+        <div class="bg-white border border-surface-200 rounded-lg p-6 flex flex-col justify-between">
             <div>
                 <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-lg font-medium text-gray-900 flex items-center">
+                    <h2 class="text-lg font-medium text-surface-900 flex items-center">
                         Kairos Payments (PayStation)
                     </h2>
-                    <span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-medium">Bangladesh, BDT only</span>
+                    <span class="bg-brand-100 text-brand-800 text-xs px-2.5 py-0.5 rounded-full font-medium">Bangladesh, BDT only</span>
                 </div>
-                <p class="text-gray-600 mb-4 text-sm">
+                <p class="text-surface-600 mb-4 text-sm">
                     No account needed. We collect and pay you out. 3% service charge. Bangladesh, BDT only.
                 </p>
-                <div class="bg-gray-50 border border-gray-100 rounded-lg p-4 mb-4 text-sm">
-                    <p class="font-semibold text-gray-700 mb-2">Worked example on ৳1,000 booking:</p>
-                    <dl class="space-y-1.5 text-gray-600">
+                <div class="bg-surface-50 border border-surface-100 rounded-lg p-4 mb-4 text-sm">
+                    <p class="font-semibold text-surface-700 mb-2">Worked example on ৳1,000 booking:</p>
+                    <dl class="space-y-1.5 text-surface-600">
                         <div class="flex justify-between">
                             <dt>Invitee pays:</dt>
                             <dd class="font-mono font-medium">৳1,000</dd>
@@ -84,34 +84,34 @@
                             <dt>Kairos service charge (3%):</dt>
                             <dd class="font-mono">-৳30</dd>
                         </div>
-                        <div class="flex justify-between text-gray-500">
+                        <div class="flex justify-between text-surface-500">
                             <dt>Gateway processing fee:</dt>
                             <dd class="font-mono text-xs">Included in 3% (৳0)</dd>
                         </div>
-                        <div class="border-t border-gray-200 pt-1.5 flex justify-between font-semibold text-gray-900">
+                        <div class="border-t border-surface-200 pt-1.5 flex justify-between font-semibold text-surface-900">
                             <dt>You receive:</dt>
                             <dd class="font-mono text-green-700">৳970</dd>
                         </div>
                     </dl>
                 </div>
-                <div class="text-xs text-gray-500 mb-4 bg-amber-50 border border-amber-200 rounded p-2.5">
+                <div class="text-xs text-surface-500 mb-4 bg-amber-50 border border-amber-200 rounded p-2.5">
                     <strong>Terms Summary:</strong> Kairos collects on your behalf, deducts 3%, pays out on a stated schedule once the ৳1,000 minimum threshold is reached, and refunds reduce your balance.
                 </div>
             </div>
             <div>
-                {% if has_accepted_terms or paystation_account %}
+                {% if terms_accepted or paystation_account %}
                     <div class="flex items-center justify-between">
                         <span class="text-xs text-green-700 font-medium flex items-center">
                             ✓ PayStation Route Active
                         </span>
-                        <a href="{% url 'payments:host_ledger' %}" class="inline-block bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-black transition text-sm font-medium">
-                            View Ledger & Payouts &rarr;
+                        <a href="{% url 'payments:wallet' %}" class="inline-block bg-surface-900 text-white px-4 py-2 rounded-md hover:bg-black transition text-sm font-medium">
+                            View Wallet & Payouts &rarr;
                         </a>
                     </div>
                 {% else %}
                     <form action="{% url 'payments:enable_paystation' %}" method="post">
                         {% csrf_token %}
-                        <button type="submit" class="w-full bg-gray-900 text-white px-5 py-2.5 rounded-md hover:bg-black transition font-medium text-sm">
+                        <button type="submit" class="w-full bg-surface-900 text-white px-5 py-2.5 rounded-md hover:bg-black transition font-medium text-sm">
                             Accept Terms & Enable PayStation
                         </button>
                     </form>

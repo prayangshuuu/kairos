@@ -181,6 +181,23 @@ def get_slots(
         if bp.lower and bp.upper:
             busy_intervals.append((bp.lower, bp.upper))
 
+    # Also block waitlist offered slots
+    from apps.bookings.models import WaitlistEntry
+    waitlist_qs = WaitlistEntry.objects.filter(
+        event_type__owner=event_type.owner,
+        status=WaitlistEntry.StatusChoices.OFFERED,
+        offer_expires_at__gt=now,
+        offered_booking_slot__gte=window_start - timedelta(minutes=1440),
+        offered_booking_slot__lte=window_end + timedelta(minutes=1440),
+    ).select_related('event_type')
+    
+    for entry in waitlist_qs:
+        slot_start = entry.offered_booking_slot
+        b_before = timedelta(minutes=entry.event_type.buffer_before_minutes)
+        dur = timedelta(minutes=entry.event_type.duration_minutes)
+        b_after = timedelta(minutes=entry.event_type.buffer_after_minutes)
+        busy_intervals.append((slot_start - b_before, slot_start + dur + b_after))
+
     if external_busy:
         busy_intervals.extend(external_busy)
 

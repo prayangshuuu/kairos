@@ -1,0 +1,11 @@
+Monthly Wallet Statement
+
+Hello {{ host.display_name|default:host.email }},
+
+Here is your monthly wallet summary for {{ month_name }}:
+- Total Earnings (Gross): ৳{{ gross_bdt }}
+- Kairos Service Fees: ৳{{ fees_bdt }}
+- Total Payouts: ৳{{ payouts_bdt }}
+- Ending Available Balance: ৳{{ available_bdt }}
+
+You can view your full ledger statement on your Kairos Dashboard.

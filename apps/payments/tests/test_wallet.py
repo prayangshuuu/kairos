@@ -15,7 +15,6 @@ Covers every requirement listed in the task spec:
 """
 
 from datetime import timedelta
-from decimal import Decimal
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -30,7 +29,6 @@ from apps.payments.models import (
     Payment,
     PayoutMethod,
     PayoutRequest,
-    WalletReconciliationLog,
 )
 from apps.payments.services import compute_paystation_service_fee
 from apps.payments.wallet import (
@@ -49,7 +47,6 @@ from apps.payments.wallet import (
     settle_pending_payments,
 )
 from apps.scheduling.models import EventType, Schedule
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

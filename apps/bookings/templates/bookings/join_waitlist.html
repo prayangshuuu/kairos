@@ -1,0 +1,32 @@
+{% extends "layouts/public.html" %}
+{% block title %}Join Waitlist for {{ event.title }} | Kairos{% endblock %}
+{% block public_content %}
+<div class="max-w-2xl mx-auto py-10 px-4">
+  <div class="bg-white rounded-2xl shadow-xl overflow-hidden p-8">
+    <h1 class="text-2xl font-bold mb-4">Join Waitlist: {{ event.title }}</h1>
+    <p class="text-surface-600 mb-6">There are currently no times available. Join the waitlist to be notified if a spot opens up.</p>
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      
+      {% for field in form %}
+        {% if not field.is_hidden %}
+          <div>
+            <label class="block text-sm font-medium text-surface-700 mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+              <p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>
+            {% endif %}
+          </div>
+        {% else %}
+          {{ field }}
+        {% endif %}
+      {% endfor %}
+      
+      <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all">
+        Join Waitlist
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
