@@ -134,6 +134,24 @@ def get_host_wallet_mode(host) -> str:
         return "custodial"
     if has_non_custodial:
         return "non_custodial"
+    
+    # Fall back to checking configured payment routes
+    from apps.payments.models import HostPaymentTerms, PaymentAccount
+    from django.conf import settings
+    
+    has_stripe_config = PaymentAccount.objects.filter(
+        user=host, provider="stripe_connect", charges_enabled=True, is_active=True
+    ).exists()
+    paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
+    has_paystation_config = paystation_enabled and HostPaymentTerms.objects.filter(user=host).exists()
+    
+    if has_stripe_config and has_paystation_config:
+        return "mixed"
+    if has_paystation_config:
+        return "custodial"
+    if has_stripe_config:
+        return "non_custodial"
+
     return "empty"
 
 
