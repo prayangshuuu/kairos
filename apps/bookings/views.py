@@ -1373,6 +1373,4 @@ class BookingEmbedView(BookingPageView):
 
     def get(self, request, host_slug, event_slug):
         response = super().get(request, host_slug, event_slug)
-        if hasattr(response, 'template_name'):
-            response.template_name = ['bookings/booking_embed.html']
         return response

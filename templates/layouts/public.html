@@ -22,18 +22,22 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex flex-col bg-surface-50">
+<div class="min-h-screen flex flex-col {% if not is_embed %}bg-surface-50{% else %}bg-white{% endif %}">
 
+    {% if not is_embed %}
     {% include "partials/_navbar.html" %}
+    {% endif %}
 
     <!-- Main public content area, centered -->
-    <main class="flex-grow flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8" style="padding-top: 100px;">
+    <main class="flex-grow flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8" {% if not is_embed %}style="padding-top: 100px;"{% endif %}>
         <div class="w-full max-w-6xl">
             {% block public_content %}{% endblock %}
         </div>
     </main>
 
+    {% if not is_embed %}
     {% include "partials/_footer.html" %}
+    {% endif %}
 
 </div>
 {% endblock %}
