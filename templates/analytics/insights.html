@@ -1,0 +1,189 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Insights - Kairos{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block app_content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-8 animate-fade-in-up">
+    
+    <div class="md:flex md:items-center md:justify-between mb-8">
+        <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                Analytics & Insights
+            </h2>
+            <p class="mt-1 text-sm text-gray-500">
+                Privacy Note: Funnel events are tracked anonymously using a session ID that expires after the booking. No personally identifiable information (e.g. IP address) is stored. Do Not Track (DNT) headers are honoured.
+            </p>
+        </div>
+        
+        <div class="mt-4 flex md:mt-0 md:ml-4 space-x-3">
+            <form method="get" class="flex items-center space-x-2">
+                <select name="period" onchange="this.form.submit()" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-black focus:border-black sm:text-sm rounded-md">
+                    <option value="7d" {% if period == '7d' %}selected{% endif %}>Last 7 days</option>
+                    <option value="30d" {% if period == '30d' %}selected{% endif %}>Last 30 days</option>
+                    <option value="90d" {% if period == '90d' %}selected{% endif %}>Last 90 days</option>
+                    <option value="this_year" {% if period == 'this_year' %}selected{% endif %}>This Year</option>
+                    <option value="all_time" {% if period == 'all_time' %}selected{% endif %}>All Time</option>
+                </select>
+            </form>
+            <a href="{% url 'analytics:export_insights' %}?period={{ period }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <dt class="text-sm font-medium text-gray-500 truncate">Total Bookings</dt>
+                <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ totals.bookings_created }}</dd>
+            </div>
+        </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <dt class="text-sm font-medium text-gray-500 truncate">Completion Rate</dt>
+                <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ completion_rate }}%</dd>
+            </div>
+        </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <dt class="text-sm font-medium text-gray-500 truncate">Cancellation Rate</dt>
+                <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ cancellation_rate }}%</dd>
+            </div>
+        </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <dt class="text-sm font-medium text-gray-500 truncate">No-show Rate</dt>
+                <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ no_show_rate }}%</dd>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Bookings & Views Over Time</h3>
+        <div class="relative h-72 w-full">
+            <canvas id="bookingsChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Funnel Section -->
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Conversion Funnel</h3>
+        <div class="flex flex-col">
+            <div class="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
+                    <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Step</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visitors</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Drop-off</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">1. Booking Page Viewed</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ totals.booking_page_viewed }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {% if totals.booking_page_viewed %}{{ dropoff_to_date }}%{% else %}-{% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">2. Date Selected</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ totals.date_selected }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {% if totals.date_selected %}{{ dropoff_to_form }}%{% else %}-{% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">3. Form Started</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ totals.form_started }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {% if totals.form_started %}{{ dropoff_to_submit }}%{% else %}-{% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">4. Form Submitted</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ totals.form_submitted }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="chartData">{{ chart_data_json|safe }}</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const dataStr = document.getElementById("chartData").textContent;
+        const chartData = JSON.parse(dataStr);
+
+        const ctx = document.getElementById('bookingsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.dates,
+                datasets: [
+                    {
+                        label: 'Bookings',
+                        data: chartData.bookings,
+                        borderColor: '#000',
+                        backgroundColor: 'rgba(0,0,0,0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Views',
+                        data: chartData.views,
+                        borderColor: '#9CA3AF',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.3,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        grid: { drawOnChartArea: false },
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

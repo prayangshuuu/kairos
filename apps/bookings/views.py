@@ -12,7 +12,6 @@ from django.views.decorators.cache import cache_control
 from django.views.generic import DetailView, View
 
 from apps.accounts.models import User
-from apps.analytics.tasks import record_page_view
 from apps.bookings.models import Booking, WaitlistEntry
 from apps.scheduling.engine import get_slots
 from apps.scheduling.models import EventType
@@ -70,8 +69,8 @@ class PublicProfileView(DetailView):
 
         self.object = obj_or_redirect
 
-        referrer = request.META.get("HTTP_REFERER", "")
-        record_page_view.delay(self.object.id, None, referrer)
+        from apps.analytics.utils import track_funnel_event, set_funnel_cookie
+        session_id = track_funnel_event(request, self.object.id, "profile_viewed", None)
 
         context = self.get_context_data(object=self.object)
         response = self.render_to_response(context)
@@ -80,7 +79,7 @@ class PublicProfileView(DetailView):
             request.session.accessed = False
             request.session.modified = False
 
-        return response
+        return set_funnel_cookie(response, session_id)
 
 
 class BookingPageView(View):
@@ -227,15 +226,18 @@ class BookingPageView(View):
             if partial == "calendar":
                 return render(request, "bookings/partials/calendar.html", context)
             elif partial == "slots":
+                from apps.analytics.utils import track_funnel_event
+                track_funnel_event(request, host.id, "date_selected", event.id)
                 return render(request, "bookings/partials/slots.html", context)
             elif partial == "tz_change":
                 return render(request, "bookings/partials/booking_body.html", context)
 
         # Fire analytics task
-        referrer = request.META.get("HTTP_REFERER", "")
-        record_page_view.delay(host.id, event.id, referrer)
+        from apps.analytics.utils import track_funnel_event, set_funnel_cookie
+        session_id = track_funnel_event(request, host.id, "booking_page_viewed", event.id)
 
-        return render(request, "bookings/booking_page.html", context)
+        response = render(request, "bookings/booking_page.html", context)
+        return set_funnel_cookie(response, session_id)
 
 
 class BookingStubView(View):
@@ -277,6 +279,9 @@ class BookingStubView(View):
 
         if "invitee_email" in request.POST:
             # Form submission
+            from apps.analytics.utils import track_funnel_event
+            track_funnel_event(request, host.id, "form_submitted", event.id)
+            
             form = BookingForm(request.POST, event_type=event)
             if form.is_valid():
                 idemp_token = form.cleaned_data["idempotency_token"]
@@ -330,6 +335,7 @@ class BookingStubView(View):
                         return render(request, "bookings/partials/slots.html", context, status=409)
 
                 if booking.status == Booking.StatusChoices.PENDING_PAYMENT:
+                    track_funnel_event(request, host.id, "payment_started", event.id)
                     from apps.payments.routing import select_provider
                     from apps.payments.services import create_payment_for_booking
 
@@ -353,6 +359,7 @@ class BookingStubView(View):
                     response["HX-Redirect"] = checkout_result.redirect_url
                     return response
                 else:
+                    track_funnel_event(request, host.id, "booking_completed", event.id)
                     # Return HX-Redirect header
                     response = HttpResponse()
 
@@ -381,6 +388,10 @@ class BookingStubView(View):
                 return render(request, "bookings/partials/booking_form.html", context)
         else:
             # Slot clicked, render empty form
+            from apps.analytics.utils import track_funnel_event
+            track_funnel_event(request, host.id, "slot_selected", event.id)
+            track_funnel_event(request, host.id, "form_started", event.id)
+            
             tz_str = request.GET.get("tz") or request.POST.get("tz", "UTC")
             slot_time_str = request.GET.get("slot") or request.POST.get("slot", "")
             try:

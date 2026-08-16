@@ -29,4 +29,16 @@ app.conf.beat_schedule = {
         "task": "apps.workflows.tasks.process_due_workflow_executions",
         "schedule": crontab(),  # every minute
     },
+    "rollup_daily_metrics": {
+        "task": "apps.analytics.tasks.rollup_daily_metrics",
+        "schedule": crontab(hour=2, minute=0),  # daily at 2 AM
+    },
+    "cleanup_old_events": {
+        "task": "apps.analytics.tasks.cleanup_old_events",
+        "schedule": crontab(hour=3, minute=30, day_of_week=0),  # weekly on Sunday 3:30 AM
+    },
+    "send_monthly_analytics_summary": {
+        "task": "apps.analytics.tasks.send_monthly_analytics_summary",
+        "schedule": crontab(hour=8, minute=0, day_of_month=1),  # monthly on the 1st at 8 AM
+    },
 }

@@ -47,7 +47,7 @@ def export_user_data(user_id):
             }
         )
 
-    for sc in Schedule.objects.filter(owner=user):
+    for sc in Schedule.objects.filter(user=user):
         data["schedules"].append(
             {
                 "name": sc.name,
@@ -65,6 +65,29 @@ def export_user_data(user_id):
                 "invitee_email": b.invitee_email,
             }
         )
+
+    from apps.analytics.models import DailyMetric, BookingFunnelEvent
+    
+    data["analytics_daily_metrics"] = []
+    for m in DailyMetric.objects.filter(host=user):
+        data["analytics_daily_metrics"].append({
+            "date": m.date.isoformat(),
+            "event_type": m.event_type.slug if m.event_type else None,
+            "views": m.views,
+            "bookings_created": m.bookings_created,
+            "bookings_completed": m.bookings_completed,
+            "bookings_cancelled": m.bookings_cancelled,
+        })
+        
+    data["analytics_funnel_events"] = []
+    for e in BookingFunnelEvent.objects.filter(host=user):
+        data["analytics_funnel_events"].append({
+            "timestamp": e.timestamp.isoformat(),
+            "step": e.step,
+            "event_type": e.event_type.slug if e.event_type else None,
+            "device_type": e.device_type,
+            "country": e.country,
+        })
 
     # Queue email with attachment
     json_data = json.dumps(data, indent=2)

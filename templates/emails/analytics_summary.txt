@@ -1,0 +1,20 @@
+Hello {{ host.first_name|default:host.email }},
+
+Here is your monthly analytics summary for {{ current_month_name }}:
+
+Total Bookings: {{ totals.bookings_created }} ({% if pop_bookings > 0 %}+{% endif %}{{ pop_bookings }}% from last month)
+Completion Rate: {{ completion_rate }}%
+Cancellation Rate: {{ cancellation_rate }}%
+No-show Rate: {{ no_show_rate }}%
+Revenue: {{ totals.revenue_cents|default:0 }}
+
+Conversion Funnel:
+- Booking Page Views: {{ totals.booking_page_viewed_count }}
+- Date Selected: {{ totals.date_selected_count }}
+- Form Started: {{ totals.form_started_count }}
+- Bookings Completed: {{ totals.bookings_created }}
+
+To view more details, check your analytics dashboard: {{ dashboard_url }}
+
+Best,
+The Kairos Team

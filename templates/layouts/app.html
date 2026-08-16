@@ -30,6 +30,9 @@
             <a href="{% url 'bookings:dashboard_bookings' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'dashboard/bookings' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Bookings
             </a>
+            <a href="{% url 'analytics:insights' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'dashboard/insights' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
+                Insights
+            </a>
             <a href="{% url 'scheduling:schedule_list' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'availability' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Availability
             </a>
