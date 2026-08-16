@@ -30,14 +30,6 @@ User.objects.create_user(email="test@joinkairos.tech", password="password")
 - **Email:** `admin@joinkairos.tech`
 - **Password:** `adminpassword`
 
-## Integrations
-
-### Local Google Calendar Webhooks
-Google Calendar push notifications require a public HTTPS endpoint. Use `ngrok` for local development:
-1. `brew install ngrok/ngrok/ngrok`
-2. `ngrok http 8000`
-3. Set `WEBHOOK_BASE_URL="https://<your-ngrok-id>.ngrok-free.app"` in your `.env`.
-
 
 ---
 *Copyright 2026 [Prayangshu Biswas Hritwick](https://prayangshu.com) & [Dwimik Software](https://www.dwimiksoftware.com)*
