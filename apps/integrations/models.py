@@ -159,7 +159,6 @@ class WatchChannel(models.Model):
 
 class ConferenceConnection(models.Model):
     PROVIDER_CHOICES = (
-        ("zoom", "Zoom"),
         ("google_meet", "Google Meet"),
     )
     user = models.ForeignKey(

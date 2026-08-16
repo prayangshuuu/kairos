@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.text import slugify
-from django.views.generic import CreateView, ListView, UpdateView, View
+from django.views.generic import CreateView, DetailView, ListView, UpdateView, View
 
 from .forms import EventTypeForm
 from .models import BookingQuestion, EventType
@@ -50,10 +50,6 @@ class EventTypeCreateView(LoginRequiredMixin, CreateView):
         ).first()
         context["google_meet_available"] = bool(google_cal and not google_cal.last_error)
 
-        # Check Zoom
-        context["zoom_connected"] = ConferenceConnection.objects.filter(
-            user=self.request.user, provider="zoom", is_active=True
-        ).exists()
 
         # Check Payments
         stripe_acc = PaymentAccount.objects.filter(
@@ -131,10 +127,6 @@ class EventTypeUpdateView(OwnerRequiredMixin, UpdateView):
         ).first()
         context["google_meet_available"] = bool(google_cal and not google_cal.last_error)
 
-        # Check Zoom
-        context["zoom_connected"] = ConferenceConnection.objects.filter(
-            user=self.request.user, provider="zoom", is_active=True
-        ).exists()
 
         # Check Payments
         stripe_acc = PaymentAccount.objects.filter(
@@ -244,6 +236,27 @@ class EventTypeToggleActiveView(LoginRequiredMixin, View):
         event.is_active = not event.is_active
         event.save(update_fields=["is_active"])
         return redirect("scheduling:eventtype_list")
+
+class EventTypeEmbedCodeView(LoginRequiredMixin, DetailView):
+    model = EventType
+    template_name = "scheduling/embed_code.html"
+    context_object_name = "event_type"
+    slug_field = "slug"
+    slug_url_kwarg = "slug"
+
+    def get_queryset(self):
+        return EventType.objects.filter(owner=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        from django.urls import reverse
+        context = super().get_context_data(**kwargs)
+        event = self.get_object()
+        embed_url = self.request.build_absolute_uri(
+            reverse("bookings:booking_embed", kwargs={"host_slug": self.request.user.slug, "event_slug": event.slug})
+        )
+        context["embed_url"] = embed_url
+        context["domain"] = self.request.get_host()
+        return context
 
 
 class EventTypeDeleteView(LoginRequiredMixin, View):

@@ -52,9 +52,6 @@ def dashboard(request):
     ).exists() if google_healthy else False
 
     # ── Conferencing ─────────────────────────────────────────────────────────
-    zoom_conn = ConferenceConnection.objects.filter(
-        user=request.user, provider="zoom"
-    ).first()
     # Google Meet is provided via the Google Calendar OAuth — no separate auth
     google_meet_available = bool(google_healthy)
 
@@ -93,7 +90,6 @@ def dashboard(request):
         "apple_conn": connected_cal.get("apple"),
         # Conferencing
         "google_meet_available": google_meet_available,
-        "zoom_conn": zoom_conn,
         # Payments
         "stripe_account": stripe_account,
         "stripe_status": stripe_status,

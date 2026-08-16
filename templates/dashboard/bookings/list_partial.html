@@ -25,7 +25,7 @@
         {% for booking in page_obj %}
         <li id="booking-row-{{ booking.uid }}" class="p-4 sm:px-6 hover:bg-surface-50" x-data="{ expanded: false }"
             {% if not booking.meeting_url %}
-                {% if booking.location_type == 'google_meet' or booking.location_type == 'jitsi' or booking.location_type == 'zoom' %}
+                {% if booking.location_type == 'google_meet' or booking.location_type == 'jitsi' %}
                     hx-get="{% url 'bookings:dashboard_bookings' %}?tab={{ tab }}"
                     hx-select="#booking-row-{{ booking.uid }}"
                     hx-swap="outerHTML"
@@ -121,7 +121,7 @@
                         <p>Created at: {{ booking.created_at|date:"M j, Y, g:i A" }}</p>
                         {% if booking.meeting_url %}
                         <p class="mt-1"><strong>Meeting Link:</strong> <a href="{{ booking.meeting_url }}" target="_blank" @click.stop class="text-primary-600 hover:underline break-all">{{ booking.meeting_url }}</a></p>
-                        {% elif booking.location_type == 'google_meet' or booking.location_type == 'jitsi' or booking.location_type == 'zoom' %}
+                        {% elif booking.location_type == 'google_meet' or booking.location_type == 'jitsi' %}
                         <p class="mt-1 text-surface-500"><strong>Meeting Link:</strong> Generating...</p>
                         {% elif booking.location_value %}
                         <p class="mt-1"><strong>Location:</strong> {{ booking.location_value }}</p>

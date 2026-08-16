@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
                     models.CharField(
                         choices=[
                             ("google_meet", "Google Meet"),
-                            ("zoom", "Zoom"),
+
                             ("ms_teams", "MS Teams"),
                             ("phone_host_calls", "Phone (Host calls invitee)"),
                             ("phone_invitee_calls", "Phone (Invitee calls host)"),

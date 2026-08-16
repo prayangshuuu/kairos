@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 (
                     "provider",
                     models.CharField(
-                        choices=[("zoom", "Zoom"), ("google_meet", "Google Meet")], max_length=50
+                        choices=[("google_meet", "Google Meet")], max_length=50
                     ),
                 ),
                 ("external_account_email", models.EmailField(max_length=254)),

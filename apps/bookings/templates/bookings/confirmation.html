@@ -103,7 +103,7 @@
           <dt class="text-sm font-medium text-surface-500">Location</dt>
           <dd id="location-details" class="mt-1 text-sm text-surface-900"
             {% if not booking.meeting_url %}
-              {% if booking.location_type == 'google_meet' or booking.location_type == 'jitsi' or booking.location_type == 'zoom' %}
+              {% if booking.location_type == 'google_meet' or booking.location_type == 'jitsi' %}
                 hx-get="{% url 'bookings:booking_confirmation' uid=booking.uid %}?t={{ token }}"
                 hx-select="#location-details"
                 hx-trigger="every 2s"
@@ -117,7 +117,7 @@
                   {{ booking.meeting_url }}
                 </a>
               </div>
-            {% elif booking.location_type == 'google_meet' or booking.location_type == 'jitsi' or booking.location_type == 'zoom' %}
+            {% elif booking.location_type == 'google_meet' or booking.location_type == 'jitsi' %}
               <div class="flex items-center gap-2 text-surface-600">
                 <svg class="animate-spin h-4 w-4 text-surface-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

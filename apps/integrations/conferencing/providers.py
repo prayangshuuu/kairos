@@ -86,17 +86,6 @@ class GoogleMeetProvider(ConferenceProvider):
         pass
 
 
-class ZoomProvider(ConferenceProvider):
-    def create_meeting(self, booking: Booking) -> MeetingDetails:
-        raise NotImplementedError("Zoom integration coming soon")
-
-    def update_meeting(self, booking: Booking, reference: "BookingReference") -> MeetingDetails:
-        raise NotImplementedError()
-
-    def delete_meeting(self, reference: "BookingReference") -> None:
-        raise NotImplementedError()
-
-
 class TeamsProvider(ConferenceProvider):
     def create_meeting(self, booking: Booking) -> MeetingDetails:
         raise NotImplementedError("Microsoft Teams integration coming soon")
@@ -111,6 +100,5 @@ class TeamsProvider(ConferenceProvider):
 PROVIDERS = {
     "jitsi": JitsiProvider(),
     "google_meet": GoogleMeetProvider(),
-    "zoom": ZoomProvider(),
     "ms_teams": TeamsProvider(),
 }

@@ -123,7 +123,6 @@ class EventType(models.Model):
 
     class LocationTypeChoices(models.TextChoices):
         GOOGLE_MEET = "google_meet", "Google Meet"
-        ZOOM = "zoom", "Zoom"
         MS_TEAMS = "ms_teams", "MS Teams"
         JITSI = "jitsi", "Jitsi"
         PHONE_HOST_CALLS = "phone_host_calls", "Phone (Host calls invitee)"

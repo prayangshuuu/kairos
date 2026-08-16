@@ -38,8 +38,6 @@ Google Calendar push notifications require a public HTTPS endpoint. Use `ngrok` 
 2. `ngrok http 8000`
 3. Set `WEBHOOK_BASE_URL="https://<your-ngrok-id>.ngrok-free.app"` in your `.env`.
 
-### Zoom
-*Note: The Zoom app is currently under review by Zoom. Use in development mode only.*
 
 ---
 *Copyright 2026 [Prayangshu Biswas Hritwick](https://prayangshu.com) & [Dwimik Software](https://www.dwimiksoftware.com)*

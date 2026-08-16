@@ -36,7 +36,6 @@ class Booking(models.Model):
 
     class LocationTypeChoices(models.TextChoices):
         GOOGLE_MEET = "google_meet", "Google Meet"
-        ZOOM = "zoom", "Zoom"
         MS_TEAMS = "ms_teams", "MS Teams"
         PHONE_HOST_CALLS = "phone_host_calls", "Phone (Host calls invitee)"
         PHONE_INVITEE_CALLS = "phone_invitee_calls", "Phone (Invitee calls host)"
@@ -68,6 +67,7 @@ class Booking(models.Model):
     invitee_email = models.EmailField(db_index=True)
     invitee_notes = models.TextField(blank=True)
     answers = models.JSONField(default=dict, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
 
     location_type = models.CharField(max_length=30, choices=LocationTypeChoices.choices, blank=True)
     location_value = models.CharField(max_length=500, blank=True)

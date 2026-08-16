@@ -6,6 +6,7 @@ from .views import (
     BookingConfirmationView,
     BookingICSView,
     BookingPageView,
+    BookingEmbedView,
     BookingRejectView,
     BookingRescheduleView,
     BookingStubView,
@@ -61,6 +62,7 @@ urlpatterns = [
         name="dashboard_booking_no_show",
     ),
     path("<slug:host_slug>/<slug:event_slug>/", BookingPageView.as_view(), name="booking_page"),
+    path("<slug:host_slug>/<slug:event_slug>/embed/", BookingEmbedView.as_view(), name="booking_embed"),
     path(
         "<slug:host_slug>/<slug:event_slug>/stub/", BookingStubView.as_view(), name="booking_stub"
     ),

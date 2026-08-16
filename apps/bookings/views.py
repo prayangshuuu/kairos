@@ -1245,3 +1245,26 @@ class DashboardBookingNoShowView(LoginRequiredMixin, View):
             mark_booking_no_show(booking=booking, marked_by=request.user, now=django_timezone.now())
         next_url = request.META.get("HTTP_REFERER", "/dashboard/bookings/")
         return redirect(next_url)
+
+from django.views.decorators.clickjacking import xframe_options_exempt
+import json
+
+class BookingEmbedView(BookingPageView):
+    @method_decorator(xframe_options_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        response = super().dispatch(request, *args, **kwargs)
+        # Prevent cookie setting on this response for embeds
+        response.cookies.clear()
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass metadata and UTMs down so the template/form can grab them
+        context['is_embed'] = True
+        return context
+
+    def get(self, request, host_slug, event_slug):
+        response = super().get(request, host_slug, event_slug)
+        if hasattr(response, 'template_name'):
+            response.template_name = ['bookings/booking_embed.html']
+        return response

@@ -143,9 +143,6 @@
                                 Google Meet{% if not google_meet_available %} (connect Google first){% endif %}
                             </option>
                             <option value="jitsi">Jitsi Meet (no setup required)</option>
-                            <option value="zoom" {% if not zoom_connected %}disabled{% endif %}>
-                                Zoom{% if not zoom_connected %} (connect in Integrations){% endif %}
-                            </option>
                             <option value="ms_teams" disabled>Microsoft Teams (coming soon)</option>
                             <option value="phone_host_calls">Phone — host calls invitee</option>
                             <option value="phone_invitee_calls">Phone — invitee calls host</option>
@@ -153,11 +150,11 @@
                             <option value="custom_link">Custom Link</option>
                             <option value="ask_invitee">Ask Invitee</option>
                         </select>
-                        <div x-show="locationType !== 'google_meet' && locationType !== 'jitsi' && locationType !== 'zoom' && locationType !== 'ms_teams'" class="mt-2 sm:mt-0 flex-1">
+                        <div x-show="locationType !== 'google_meet' && locationType !== 'jitsi' && locationType !== 'ms_teams'" class="mt-2 sm:mt-0 flex-1">
                             <input type="text" name="location_value" id="id_location_value" :placeholder="locationPlaceholder" value="{{ form.location_value.value|default:'' }}" class="block w-full border border-surface-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
                         </div>
                     </div>
-                    {% if not google_meet_available or not zoom_connected %}
+                    {% if not google_meet_available %}
                     <p class="mt-2 text-sm text-amber-600 font-medium">
                         Some providers are disabled. <a href="{% url 'integrations:dashboard' %}" class="underline text-brand-600 hover:text-brand-700">Connect accounts in Integrations</a> to use them.
                     </p>
@@ -167,9 +164,6 @@
                     </p>
                     <p class="mt-2 text-sm text-surface-500" x-show="locationType === 'jitsi'">
                         A unique Jitsi room at meet.jit.si is generated automatically per booking — no account required.
-                    </p>
-                    <p class="mt-2 text-sm text-surface-500" x-show="locationType === 'zoom'">
-                        A Zoom link will be generated using your connected Zoom account.
                     </p>
                     {% if form.location_type.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="basics">{{ form.location_type.errors.0 }}</p>{% endif %}
                     {% if form.location_value.errors %}<p class="mt-2 text-sm text-red-600" data-tab-error="basics">{{ form.location_value.errors.0 }}</p>{% endif %}
