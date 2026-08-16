@@ -1,6 +1,6 @@
 # Kairos
 
-Kairos is a 100% free scheduling platform with no subscription tiers or artificial feature limits. Every feature (unlimited event types, schedules, workflows, custom questions, and bookings) is available to all users.
+Kairos is a 100% free scheduling platform with no subscription tiers or artificial feature limits. Every feature (unlimited event types, schedules, workflows, custom questions, client CRM/records, and bookings) is available to all users.
 
 **Revenue Model:**
 - **0% service charge** for hosts using their own Stripe Connect account.

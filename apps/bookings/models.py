@@ -53,7 +53,7 @@ class Booking(models.Model):
     )
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True)
     resource_id = models.UUIDField(null=True, blank=True)
-    client_id = models.UUIDField(null=True, blank=True)
+    client = models.ForeignKey("clients.Client", on_delete=models.SET_NULL, null=True, blank=True, related_name="bookings")
 
     start_at = models.DateTimeField()
     end_at = models.DateTimeField()

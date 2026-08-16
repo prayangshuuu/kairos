@@ -426,10 +426,33 @@ def create_booking(
         location_value=event_type.location_value,
     )
 
-    # Use a nested atomic block so the caller's transaction is not poisoned
-    # if a constraint violation occurs.
     try:
         with transaction.atomic():
+            from apps.clients.models import Client
+            client, created = Client.objects.get_or_create(
+                host=event_type.owner,
+                email=invitee_email.lower().strip(),
+                defaults={
+                    'name': invitee_name,
+                    'first_seen_at': now,
+                    'last_seen_at': start_at,
+                    'timezone': invitee_timezone,
+                    'source': 'booking_flow',
+                }
+            )
+            if not created:
+                update_fields = []
+                if invitee_name and invitee_name != client.name:
+                    if invitee_name not in client.known_names:
+                        client.known_names.append(invitee_name)
+                        update_fields.append('known_names')
+                if start_at > client.last_seen_at:
+                    client.last_seen_at = start_at
+                    update_fields.append('last_seen_at')
+                if update_fields:
+                    client.save(update_fields=update_fields)
+                    
+            booking.client = client
             booking.save()
 
             # Create Attendees

@@ -35,6 +35,7 @@ handler500 = "apps.core.views.custom_server_error"
 urlpatterns = [
     path("", account_views.home, name="home"),
     path("dashboard/", account_views.dashboard, name="dashboard"),
+    path("dashboard/clients/", include("apps.clients.urls")),
     path("dashboard/integrations/", include("apps.integrations.urls")),
     path("onboarding/", account_views.onboarding, name="onboarding"),
     path("onboarding/check-slug/", account_views.check_slug, name="check_slug"),

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "apps.analytics.apps.AnalyticsConfig",
     "apps.subscriptions.apps.SubscriptionsConfig",
     "apps.workflows.apps.WorkflowsConfig",
+    "apps.clients.apps.ClientsConfig",
 ]
 
 
