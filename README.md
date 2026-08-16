@@ -1,85 +1,45 @@
 # Kairos
 
-## Business Model
+Kairos is a 100% free scheduling platform with no subscription tiers or artificial feature limits. Every feature (unlimited event types, schedules, workflows, custom questions, and bookings) is available to all users.
 
-Kairos is 100% free with no subscription tiers or artificial feature limits. Every feature (unlimited event types, schedules, workflows, custom questions, and bookings) is available to all users.
+**Revenue Model:**
+- **0% service charge** for hosts using their own Stripe Connect account.
+- **3% service charge** for hosts accepting paid bookings via Kairos PayStation.
 
-Revenue model:
-- **0% service charge** for hosts who connect their own Stripe account via Stripe Connect.
-- **3% service charge** for hosts accepting paid bookings via the Kairos PayStation route.
+## Quick Start
 
-## Setup
+1. **Install dependencies:** `uv sync`
+2. **Start backing services (PostgreSQL & Redis):** `docker compose up -d`
+3. **Run migrations:** `uv run python manage.py migrate`
+4. **Build Tailwind CSS:** 
+   - Once: `./tailwindcss -i ./static/src/input.css -o ./static/css/output.css`
+   - Watch: `./tailwindcss -i ./static/src/input.css -o ./static/css/output.css --watch`
+5. **Start server:** `uv run python manage.py runserver`
 
-1. Install dependencies:
-   ```bash
-   uv sync
-   ```
-2. Start services (PostgreSQL and Redis):
-   ```bash
-   docker compose up -d
-   ```
-3. Run migrations:
-   ```bash
-   uv run python manage.py migrate
-   ```
-4. Build Tailwind CSS:
-   ```bash
-   # Build once
-   ./tailwindcss -i ./static/src/input.css -o ./static/css/output.css
-   
-   # Or watch for changes during development
-   ./tailwindcss -i ./static/src/input.css -o ./static/css/output.css --watch
-   ```
-5. Start development server:
-   ```bash
-   uv run python manage.py runserver
-   ```
+## Accounts
 
-## Demo Account
-
-To create a quick test user for testing the dashboard and onboarding flows, run the following command in the Django shell (`uv run python manage.py shell`):
-
+**Demo User** (Login at `/accounts/login/`):
+Create one via Django shell (`uv run python manage.py shell`):
 ```python
 from apps.accounts.models import User
-
-user = User.objects.create_user(email="test@joinkairos.tech", password="password")
+User.objects.create_user(email="test@joinkairos.tech", password="password")
 ```
+*Use `test@joinkairos.tech` / `password` to log in.*
 
-You can then log in at `http://127.0.0.1:8000/accounts/login/` with:
-- **Email**: `test@joinkairos.tech`
-- **Password**: `password`
+**Admin User** (Login at `/admin/`):
+- **Email:** `admin@joinkairos.tech`
+- **Password:** `adminpassword`
 
-## Local Google Calendar Webhooks
+## Integrations
 
-Google Calendar Push Notifications require a publicly accessible HTTPS endpoint to receive webhook payloads. For local development, you must expose your local server to the internet using a tunnel like `ngrok`.
+### Local Google Calendar Webhooks
+Google Calendar push notifications require a public HTTPS endpoint. Use `ngrok` for local development:
+1. `brew install ngrok/ngrok/ngrok`
+2. `ngrok http 8000`
+3. Set `WEBHOOK_BASE_URL="https://<your-ngrok-id>.ngrok-free.app"` in your `.env`.
 
-### Setting up ngrok
-
-1. **Install ngrok** (if not already installed):
-   ```bash
-   brew install ngrok/ngrok/ngrok
-   ```
-2. **Start the tunnel** pointing to your local Django server port (usually 8000):
-   ```bash
-   ngrok http 8000
-   ```
-3. **Configure the Webhook URL**: Note the HTTPS URL provided by ngrok (e.g., `https://1234abcd.ngrok-free.app`). Open your `.env` file and set `WEBHOOK_BASE_URL` to this value:
-   ```bash
-   WEBHOOK_BASE_URL="https://1234abcd.ngrok-free.app"
-   ```
-4. With this configured, when Kairos attempts to register a watch channel with Google (e.g. during an initial connection or renewal), it will use your ngrok tunnel so Google can securely push incremental syncs to your local machine!
-
-## Admin Account
-
-A default superuser has been created for accessing the Django admin interface at `http://127.0.0.1:8000/admin/`.
-
-You can log in with:
-- **Email**: `admin@joinkairos.tech`
-- **Password**: `adminpassword`
-
-
-## Zoom Integration
-Note: The Zoom app is currently under review by Zoom. You can use it in development mode.
+### Zoom
+*Note: The Zoom app is currently under review by Zoom. Use in development mode only.*
 
 ---
-Footer: 2026 Prayangshu Biswas Hritwick (https://prayangshu.com) & Dwimik Software (https://www.dwimiksoftware.com)
+*Copyright 2026 [Prayangshu Biswas Hritwick](https://prayangshu.com) & [Dwimik Software](https://www.dwimiksoftware.com)*
