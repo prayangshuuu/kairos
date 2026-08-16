@@ -36,6 +36,14 @@
             <a href="{% url 'integrations:dashboard' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'integrations' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Integrations
             </a>
+            {% if show_wallet_nav %}
+            <a href="{% url 'payments:wallet' %}" class="flex items-center justify-between px-4 py-2 text-sm font-medium rounded-md {% if 'wallet' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
+                <span>Wallet</span>
+                {% if wallet_nav_badge %}
+                <span class="inline-flex items-center justify-center w-2 h-2 rounded-full bg-amber-400"></span>
+                {% endif %}
+            </a>
+            {% endif %}
             <a href="{% url 'accounts:settings_profile' %}" class="flex items-center px-4 py-2 text-sm font-medium rounded-md {% if 'settings' in request.path %}text-surface-900 bg-surface-100{% else %}text-surface-600 hover:bg-surface-50 hover:text-surface-900{% endif %}">
                 Settings
             </a>

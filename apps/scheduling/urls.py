@@ -22,6 +22,7 @@ from .views import (
     EventTypeListView,
     EventTypeToggleActiveView,
     EventTypeUpdateView,
+    EventTypeEmbedCodeView,
 )
 
 app_name = "scheduling"
@@ -38,6 +39,7 @@ urlpatterns = [
     path(
         "dashboard/event-types/<slug:slug>/", EventTypeUpdateView.as_view(), name="eventtype_edit"
     ),
+    path("dashboard/event-types/<slug:slug>/embed/", EventTypeEmbedCodeView.as_view(), name="eventtype_embed"),
     path(
         "dashboard/event-types/<slug:slug>/duplicate/",
         EventTypeDuplicateView.as_view(),

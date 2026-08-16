@@ -23,6 +23,7 @@ def home(request):
 def dashboard(request):
     from apps.bookings.models import Booking
     from apps.integrations.models import CalendarConnection
+    from apps.payments.wallet import get_dashboard_wallet_summary, has_payment_route
 
     pending_bookings = (
         Booking.objects.filter(host=request.user, status=Booking.StatusChoices.PENDING)
@@ -43,6 +44,9 @@ def dashboard(request):
 
     broken_connections = CalendarConnection.objects.filter(user=request.user, is_active=False)
 
+    # Wallet summary for dashboard card (bounded query count)
+    wallet_summary = get_dashboard_wallet_summary(request.user)
+
     return render(
         request,
         "dashboard.html",
@@ -50,6 +54,8 @@ def dashboard(request):
             "pending_bookings": pending_bookings,
             "next_meeting": next_meeting,
             "broken_connections": broken_connections,
+            "wallet_summary": wallet_summary,
+            "has_payment_route": has_payment_route(request.user),
         },
     )
 

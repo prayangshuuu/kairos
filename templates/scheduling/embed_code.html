@@ -1,0 +1,51 @@
+{% extends "core/dashboard_base.html" %}
+
+{% block title %}Embed {{ event_type.title }} - Kairos{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8 px-4">
+    <h1 class="text-2xl font-bold mb-6">Embed "{{ event_type.title }}"</h1>
+    <p class="mb-8 text-gray-600">Copy the code snippets below to embed this event type on your website.</p>
+
+    <div class="space-y-8">
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h2 class="text-lg font-semibold mb-4">Inline Embed</h2>
+            <p class="text-sm text-gray-500 mb-4">Displays the booking page directly within your site's content.</p>
+            <pre class="bg-gray-50 p-4 rounded text-sm overflow-x-auto"><code>&lt;div id="kairos-inline-container"&gt;&lt;/div&gt;
+&lt;script src="https://{{ domain }}/static/js/embed.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    window.KairosWidget.init({
+        url: '{{ embed_url }}',
+        mode: 'inline',
+        parentElement: document.getElementById('kairos-inline-container')
+    });
+&lt;/script&gt;</code></pre>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h2 class="text-lg font-semibold mb-4">Popup Embed</h2>
+            <p class="text-sm text-gray-500 mb-4">Opens the booking page in a modal over your site when a button is clicked.</p>
+            <pre class="bg-gray-50 p-4 rounded text-sm overflow-x-auto"><code>&lt;button onclick="window.KairosWidget.openPopup()"&gt;Book Time&lt;/button&gt;
+&lt;script src="https://{{ domain }}/static/js/embed.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    window.KairosWidget.init({
+        url: '{{ embed_url }}',
+        mode: 'popup'
+    });
+&lt;/script&gt;</code></pre>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h2 class="text-lg font-semibold mb-4">Floating Button Embed</h2>
+            <p class="text-sm text-gray-500 mb-4">Adds a floating "Book Time" button to the bottom corner of your site.</p>
+            <pre class="bg-gray-50 p-4 rounded text-sm overflow-x-auto"><code>&lt;script src="https://{{ domain }}/static/js/embed.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    window.KairosWidget.init({
+        url: '{{ embed_url }}',
+        mode: 'floating'
+    });
+&lt;/script&gt;</code></pre>
+        </div>
+    </div>
+</div>
+{% endblock %}

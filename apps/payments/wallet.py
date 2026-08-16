@@ -137,6 +137,278 @@ def get_host_wallet_mode(host) -> str:
     return "empty"
 
 
+def has_payment_route(host) -> bool:
+    """
+    Returns True if the host has any payment route configured:
+    - A Stripe Connect account with charges_enabled, OR
+    - Accepted PayStation terms (and PayStation is enabled).
+    This is used to decide whether to show the wallet nav item / card.
+    """
+    from apps.payments.models import HostPaymentTerms, PaymentAccount
+
+    has_stripe = PaymentAccount.objects.filter(
+        user=host, provider="stripe_connect", charges_enabled=True, is_active=True
+    ).exists()
+    if has_stripe:
+        return True
+
+    paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
+    if paystation_enabled and HostPaymentTerms.objects.filter(user=host).exists():
+        return True
+
+    return False
+
+
+def get_dashboard_wallet_summary(host) -> dict | None:
+    """
+    Compute everything the dashboard wallet card needs in a bounded number of queries.
+    Returns None if the host has no payment route configured (card should be hidden).
+
+    Query budget (annotated):
+      Q1: has_payment_route check (1-2 existence checks)
+      Q2: Single aggregate over HostLedger for balances + mode detection
+      Q3: Payout request status check (single query)
+      Q4: Monthly earnings for sparkline (single query, bounded to 6 months)
+
+    Total: exactly 4-5 queries regardless of data volume.
+    """
+    if not has_payment_route(host):
+        return None
+
+    now = timezone.now()
+    min_threshold_cents = getattr(settings, "KAIROS_MINIMUM_PAYOUT_CENTS", 1000)
+
+    # --- Q2: Single aggregate query for all balance data + mode detection ---
+    agg = HostLedger.objects.filter(host=host).aggregate(
+        # Mode detection via conditional counts (Exists not supported in aggregate)
+        custodial_count=models.Count(
+            models.Case(
+                models.When(is_custodial=True, then=models.Value(1)),
+                output_field=models.IntegerField(),
+            )
+        ),
+        non_custodial_count=models.Count(
+            models.Case(
+                models.When(is_custodial=False, then=models.Value(1)),
+                output_field=models.IntegerField(),
+            )
+        ),
+        # Available balance: custodial entries where payment is settled or non-payment
+        available_cents=models.Sum(
+            models.Case(
+                models.When(
+                    is_custodial=True,
+                    payment__isnull=True,
+                    then=models.F("amount_cents"),
+                ),
+                models.When(
+                    is_custodial=True,
+                    payment__is_settled=True,
+                    then=models.F("amount_cents"),
+                ),
+                default=models.Value(0),
+                output_field=models.IntegerField(),
+            )
+        ),
+        # Pending balance: custodial entries with unsettled payment
+        pending_cents=models.Sum(
+            models.Case(
+                models.When(
+                    is_custodial=True,
+                    payment__isnull=False,
+                    payment__is_settled=False,
+                    then=models.F("amount_cents"),
+                ),
+                default=models.Value(0),
+                output_field=models.IntegerField(),
+            )
+        ),
+        # Total Stripe charges this month (informational for non-custodial)
+        stripe_month_cents=models.Sum(
+            models.Case(
+                models.When(
+                    is_custodial=False,
+                    entry_type="charge",
+                    created_at__year=now.year,
+                    created_at__month=now.month,
+                    then=models.F("amount_cents"),
+                ),
+                default=models.Value(0),
+                output_field=models.IntegerField(),
+            )
+        ),
+        # Total custodial charges this month
+        custodial_month_cents=models.Sum(
+            models.Case(
+                models.When(
+                    is_custodial=True,
+                    entry_type="charge",
+                    created_at__year=now.year,
+                    created_at__month=now.month,
+                    then=models.F("amount_cents"),
+                ),
+                default=models.Value(0),
+                output_field=models.IntegerField(),
+            )
+        ),
+        # Total entry count for "any entries" check
+        total_count=models.Count("id"),
+    )
+
+    has_custodial = (agg["custodial_count"] or 0) > 0
+    has_non_custodial = (agg["non_custodial_count"] or 0) > 0
+    has_any_entries = (agg["total_count"] or 0) > 0
+
+    if not has_any_entries:
+        from apps.payments.models import HostPaymentTerms, PaymentAccount
+        has_stripe_config = PaymentAccount.objects.filter(
+            user=host, provider="stripe_connect", charges_enabled=True, is_active=True
+        ).exists()
+        paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
+        has_paystation_config = paystation_enabled and HostPaymentTerms.objects.filter(user=host).exists()
+        
+        if has_stripe_config and has_paystation_config:
+            wallet_mode = "mixed"
+            has_custodial = True
+            has_non_custodial = True
+        elif has_paystation_config:
+            wallet_mode = "custodial"
+            has_custodial = True
+        elif has_stripe_config:
+            wallet_mode = "non_custodial"
+            has_non_custodial = True
+        else:
+            wallet_mode = "empty"
+    else:
+        if has_custodial and has_non_custodial:
+            wallet_mode = "mixed"
+        elif has_custodial:
+            wallet_mode = "custodial"
+        elif has_non_custodial:
+            wallet_mode = "non_custodial"
+        else:
+            wallet_mode = "empty"
+
+    available_cents = agg["available_cents"] or 0
+    pending_cents = agg["pending_cents"] or 0
+    stripe_month_cents = agg["stripe_month_cents"] or 0
+    custodial_month_cents = agg["custodial_month_cents"] or 0
+
+    # --- Q3: Payout request notification check ---
+    payout_notification = None
+    recent_cutoff = now - timedelta(days=3)
+    active_request = PayoutRequest.objects.filter(
+        host=host,
+        status__in=[
+            PayoutRequest.STATUS_REQUESTED,
+            PayoutRequest.STATUS_APPROVED,
+            PayoutRequest.STATUS_PROCESSING,
+        ],
+    ).first()
+    if active_request:
+        payout_notification = {
+            "type": "pending",
+            "status": active_request.status,
+            "amount_bdt": f"{active_request.amount_cents / 100:.2f}",
+        }
+    else:
+        recent_completed = PayoutRequest.objects.filter(
+            host=host,
+            status=PayoutRequest.STATUS_COMPLETED,
+            processed_at__gte=recent_cutoff,
+        ).first()
+        if recent_completed:
+            payout_notification = {
+                "type": "completed",
+                "status": "completed",
+                "amount_bdt": f"{recent_completed.amount_cents / 100:.2f}",
+            }
+
+    # --- Q4: Monthly earnings sparkline (last 6 months, single query) ---
+    from django.db.models.functions import TruncMonth
+
+    six_months_ago = now - timedelta(days=180)
+    monthly_data = (
+        HostLedger.objects.filter(
+            host=host,
+            entry_type="charge",
+            created_at__gte=six_months_ago,
+        )
+        .annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(
+            custodial_total=models.Sum(
+                models.Case(
+                    models.When(is_custodial=True, then=models.F("amount_cents")),
+                    default=models.Value(0),
+                    output_field=models.IntegerField(),
+                )
+            ),
+            stripe_total=models.Sum(
+                models.Case(
+                    models.When(is_custodial=False, then=models.F("amount_cents")),
+                    default=models.Value(0),
+                    output_field=models.IntegerField(),
+                )
+            ),
+        )
+        .order_by("month")
+    )
+
+    # Build sparkline data for exactly 6 months
+    sparkline = []
+    for row in monthly_data:
+        sparkline.append({
+            "month": row["month"].strftime("%b"),
+            "custodial": row["custodial_total"] or 0,
+            "stripe": row["stripe_total"] or 0,
+            "total": (row["custodial_total"] or 0) + (row["stripe_total"] or 0),
+        })
+
+    # Payout button logic
+    can_request_payout = (
+        has_custodial
+        and available_cents >= min_threshold_cents
+        and available_cents > 0
+    )
+    shortfall_cents = max(0, min_threshold_cents - available_cents) if has_custodial else 0
+
+    # Stripe dashboard link
+    stripe_dashboard_url = getattr(
+        settings, "STRIPE_EXPRESS_DASHBOARD_URL",
+        "https://connect.stripe.com/express_login",
+    )
+
+    return {
+        "wallet_mode": wallet_mode,
+        "has_custodial": has_custodial,
+        "has_non_custodial": has_non_custodial,
+        "has_any_entries": has_any_entries,
+        # Custodial balances
+        "available_cents": available_cents,
+        "available_bdt": f"{available_cents / 100:.2f}",
+        "pending_cents": pending_cents,
+        "pending_bdt": f"{pending_cents / 100:.2f}",
+        # Monthly figures
+        "stripe_month_cents": stripe_month_cents,
+        "stripe_month_bdt": f"{stripe_month_cents / 100:.2f}",
+        "custodial_month_cents": custodial_month_cents,
+        "custodial_month_bdt": f"{custodial_month_cents / 100:.2f}",
+        # Payout thresholds
+        "min_threshold_cents": min_threshold_cents,
+        "min_threshold_bdt": f"{min_threshold_cents / 100:.2f}",
+        "can_request_payout": can_request_payout,
+        "shortfall_cents": shortfall_cents,
+        "shortfall_bdt": f"{shortfall_cents / 100:.2f}",
+        # Payout notification
+        "payout_notification": payout_notification,
+        # Sparkline data
+        "sparkline": sparkline,
+        # Stripe link
+        "stripe_dashboard_url": stripe_dashboard_url,
+    }
+
+
 # ---------------------------------------------------------------------------
 # LEDGER RECORD FUNCTIONS
 # ---------------------------------------------------------------------------

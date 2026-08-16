@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Embed Test</title>
+</head>
+<body>
+    <h1>Inline Test</h1>
+    <div id="inline-container"></div>
+    <button onclick="window.KairosWidget.openPopup()">Open Popup</button>
+
+    <script src="/static/js/embed.js"></script>
+    <script>
+        const embedUrl = 'http://localhost:8000/YOUR_HOST_SLUG/YOUR_EVENT_SLUG/embed/';
+        window.KairosWidget.init({
+            url: embedUrl,
+            mode: 'inline',
+            parentElement: document.getElementById('inline-container'),
+            metadata: { test_key: 'test_value' }
+        });
+    </script>
+</body>
+</html>
