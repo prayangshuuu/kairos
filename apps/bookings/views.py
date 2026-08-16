@@ -15,6 +15,7 @@ from apps.accounts.models import User
 from apps.bookings.models import Booking, WaitlistEntry
 from apps.scheduling.engine import get_slots
 from apps.scheduling.models import EventType
+from apps.core.permissions import TeamContextMixin, ViewPermissionMixin
 
 
 @method_decorator(
@@ -566,9 +567,15 @@ class BookingCancelView(View):
         return redirect(f"/booking/{booking.uid}/?t={token}")
 
 
-class DashboardBookingCancelView(LoginRequiredMixin, View):
+class DashboardBookingCancelView(TeamContextMixin, ViewPermissionMixin, View):
     def post(self, request, uid):
-        booking = get_object_or_404(Booking, uid=uid, host=request.user)
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            booking = get_object_or_404(Booking, uid=uid, event_type__team=team)
+        else:
+            booking = get_object_or_404(Booking, uid=uid, host=request.user, event_type__team__isnull=True)
+            
         reason = request.POST.get("reason", "")
 
         from apps.bookings.services import AlreadyCancelled, cancel_booking
@@ -599,6 +606,7 @@ class BookingRescheduleView(View):
 
         event = booking.event_type
         host = booking.host
+        team = event.team
 
         tz_str = request.GET.get("tz") or booking.invitee_timezone
         if tz_str not in zoneinfo.available_timezones():
@@ -801,9 +809,15 @@ class BookingRescheduleView(View):
         return response
 
 
-class DashboardBookingRescheduleView(LoginRequiredMixin, View):
+class DashboardBookingRescheduleView(TeamContextMixin, ViewPermissionMixin, View):
     def post(self, request, uid):
-        booking = get_object_or_404(Booking, uid=uid, host=request.user)
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            booking = get_object_or_404(Booking, uid=uid, event_type__team=team)
+        else:
+            booking = get_object_or_404(Booking, uid=uid, host=request.user, event_type__team__isnull=True)
+            
         reason = request.POST.get("reason", "")
         slot_time_str = request.POST.get("slot_time")
 
@@ -827,9 +841,15 @@ class DashboardBookingRescheduleView(LoginRequiredMixin, View):
         return redirect(next_url)
 
 
-class DashboardBookingApproveView(LoginRequiredMixin, View):
+class DashboardBookingApproveView(TeamContextMixin, ViewPermissionMixin, View):
     def post(self, request, uid):
-        booking = get_object_or_404(Booking, uid=uid, host=request.user)
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            booking = get_object_or_404(Booking, uid=uid, event_type__team=team)
+        else:
+            booking = get_object_or_404(Booking, uid=uid, host=request.user, event_type__team__isnull=True)
+            
         from apps.bookings.services import InvalidTransition, approve_booking
 
         with contextlib.suppress(InvalidTransition):
@@ -837,9 +857,15 @@ class DashboardBookingApproveView(LoginRequiredMixin, View):
         return redirect("dashboard")
 
 
-class DashboardBookingRejectView(LoginRequiredMixin, View):
+class DashboardBookingRejectView(TeamContextMixin, ViewPermissionMixin, View):
     def post(self, request, uid):
-        booking = get_object_or_404(Booking, uid=uid, host=request.user)
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            booking = get_object_or_404(Booking, uid=uid, event_type__team=team)
+        else:
+            booking = get_object_or_404(Booking, uid=uid, host=request.user, event_type__team__isnull=True)
+            
         reason = request.POST.get("reason", "")
         from apps.bookings.services import InvalidTransition, reject_booking
 
@@ -925,18 +951,19 @@ class Echo:
         return value
 
 
-class DashboardBookingsView(LoginRequiredMixin, View):
+class DashboardBookingsView(TeamContextMixin, ViewPermissionMixin, View):
     def get(self, request):
         now = django_timezone.now()
 
-        # Base queryset
-        qs = (
-            Booking.objects.filter(host=request.user)
-            .select_related("event_type", "host")
-            .prefetch_related("attendees")
-        )
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            qs = Booking.objects.filter(event_type__team=team)
+        else:
+            qs = Booking.objects.filter(host=request.user, event_type__team__isnull=True)
+            
+        qs = qs.select_related("event_type", "host").prefetch_related("attendees")
 
-        # Single aggregate query for tab counts
         counts = qs.aggregate(
             upcoming=Count(
                 "id", filter=Q(status=Booking.StatusChoices.CONFIRMED, start_at__gte=now)
@@ -1035,7 +1062,10 @@ class DashboardBookingsView(LoginRequiredMixin, View):
         page_number = request.GET.get("page", 1)
         page_obj = paginator.get_page(page_number)
 
-        event_types = EventType.objects.filter(owner=request.user)
+        if team:
+            event_types = EventType.objects.filter(team=team)
+        else:
+            event_types = EventType.objects.filter(owner=request.user, team__isnull=True)
 
         context = {
             "page_obj": page_obj,
@@ -1046,6 +1076,7 @@ class DashboardBookingsView(LoginRequiredMixin, View):
             "current_date": date_preset,
             "search_q": search,
             "host_tz": request.user.timezone or "UTC",
+            "active_team": team,
         }
 
         if request.headers.get("HX-Request"):
@@ -1053,9 +1084,15 @@ class DashboardBookingsView(LoginRequiredMixin, View):
         return render(request, "dashboard/bookings/list.html", context)
 
 
-class WaitlistListView(LoginRequiredMixin, View):
+class WaitlistListView(TeamContextMixin, ViewPermissionMixin, View):
     def get(self, request, slug):
-        event_type = get_object_or_404(EventType, owner=request.user, slug=slug)
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            event_type = get_object_or_404(EventType, team=team, slug=slug)
+        else:
+            event_type = get_object_or_404(EventType, owner=request.user, team__isnull=True, slug=slug)
+            
         waitlist_entries = event_type.waitlist_entries.order_by("-created_at")
         context = {
             "event_type": event_type,
@@ -1064,10 +1101,16 @@ class WaitlistListView(LoginRequiredMixin, View):
         return render(request, "bookings/waitlist_list.html", context)
 
 
-class WaitlistRemoveView(LoginRequiredMixin, View):
+class WaitlistRemoveView(TeamContextMixin, ViewPermissionMixin, View):
     def post(self, request, uid):
         from apps.bookings.models import WaitlistEntry
-        entry = get_object_or_404(WaitlistEntry, host=request.user, claim_token=uid)
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            entry = get_object_or_404(WaitlistEntry, event_type__team=team, claim_token=uid)
+        else:
+            entry = get_object_or_404(WaitlistEntry, host=request.user, event_type__team__isnull=True, claim_token=uid)
+            
         entry.status = WaitlistEntry.StatusChoices.REMOVED
         entry.save(update_fields=["status", "updated_at"])
         from django.contrib import messages
@@ -1078,11 +1121,24 @@ class WaitlistRemoveView(LoginRequiredMixin, View):
 class JoinWaitlistView(View):
     def get_host_and_event(self, host_slug, event_slug):
         host = User.objects.filter(slug__iexact=host_slug, is_active=True).first()
+        
+        # Check if it's a team slug
+        from apps.teams.models import Team
+        team = None
         if not host:
-            raise Http404("Host not found")
-        event = EventType.objects.filter(
-            owner=host, slug__iexact=event_slug, is_active=True
-        ).first()
+            team = Team.objects.filter(slug__iexact=host_slug, is_active=True).first()
+            if not team:
+                raise Http404("Host or Team not found")
+        
+        if team:
+            event = EventType.objects.filter(
+                team=team, slug__iexact=event_slug, is_active=True
+            ).first()
+        else:
+            event = EventType.objects.filter(
+                owner=host, slug__iexact=event_slug, is_active=True
+            ).first()
+            
         if not event:
             raise Http404("Event not found")
         return host, event
@@ -1247,9 +1303,15 @@ class WaitlistClaimView(View):
             return render(request, "bookings/waitlist_claim_expired.html", {"entry": entry})
 
 
-class DashboardBookingNoShowView(LoginRequiredMixin, View):
+class DashboardBookingNoShowView(TeamContextMixin, ViewPermissionMixin, View):
     def post(self, request, uid):
-        booking = get_object_or_404(Booking, uid=uid, host=request.user)
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            booking = get_object_or_404(Booking, uid=uid, event_type__team=team)
+        else:
+            booking = get_object_or_404(Booking, uid=uid, host=request.user, event_type__team__isnull=True)
+            
         from apps.bookings.services import InvalidTransition, mark_booking_no_show
 
         with contextlib.suppress(InvalidTransition):

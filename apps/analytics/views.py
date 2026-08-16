@@ -10,12 +10,15 @@ from django.db.models.functions import Coalesce
 
 from .models import DailyMetric, BookingFunnelEvent
 
-class DashboardInsightsView(LoginRequiredMixin, TemplateView):
+from apps.core.permissions import TeamContextMixin, ViewPermissionMixin, get_active_team
+
+class DashboardInsightsView(TeamContextMixin, ViewPermissionMixin, TemplateView):
     template_name = "analytics/insights.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         host = self.request.user
+        team = get_active_team(self.request)
         
         # Determine date range
         period = self.request.GET.get("period", "30d")
@@ -35,7 +38,10 @@ class DashboardInsightsView(LoginRequiredMixin, TemplateView):
         else:
             start_date = today - timedelta(days=30)
             
-        metrics_qs = DailyMetric.objects.filter(host=host, date__gte=start_date, date__lte=today)
+        if team:
+            metrics_qs = DailyMetric.objects.filter(team=team, date__gte=start_date, date__lte=today)
+        else:
+            metrics_qs = DailyMetric.objects.filter(host=host, team__isnull=True, date__gte=start_date, date__lte=today)
         
         # Aggregate totals
         totals = metrics_qs.aggregate(
@@ -112,12 +118,14 @@ class DashboardInsightsView(LoginRequiredMixin, TemplateView):
             "dropoff_to_date": dropoff_to_date,
             "dropoff_to_form": dropoff_to_form,
             "dropoff_to_submit": dropoff_to_submit,
+            "active_team": team,
         })
         return context
 
-class ExportInsightsView(LoginRequiredMixin, View):
+class ExportInsightsView(TeamContextMixin, ViewPermissionMixin, View):
     def get(self, request, *args, **kwargs):
         host = request.user
+        team = get_active_team(request)
         period = request.GET.get("period", "30d")
         now = timezone.now()
         today = now.date()
@@ -135,11 +143,19 @@ class ExportInsightsView(LoginRequiredMixin, View):
         else:
             start_date = today - timedelta(days=30)
 
-        metrics = DailyMetric.objects.filter(
-            host=host, 
-            date__gte=start_date, 
-            date__lte=today
-        ).order_by('-date')
+        if team:
+            metrics = DailyMetric.objects.filter(
+                team=team, 
+                date__gte=start_date, 
+                date__lte=today
+            ).order_by('-date')
+        else:
+            metrics = DailyMetric.objects.filter(
+                host=host, 
+                team__isnull=True,
+                date__gte=start_date, 
+                date__lte=today
+            ).order_by('-date')
 
         response = HttpResponse(
             content_type="text/csv",

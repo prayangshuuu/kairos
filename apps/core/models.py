@@ -32,3 +32,17 @@ class BouncedEmail(models.Model):
 
     def __str__(self):
         return self.email
+
+
+class URLNamespace(models.Model):
+    """
+    A global registry of slugs to prevent collisions between Users, Teams, and potentially other entities.
+    """
+    slug = models.SlugField(max_length=60, unique=True)
+    
+    # We can store generic content types here if we want, but for now we just need the slug to be unique.
+    # To know who owns it, we can query User and Team.
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.slug

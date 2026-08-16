@@ -354,79 +354,76 @@ class HostWalletView(LoginRequiredMixin, View):
     """Host Wallet Dashboard: balances, payout methods, request form, full ledger statement, payout history."""
 
     def get(self, request):
-        user = request.user
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        owner = team if team else request.user
 
         # Determine wallet mode before computing balances.
-        wallet_mode = get_host_wallet_mode(user)
+        wallet_mode = get_host_wallet_mode(owner)
         has_custodial = wallet_mode in ("custodial", "mixed")
         has_non_custodial = wallet_mode in ("non_custodial", "mixed")
 
-        # Balance figures are ONLY meaningful for custodial (PayStation) entries.
-        # For Stripe-only hosts these will correctly be 0 — Kairos holds ৳0.
-        avail_cents = get_available_balance(user) if has_custodial else 0
-        pending_cents = get_pending_balance(user) if has_custodial else 0
-        total_cents = get_total_balance(user) if has_custodial else 0
+        avail_cents = get_available_balance(owner) if has_custodial else 0
+        pending_cents = get_pending_balance(owner) if has_custodial else 0
+        total_cents = get_total_balance(owner) if has_custodial else 0
 
-        # Retrieve all ledger entries in chronological order for statement.
-        # For mixed hosts the list contains both custodial and non-custodial rows.
-        raw_entries = HostLedger.objects.filter(host=user).order_by("created_at", "id")
+        if team:
+            raw_entries = HostLedger.objects.filter(team=owner).order_by("created_at", "id")
+        else:
+            raw_entries = HostLedger.objects.filter(host=owner, team__isnull=True).order_by("created_at", "id")
+            
         running = 0
         statement_rows = []
         for entry in raw_entries:
-            # Running balance tracks custodial entries only — non-custodial rows
-            # do not affect the running balance but are still shown for bookkeeping.
             if entry.is_custodial:
                 running += entry.amount_cents
             statement_rows.append(
                 {
                     "entry": entry,
-                    # running_balance_cents reflects custodial funds only.
                     "running_balance_cents": running if entry.is_custodial else None,
                 }
             )
 
-        # Reverse for display (latest first)
         statement_rows.reverse()
 
-        payout_methods = PayoutMethod.objects.filter(host=user)
-        payout_requests = PayoutRequest.objects.filter(host=user).order_by("-requested_at")
+        if team:
+            payout_methods = PayoutMethod.objects.filter(team=owner)
+            payout_requests = PayoutRequest.objects.filter(team=owner).order_by("-requested_at")
+        else:
+            payout_methods = PayoutMethod.objects.filter(host=owner, team__isnull=True)
+            payout_requests = PayoutRequest.objects.filter(host=owner, team__isnull=True).order_by("-requested_at")
 
         min_threshold_cents = getattr(settings, "KAIROS_MINIMUM_PAYOUT_CENTS", 1000)
 
-        # Stripe Express dashboard link for non-custodial / mixed hosts
         stripe_dashboard_url = getattr(
             settings, "STRIPE_EXPRESS_DASHBOARD_URL",
             "https://connect.stripe.com/express_login"
         )
 
         context = {
-            # Wallet mode
             "wallet_mode": wallet_mode,
             "has_custodial": has_custodial,
             "has_non_custodial": has_non_custodial,
-            # Custodial balances (only meaningful when has_custodial=True)
             "available_cents": avail_cents,
             "pending_cents": pending_cents,
             "total_cents": total_cents,
             "available_bdt": f"{avail_cents / 100:.2f}",
             "pending_bdt": f"{pending_cents / 100:.2f}",
             "total_bdt": f"{total_cents / 100:.2f}",
-            # Statement
             "statement_rows": statement_rows,
-            # Payout methods and requests (custodial section only)
             "payout_methods": payout_methods,
             "payout_requests": payout_requests,
             "min_threshold_cents": min_threshold_cents,
             "min_threshold_bdt": f"{min_threshold_cents / 100:.2f}",
             "is_negative": (avail_cents < 0 or total_cents < 0),
-            # Stripe dashboard link for non-custodial hosts
             "stripe_dashboard_url": stripe_dashboard_url,
+            "active_team": team,
         }
         return render(request, "payments/wallet.html", context)
 
 
 class AddPayoutMethodView(LoginRequiredMixin, View):
-    """Host adds a bKash, Nagad, or Bank Transfer payout method."""
+    """Host or Team adds a bKash, Nagad, or Bank Transfer payout method."""
 
     def post(self, request):
         method_type = request.POST.get("method_type")
@@ -460,16 +457,28 @@ class AddPayoutMethodView(LoginRequiredMixin, View):
             messages.error(request, "Invalid method type selected.")
             return redirect("payments:wallet")
 
-        # Set first method as default automatically
-        is_first = not PayoutMethod.objects.filter(host=request.user).exists()
-
-        pm = PayoutMethod(
-            host=request.user,
-            method_type=method_type,
-            account_name=account_name,
-            is_verified=True,
-            is_default=is_first,
-        )
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        
+        if team:
+            is_first = not PayoutMethod.objects.filter(team=team).exists()
+            pm = PayoutMethod(
+                team=team,
+                method_type=method_type,
+                account_name=account_name,
+                is_verified=True,
+                is_default=is_first,
+            )
+        else:
+            is_first = not PayoutMethod.objects.filter(host=request.user, team__isnull=True).exists()
+            pm = PayoutMethod(
+                host=request.user,
+                method_type=method_type,
+                account_name=account_name,
+                is_verified=True,
+                is_default=is_first,
+            )
+            
         pm.set_details(details)
         pm.save()
 
@@ -478,17 +487,23 @@ class AddPayoutMethodView(LoginRequiredMixin, View):
 
 
 class DeletePayoutMethodView(LoginRequiredMixin, View):
-    """Host deletes a payout method."""
+    """Host or Team deletes a payout method."""
 
     def post(self, request, method_id):
-        pm = get_object_or_404(PayoutMethod, id=method_id, host=request.user)
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            pm = get_object_or_404(PayoutMethod, id=method_id, team=team)
+        else:
+            pm = get_object_or_404(PayoutMethod, id=method_id, host=request.user, team__isnull=True)
+            
         pm.delete()
         messages.success(request, "Payout method deleted.")
         return redirect("payments:wallet")
 
 
 class RequestPayoutView(LoginRequiredMixin, View):
-    """Host submits a payout request."""
+    """Host or Team submits a payout request."""
 
     def post(self, request):
         try:
@@ -496,7 +511,11 @@ class RequestPayoutView(LoginRequiredMixin, View):
             amount_cents = int(amount_bdt * Decimal("100"))
             method_id = int(request.POST.get("method_id", 0))
 
-            request_payout(host=request.user, amount_cents=amount_cents, method_id=method_id)
+            from apps.core.permissions import get_active_team
+            team = get_active_team(request)
+            owner = team if team else request.user
+
+            request_payout(owner=owner, amount_cents=amount_cents, method_id=method_id)
             messages.success(
                 request,
                 f"Payout request for ৳{amount_bdt:.2f} submitted successfully! Reserved from available balance.",
@@ -508,7 +527,7 @@ class RequestPayoutView(LoginRequiredMixin, View):
 
 
 class DownloadStatementCSVView(LoginRequiredMixin, View):
-    """Download full host ledger statement as CSV."""
+    """Download full host or team ledger statement as CSV."""
 
     def get(self, request):
         response = HttpResponse(content_type="text/csv")
@@ -520,7 +539,13 @@ class DownloadStatementCSVView(LoginRequiredMixin, View):
             "Description", "Amount (BDT)", "Running Custodial Balance (BDT)",
         ])
 
-        entries = HostLedger.objects.filter(host=request.user).order_by("created_at", "id")
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            entries = HostLedger.objects.filter(team=team).order_by("created_at", "id")
+        else:
+            entries = HostLedger.objects.filter(host=request.user, team__isnull=True).order_by("created_at", "id")
+            
         running = 0
         rows = []
         for entry in entries:
@@ -546,7 +571,15 @@ class DownloadStatementPDFView(LoginRequiredMixin, View):
     """Download clean printable statement HTML formatted view."""
 
     def get(self, request):
-        entries = HostLedger.objects.filter(host=request.user).order_by("created_at", "id")
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        owner = team if team else request.user
+        
+        if team:
+            entries = HostLedger.objects.filter(team=team).order_by("created_at", "id")
+        else:
+            entries = HostLedger.objects.filter(host=owner, team__isnull=True).order_by("created_at", "id")
+            
         running = 0
         rows = []
         for entry in entries:
@@ -560,19 +593,20 @@ class DownloadStatementPDFView(LoginRequiredMixin, View):
             })
         rows.reverse()
 
-        wallet_mode = get_host_wallet_mode(request.user)
+        wallet_mode = get_host_wallet_mode(owner)
         has_custodial = wallet_mode in ("custodial", "mixed")
-        avail_cents = get_available_balance(request.user) if has_custodial else 0
-        total_cents = get_total_balance(request.user) if has_custodial else 0
+        avail_cents = get_available_balance(owner) if has_custodial else 0
+        total_cents = get_total_balance(owner) if has_custodial else 0
 
         context = {
-            "host": request.user,
+            "host": owner,
             "rows": rows,
             "wallet_mode": wallet_mode,
             "has_custodial": has_custodial,
             "available_bdt": f"{avail_cents / 100:.2f}",
             "total_bdt": f"{total_cents / 100:.2f}",
             "generated_at": timezone.now(),
+            "active_team": team,
         }
         return render(request, "payments/statement_pdf.html", context)
 
@@ -587,7 +621,7 @@ class AdminPayoutQueueView(StaffRequiredMixin, View):
 
     def get(self, request):
         status_filter = request.GET.get("status", "requested")
-        payouts_query = PayoutRequest.objects.select_related("host", "method").order_by("-requested_at")
+        payouts_query = PayoutRequest.objects.select_related("host", "team", "method").order_by("-requested_at")
 
         if status_filter != "all":
             payouts_query = payouts_query.filter(status=status_filter)
@@ -595,13 +629,15 @@ class AdminPayoutQueueView(StaffRequiredMixin, View):
         payout_list = []
         for pr in payouts_query:
             details = pr.method.get_details()
+            owner = pr.team if pr.team else pr.host
             # Fetch host ledger history summary
-            host_avail = get_available_balance(pr.host)
+            host_avail = get_available_balance(owner)
             payout_list.append({
                 "payout_request": pr,
                 "amount_bdt": f"{pr.amount_cents / 100:.2f}",
                 "account_details": details,
                 "host_available_bdt": f"{host_avail / 100:.2f}",
+                "owner_name": owner.name if hasattr(owner, 'name') else owner.email,
             })
 
         context = {
@@ -650,8 +686,8 @@ class AdminPayoutExportCSVView(StaffRequiredMixin, View):
         writer = csv.writer(response)
         writer.writerow([
             "Request ID",
-            "Host Email",
-            "Host Name",
+            "Owner Email",
+            "Owner Name",
             "Amount BDT",
             "Method Type",
             "Account Name",
@@ -663,7 +699,7 @@ class AdminPayoutExportCSVView(StaffRequiredMixin, View):
 
         approved_requests = PayoutRequest.objects.filter(
             status__in=[PayoutRequest.STATUS_APPROVED, PayoutRequest.STATUS_REQUESTED]
-        ).select_related("host", "method")
+        ).select_related("host", "team", "method")
 
         for pr in approved_requests:
             details = pr.method.get_details()
@@ -672,10 +708,14 @@ class AdminPayoutExportCSVView(StaffRequiredMixin, View):
             if details.get("routing_number"):
                 bank_info += f" (Routing: {details.get('routing_number')})"
 
+            owner = pr.team if pr.team else pr.host
+            email = getattr(owner, 'email', '')
+            name = getattr(owner, 'name', '') or getattr(owner, 'display_name', '') or email
+
             writer.writerow([
                 pr.id,
-                pr.host.email,
-                pr.host.display_name or pr.host.email,
+                email,
+                name,
                 f"{pr.amount_cents / 100:.2f}",
                 pr.method.get_method_type_display(),
                 pr.method.account_name,

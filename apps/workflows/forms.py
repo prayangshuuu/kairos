@@ -34,10 +34,12 @@ class WorkflowForm(forms.ModelForm):
             "is_active": forms.CheckboxInput(attrs={"class": "rounded border-gray-300 text-teal-600 focus:ring-teal-500"}),
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, team=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if user:
-            self.fields["event_types"].queryset = EventType.objects.filter(owner=user)
+        if team:
+            self.fields["event_types"].queryset = EventType.objects.filter(team=team)
+        elif user:
+            self.fields["event_types"].queryset = EventType.objects.filter(owner=user, team__isnull=True)
 
 
 class WorkflowStepForm(forms.ModelForm):

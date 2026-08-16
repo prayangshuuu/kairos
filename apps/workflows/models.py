@@ -23,7 +23,10 @@ class Workflow(models.Model):
     ]
 
     owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="workflows"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="workflows", null=True, blank=True
+    )
+    team = models.ForeignKey(
+        "teams.Team", on_delete=models.CASCADE, related_name="workflows", null=True, blank=True
     )
     name = models.CharField(max_length=150)
     event_types = models.ManyToManyField(
@@ -37,6 +40,17 @@ class Workflow(models.Model):
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(owner__isnull=False, team__isnull=True)
+                    | models.Q(owner__isnull=True, team__isnull=False)
+                ),
+                name="workflow_owner_or_team",
+            )
+        ]
 
     def clean(self):
         super().clean()

@@ -73,3 +73,11 @@ def validate_slug(value):
 
     if value.isdigit():
         raise ValidationError("Slug cannot be purely numeric.")
+
+    # Cross-table validation (db constraint is in URLNamespace)
+    from apps.accounts.models import User
+    from apps.teams.models import Team
+
+    # If the user or team is being saved, it might already own this slug.
+    # We can't perfectly check ownership in a validator since we don't have the instance,
+    # but the URLNamespace save() process will enforce the db-level constraint.

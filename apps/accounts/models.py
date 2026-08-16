@@ -77,11 +77,33 @@ class User(AbstractUser):
 
     objects = UserManager()
 
+    def clean(self):
+        super().clean()
+        if self.slug:
+            from apps.teams.models import Team
+            from django.core.exceptions import ValidationError
+            if Team.objects.filter(slug__iexact=self.slug).exists():
+                raise ValidationError({"slug": "This slug is already in use by a team."})
+
     def save(self, *args, **kwargs):
         if self.slug:
             self.slug = self.slug.lower()
+        
+        # Check if slug is changing or new
+        old_slug = None
+        if self.pk:
+            old_user = User.objects.filter(pk=self.pk).first()
+            if old_user and old_user.slug != self.slug:
+                old_slug = old_user.slug
+        
         super().save(*args, **kwargs)
 
+        if self.slug:
+            from apps.core.models import URLNamespace
+            URLNamespace.objects.get_or_create(slug=self.slug)
+        if old_slug and old_slug != self.slug:
+            # We don't delete from URLNamespace to prevent immediate reuse
+            pass
     @property
     def booking_url(self):
         if self.slug:

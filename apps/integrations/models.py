@@ -29,7 +29,10 @@ class CalendarConnection(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="calendar_connections",
+        null=True,
+        blank=True,
     )
+    team = models.ForeignKey("teams.Team", on_delete=models.CASCADE, null=True, blank=True)
     provider = models.CharField(max_length=50, choices=PROVIDER_CHOICES)
     external_account_email = models.EmailField(
         help_text=_("The email address of the connected account")
@@ -54,6 +57,16 @@ class CalendarConnection(models.Model):
             models.UniqueConstraint(
                 fields=["user", "provider", "external_account_id"],
                 name="unique_user_provider_account",
+                condition=models.Q(user__isnull=False)
+            ),
+            models.UniqueConstraint(
+                fields=["team", "provider", "external_account_id"],
+                name="unique_team_provider_account",
+                condition=models.Q(team__isnull=False)
+            ),
+            models.CheckConstraint(
+                condition=models.Q(user__isnull=False, team__isnull=True) | models.Q(user__isnull=True, team__isnull=False),
+                name="calendar_connection_user_or_team"
             )
         ]
 
@@ -103,9 +116,14 @@ class SelectedCalendar(models.Model):
 
         with transaction.atomic():
             if self.is_write_target:
-                SelectedCalendar.objects.filter(
-                    connection__user=self.connection.user, is_write_target=True
-                ).exclude(pk=self.pk).update(is_write_target=False)
+                if self.connection.team:
+                    SelectedCalendar.objects.filter(
+                        connection__team=self.connection.team, is_write_target=True
+                    ).exclude(pk=self.pk).update(is_write_target=False)
+                else:
+                    SelectedCalendar.objects.filter(
+                        connection__user=self.connection.user, connection__team__isnull=True, is_write_target=True
+                    ).exclude(pk=self.pk).update(is_write_target=False)
             super().save(*args, **kwargs)
 
     def __str__(self):
@@ -165,7 +183,10 @@ class ConferenceConnection(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="conference_connections",
+        null=True,
+        blank=True,
     )
+    team = models.ForeignKey("teams.Team", on_delete=models.CASCADE, null=True, blank=True)
     provider = models.CharField(max_length=50, choices=PROVIDER_CHOICES)
     external_account_email = models.EmailField()
     external_account_id = models.CharField(max_length=255)
@@ -181,5 +202,15 @@ class ConferenceConnection(models.Model):
             models.UniqueConstraint(
                 fields=["user", "provider", "external_account_id"],
                 name="unique_conference_user_provider_account",
+                condition=models.Q(user__isnull=False)
+            ),
+            models.UniqueConstraint(
+                fields=["team", "provider", "external_account_id"],
+                name="unique_conference_team_provider_account",
+                condition=models.Q(team__isnull=False)
+            ),
+            models.CheckConstraint(
+                condition=models.Q(user__isnull=False, team__isnull=True) | models.Q(user__isnull=True, team__isnull=False),
+                name="conference_connection_user_or_team"
             )
         ]

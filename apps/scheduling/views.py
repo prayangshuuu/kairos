@@ -14,12 +14,12 @@ from .forms import EventTypeForm
 from .models import BookingQuestion, EventType
 
 
-class OwnerRequiredMixin(LoginRequiredMixin):
-    def get_queryset(self):
-        return super().get_queryset().filter(owner=self.request.user)
+from apps.core.permissions import TeamContextMixin, ManagePermissionMixin, ViewPermissionMixin, get_active_team
 
+class ContextRequiredMixin(LoginRequiredMixin, TeamContextMixin):
+    pass
 
-class EventTypeListView(OwnerRequiredMixin, ListView):
+class EventTypeListView(ContextRequiredMixin, ListView):
     model = EventType
     template_name = "scheduling/eventtype_list.html"
     context_object_name = "event_types"
@@ -34,7 +34,7 @@ class EventTypeListView(OwnerRequiredMixin, ListView):
         ).order_by("title")
 
 
-class EventTypeCreateView(LoginRequiredMixin, CreateView):
+class EventTypeCreateView(ContextRequiredMixin, ManagePermissionMixin, CreateView):
     model = EventType
     form_class = EventTypeForm
     template_name = "scheduling/eventtype_form.html"
@@ -67,6 +67,7 @@ class EventTypeCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.owner = self.request.user
+        form.instance.team = get_active_team(self.request)
         response = super().form_valid(form)
 
         # Save questions if passed via JSON
@@ -111,7 +112,7 @@ class EventTypeCreateView(LoginRequiredMixin, CreateView):
         return reverse("scheduling:eventtype_edit", kwargs={"slug": self.object.slug})
 
 
-class EventTypeUpdateView(OwnerRequiredMixin, UpdateView):
+class EventTypeUpdateView(ContextRequiredMixin, ManagePermissionMixin, UpdateView):
     model = EventType
     form_class = EventTypeForm
     template_name = "scheduling/eventtype_form.html"
@@ -201,18 +202,32 @@ class EventTypeUpdateView(OwnerRequiredMixin, UpdateView):
         return reverse("scheduling:eventtype_edit", kwargs={"slug": self.object.slug})
 
 
-class EventTypeDuplicateView(LoginRequiredMixin, View):
+class EventTypeDuplicateView(ContextRequiredMixin, View):
     def post(self, request, slug):
-        event = get_object_or_404(EventType, owner=request.user, slug=slug)
+        team = get_active_team(request)
+        if team:
+            event = get_object_or_404(EventType, team=team, slug=slug)
+        else:
+            event = get_object_or_404(EventType, owner=request.user, team__isnull=True, slug=slug)
+            
+        from apps.core.permissions import can_manage
+        if not can_manage(request.user, event):
+            from django.http import Http404
+            raise Http404("No such object")
 
         with transaction.atomic():
             new_title = f"{event.title} (copy)"
             base_slug = slugify(new_title)
             new_slug = base_slug
             counter = 1
-            while EventType.objects.filter(owner=request.user, slug=new_slug).exists():
-                new_slug = f"{base_slug}-{counter}"
-                counter += 1
+            if team:
+                while EventType.objects.filter(team=team, slug=new_slug).exists():
+                    new_slug = f"{base_slug}-{counter}"
+                    counter += 1
+            else:
+                while EventType.objects.filter(owner=request.user, team__isnull=True, slug=new_slug).exists():
+                    new_slug = f"{base_slug}-{counter}"
+                    counter += 1
 
             new_event = EventType.objects.get(id=event.id)
             new_event.pk = None
@@ -229,39 +244,60 @@ class EventTypeDuplicateView(LoginRequiredMixin, View):
         return redirect("scheduling:eventtype_list")
 
 
-class EventTypeToggleActiveView(LoginRequiredMixin, View):
+class EventTypeToggleActiveView(ContextRequiredMixin, View):
     def post(self, request, slug):
-        event = get_object_or_404(EventType, owner=request.user, slug=slug)
+        team = get_active_team(request)
+        if team:
+            event = get_object_or_404(EventType, team=team, slug=slug)
+        else:
+            event = get_object_or_404(EventType, owner=request.user, team__isnull=True, slug=slug)
+            
+        from apps.core.permissions import can_manage
+        if not can_manage(request.user, event):
+            from django.http import Http404
+            raise Http404("No such object")
 
         event.is_active = not event.is_active
         event.save(update_fields=["is_active"])
         return redirect("scheduling:eventtype_list")
 
-class EventTypeEmbedCodeView(LoginRequiredMixin, DetailView):
+class EventTypeEmbedCodeView(ContextRequiredMixin, ViewPermissionMixin, DetailView):
     model = EventType
     template_name = "scheduling/embed_code.html"
     context_object_name = "event_type"
     slug_field = "slug"
     slug_url_kwarg = "slug"
 
-    def get_queryset(self):
-        return EventType.objects.filter(owner=self.request.user)
-
     def get_context_data(self, **kwargs):
         from django.urls import reverse
         context = super().get_context_data(**kwargs)
         event = self.get_object()
-        embed_url = self.request.build_absolute_uri(
-            reverse("bookings:booking_embed", kwargs={"host_slug": self.request.user.slug, "event_slug": event.slug})
-        )
+        if event.team:
+            embed_url = self.request.build_absolute_uri(
+                reverse("bookings:booking_embed", kwargs={"host_slug": event.team.slug, "event_slug": event.slug})
+            )
+        else:
+            embed_url = self.request.build_absolute_uri(
+                reverse("bookings:booking_embed", kwargs={"host_slug": self.request.user.slug, "event_slug": event.slug})
+            )
         context["embed_url"] = embed_url
         context["domain"] = self.request.get_host()
         return context
 
 
-class EventTypeDeleteView(LoginRequiredMixin, View):
+class EventTypeDeleteView(ContextRequiredMixin, View):
     def post(self, request, slug):
-        event = get_object_or_404(EventType, owner=request.user, slug=slug)
+        team = get_active_team(request)
+        if team:
+            event = get_object_or_404(EventType, team=team, slug=slug)
+        else:
+            event = get_object_or_404(EventType, owner=request.user, team__isnull=True, slug=slug)
+            
+        from apps.core.permissions import can_manage
+        if not can_manage(request.user, event):
+            from django.http import Http404
+            raise Http404("No such object")
+            
         try:
             event.delete()
         except ProtectedError:
@@ -272,22 +308,30 @@ class EventTypeDeleteView(LoginRequiredMixin, View):
         return redirect("scheduling:eventtype_list")
 
 
-class EventTypeCheckSlugView(LoginRequiredMixin, View):
+class EventTypeCheckSlugView(ContextRequiredMixin, View):
     def get(self, request):
         slug = request.GET.get("slug", "").lower()
         exclude_id = request.GET.get("exclude_id")
 
         if not slug:
             return HttpResponse("")
+            
+        team = get_active_team(request)
 
-        qs = EventType.objects.filter(owner=request.user, slug=slug)
+        qs = EventType.objects.filter(slug=slug)
+        if team:
+            qs = qs.filter(team=team)
+        else:
+            qs = qs.filter(owner=request.user, team__isnull=True)
+            
         if exclude_id:
             qs = qs.exclude(id=exclude_id)
 
         if qs.exists():
             return HttpResponse("<span class='text-red-500 text-sm'>Unavailable</span>")
 
-        url = request.build_absolute_uri(
-            f"/{request.user.slug or ('u/' + str(request.user.id))}/{slug}"
-        )
+        if team:
+            url = request.build_absolute_uri(f"/{team.slug}/{slug}")
+        else:
+            url = request.build_absolute_uri(f"/{request.user.slug or ('u/' + str(request.user.id))}/{slug}")
         return HttpResponse(f"<span class='text-green-500 text-sm'>Available at {url}</span>")

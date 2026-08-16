@@ -43,9 +43,9 @@ def test_google_callback_rejects_expired_state(client):
     # State string format: value:timestamp:signature
     signer = TimestampSigner()
 
-    # We mock time.time so it thinks we are signing it in the past
     with patch("time.time", return_value=time.time() - 601):
-        expired_state = signer.sign(str(user.id))
+        import json
+        expired_state = signer.sign(json.dumps({"user_id": user.id, "team_id": None}))
 
     url = reverse("integrations:google_callback")
     response = client.get(url, {"state": expired_state, "code": "fake_code"})
@@ -65,7 +65,8 @@ def test_google_callback_accepts_superset_scopes(mock_get, mock_post, client):
     client.force_login(user)
 
     signer = TimestampSigner()
-    state = signer.sign(str(user.id))
+    import json
+    state = signer.sign(json.dumps({"user_id": user.id, "team_id": None}))
 
     # Mock token response with an extra scope
     mock_post.return_value.ok = True

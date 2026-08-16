@@ -28,11 +28,20 @@ class ClientManager(models.Manager):
 
 class ClientTag(models.Model):
     name = models.CharField(max_length=100)
-    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="client_tags")
+    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="client_tags", null=True, blank=True)
+    team = models.ForeignKey("teams.Team", on_delete=models.CASCADE, related_name="client_tags", null=True, blank=True)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["host", "name"], name="unique_client_tag_host_name")
+            models.UniqueConstraint(fields=["host", "name"], condition=models.Q(team__isnull=True), name="unique_client_tag_host_name"),
+            models.UniqueConstraint(fields=["team", "name"], condition=models.Q(host__isnull=True), name="unique_client_tag_team_name"),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(host__isnull=False, team__isnull=True)
+                    | models.Q(host__isnull=True, team__isnull=False)
+                ),
+                name="client_tag_host_or_team",
+            )
         ]
 
     def __str__(self):
@@ -43,7 +52,8 @@ class Client(models.Model):
         ACTIVE = "active", "Active"
         ARCHIVED = "archived", "Archived"
 
-    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="clients")
+    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="clients", null=True, blank=True)
+    team = models.ForeignKey("teams.Team", on_delete=models.CASCADE, related_name="clients", null=True, blank=True)
     name = models.CharField(max_length=255)
     known_names = models.JSONField(default=list, blank=True)
     email = models.EmailField()
@@ -66,11 +76,21 @@ class Client(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["host", "email"], name="unique_client_host_email")
+            models.UniqueConstraint(fields=["host", "email"], condition=models.Q(team__isnull=True), name="unique_client_host_email"),
+            models.UniqueConstraint(fields=["team", "email"], condition=models.Q(host__isnull=True), name="unique_client_team_email"),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(host__isnull=False, team__isnull=True)
+                    | models.Q(host__isnull=True, team__isnull=False)
+                ),
+                name="client_host_or_team",
+            )
         ]
         indexes = [
             models.Index(fields=["host", "email"]),
+            models.Index(fields=["team", "email"]),
             models.Index(fields=["host", "last_seen_at"]),
+            models.Index(fields=["team", "last_seen_at"]),
         ]
 
     def __str__(self):

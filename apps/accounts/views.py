@@ -24,28 +24,55 @@ def dashboard(request):
     from apps.bookings.models import Booking
     from apps.integrations.models import CalendarConnection
     from apps.payments.wallet import get_dashboard_wallet_summary, has_payment_route
+    from apps.core.permissions import get_active_team
 
-    pending_bookings = (
-        Booking.objects.filter(host=request.user, status=Booking.StatusChoices.PENDING)
-        .select_related("event_type")
-        .order_by("start_at")
-    )
+    team = get_active_team(request)
 
-    next_meeting = (
-        Booking.objects.filter(
-            host=request.user,
-            status=Booking.StatusChoices.CONFIRMED,
-            start_at__gte=django_timezone.now(),
+    if team:
+        pending_bookings = (
+            Booking.objects.filter(event_type__team=team, status=Booking.StatusChoices.PENDING)
+            .select_related("event_type")
+            .order_by("start_at")
         )
-        .select_related("event_type")
-        .order_by("start_at")
-        .first()
-    )
+
+        next_meeting = (
+            Booking.objects.filter(
+                event_type__team=team,
+                status=Booking.StatusChoices.CONFIRMED,
+                start_at__gte=django_timezone.now(),
+            )
+            .select_related("event_type")
+            .order_by("start_at")
+            .first()
+        )
+        
+        wallet_summary = get_dashboard_wallet_summary(team)
+        can_pay = has_payment_route(team)
+    else:
+        pending_bookings = (
+            Booking.objects.filter(host=request.user, event_type__team__isnull=True, status=Booking.StatusChoices.PENDING)
+            .select_related("event_type")
+            .order_by("start_at")
+        )
+
+        next_meeting = (
+            Booking.objects.filter(
+                host=request.user,
+                event_type__team__isnull=True,
+                status=Booking.StatusChoices.CONFIRMED,
+                start_at__gte=django_timezone.now(),
+            )
+            .select_related("event_type")
+            .order_by("start_at")
+            .first()
+        )
+        
+        wallet_summary = get_dashboard_wallet_summary(request.user)
+        can_pay = has_payment_route(request.user)
 
     broken_connections = CalendarConnection.objects.filter(user=request.user, is_active=False)
-
-    # Wallet summary for dashboard card (bounded query count)
-    wallet_summary = get_dashboard_wallet_summary(request.user)
+    
+    my_teams = request.user.team_memberships.filter(status='active').select_related('team')
 
     return render(
         request,
@@ -55,7 +82,9 @@ def dashboard(request):
             "next_meeting": next_meeting,
             "broken_connections": broken_connections,
             "wallet_summary": wallet_summary,
-            "has_payment_route": has_payment_route(request.user),
+            "has_payment_route": can_pay,
+            "active_team": team,
+            "my_teams": my_teams,
         },
     )
 

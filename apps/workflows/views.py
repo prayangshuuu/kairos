@@ -26,41 +26,57 @@ from apps.workflows.services import (
 logger = logging.getLogger(__name__)
 
 
-class WorkflowListView(LoginRequiredMixin, View):
+from apps.core.permissions import TeamContextMixin, ViewPermissionMixin, get_active_team
+
+class WorkflowListView(TeamContextMixin, ViewPermissionMixin, View):
     """
-    List all workflows for the current host and display recent workflow execution history.
+    List all workflows for the current host/team and display recent workflow execution history.
     """
 
     def get(self, request):
-        ensure_default_workflows_for_user(request.user)
+        team = get_active_team(request)
+        if not team:
+            ensure_default_workflows_for_user(request.user)
 
-        workflows = (
-            Workflow.objects.filter(owner=request.user)
-            .prefetch_related("steps", "event_types")
-            .order_by("-is_default", "created_at")
-        )
-
-        executions = (
-            WorkflowExecution.objects.filter(workflow__owner=request.user)
-            .select_related("workflow", "step", "booking", "booking__event_type")
-            .order_by("-created_at")[:50]
-        )
+        if team:
+            workflows = (
+                Workflow.objects.filter(team=team)
+                .prefetch_related("steps", "event_types")
+                .order_by("-is_default", "created_at")
+            )
+            executions = (
+                WorkflowExecution.objects.filter(workflow__team=team)
+                .select_related("workflow", "step", "booking", "booking__event_type")
+                .order_by("-created_at")[:50]
+            )
+        else:
+            workflows = (
+                Workflow.objects.filter(owner=request.user, team__isnull=True)
+                .prefetch_related("steps", "event_types")
+                .order_by("-is_default", "created_at")
+            )
+            executions = (
+                WorkflowExecution.objects.filter(workflow__owner=request.user, workflow__team__isnull=True)
+                .select_related("workflow", "step", "booking", "booking__event_type")
+                .order_by("-created_at")[:50]
+            )
 
         context = {
             "workflows": workflows,
             "executions": executions,
             "can_create_custom": True,
+            "active_team": team,
         }
         return render(request, "workflows/workflow_list.html", context)
 
 
-class WorkflowCreateView(LoginRequiredMixin, View):
+class WorkflowCreateView(TeamContextMixin, ViewPermissionMixin, View):
     """
     Create a new custom workflow.
     """
 
     def get(self, request):
-        workflow_form = WorkflowForm(user=request.user)
+        workflow_form = WorkflowForm(user=request.user, team=get_active_team(request))
         step_form = WorkflowStepForm()
 
         context = {
@@ -72,13 +88,17 @@ class WorkflowCreateView(LoginRequiredMixin, View):
         return render(request, "workflows/workflow_form.html", context)
 
     def post(self, request):
-        workflow_form = WorkflowForm(request.POST, user=request.user)
+        team = get_active_team(request)
+        workflow_form = WorkflowForm(request.POST, user=request.user, team=team)
         step_form = WorkflowStepForm(request.POST)
 
         if workflow_form.is_valid() and step_form.is_valid():
             with transaction.atomic():
                 workflow = workflow_form.save(commit=False)
-                workflow.owner = request.user
+                if team:
+                    workflow.team = team
+                else:
+                    workflow.owner = request.user
                 workflow.save()
                 workflow_form.save_m2m()
 
@@ -99,16 +119,21 @@ class WorkflowCreateView(LoginRequiredMixin, View):
         return render(request, "workflows/workflow_form.html", context)
 
 
-class WorkflowUpdateView(LoginRequiredMixin, View):
+class WorkflowUpdateView(TeamContextMixin, ViewPermissionMixin, View):
     """
     Edit an existing workflow and its primary step.
     """
 
     def get(self, request, pk):
-        workflow = get_object_or_404(Workflow, owner=request.user, pk=pk)
+        team = get_active_team(request)
+        if team:
+            workflow = get_object_or_404(Workflow, team=team, pk=pk)
+        else:
+            workflow = get_object_or_404(Workflow, owner=request.user, team__isnull=True, pk=pk)
+            
         step = workflow.steps.first()
 
-        workflow_form = WorkflowForm(instance=workflow, user=request.user)
+        workflow_form = WorkflowForm(instance=workflow, user=request.user, team=team)
         step_form = WorkflowStepForm(instance=step) if step else WorkflowStepForm()
 
         context = {
@@ -121,10 +146,15 @@ class WorkflowUpdateView(LoginRequiredMixin, View):
         return render(request, "workflows/workflow_form.html", context)
 
     def post(self, request, pk):
-        workflow = get_object_or_404(Workflow, owner=request.user, pk=pk)
+        team = get_active_team(request)
+        if team:
+            workflow = get_object_or_404(Workflow, team=team, pk=pk)
+        else:
+            workflow = get_object_or_404(Workflow, owner=request.user, team__isnull=True, pk=pk)
+            
         step = workflow.steps.first()
 
-        workflow_form = WorkflowForm(request.POST, instance=workflow, user=request.user)
+        workflow_form = WorkflowForm(request.POST, instance=workflow, user=request.user, team=team)
         step_form = WorkflowStepForm(request.POST, instance=step) if step else WorkflowStepForm(request.POST)
 
         if workflow_form.is_valid() and step_form.is_valid():
@@ -147,17 +177,22 @@ class WorkflowUpdateView(LoginRequiredMixin, View):
         return render(request, "workflows/workflow_form.html", context)
 
 
-class WorkflowDuplicateView(LoginRequiredMixin, View):
+class WorkflowDuplicateView(TeamContextMixin, ViewPermissionMixin, View):
     """
     Duplicate an existing workflow.
     """
 
     def post(self, request, pk):
-        workflow = get_object_or_404(Workflow, owner=request.user, pk=pk)
+        team = get_active_team(request)
+        if team:
+            workflow = get_object_or_404(Workflow, team=team, pk=pk)
+        else:
+            workflow = get_object_or_404(Workflow, owner=request.user, team__isnull=True, pk=pk)
 
         with transaction.atomic():
             new_wf = Workflow.objects.create(
-                owner=request.user,
+                owner=request.user if not team else None,
+                team=team,
                 name=f"{workflow.name} (Copy)",
                 trigger=workflow.trigger,
                 offset_minutes=workflow.offset_minutes,
@@ -181,26 +216,36 @@ class WorkflowDuplicateView(LoginRequiredMixin, View):
         return redirect("workflows:list")
 
 
-class WorkflowDeleteView(LoginRequiredMixin, View):
+class WorkflowDeleteView(TeamContextMixin, ViewPermissionMixin, View):
     """
     Delete a workflow.
     """
 
     def post(self, request, pk):
-        workflow = get_object_or_404(Workflow, owner=request.user, pk=pk)
+        team = get_active_team(request)
+        if team:
+            workflow = get_object_or_404(Workflow, team=team, pk=pk)
+        else:
+            workflow = get_object_or_404(Workflow, owner=request.user, team__isnull=True, pk=pk)
+            
         name = workflow.name
         workflow.delete()
         messages.success(request, f"Workflow '{name}' deleted.")
         return redirect("workflows:list")
 
 
-class WorkflowToggleView(LoginRequiredMixin, View):
+class WorkflowToggleView(TeamContextMixin, ViewPermissionMixin, View):
     """
     Toggle is_active on a workflow.
     """
 
     def post(self, request, pk):
-        workflow = get_object_or_404(Workflow, owner=request.user, pk=pk)
+        team = get_active_team(request)
+        if team:
+            workflow = get_object_or_404(Workflow, team=team, pk=pk)
+        else:
+            workflow = get_object_or_404(Workflow, owner=request.user, team__isnull=True, pk=pk)
+            
         workflow.is_active = not workflow.is_active
         workflow.save(update_fields=["is_active", "updated_at"])
 
@@ -213,13 +258,17 @@ class WorkflowToggleView(LoginRequiredMixin, View):
         return redirect("workflows:list")
 
 
-class WorkflowExecutionRetryView(LoginRequiredMixin, View):
+class WorkflowExecutionRetryView(TeamContextMixin, ViewPermissionMixin, View):
     """
     Manually retry a failed workflow execution.
     """
 
     def post(self, request, pk):
-        execution = get_object_or_404(WorkflowExecution, pk=pk, workflow__owner=request.user)
+        team = get_active_team(request)
+        if team:
+            execution = get_object_or_404(WorkflowExecution, pk=pk, workflow__team=team)
+        else:
+            execution = get_object_or_404(WorkflowExecution, pk=pk, workflow__owner=request.user, workflow__team__isnull=True)
 
         execution.status = WorkflowExecution.STATUS_SCHEDULED
         execution.error = ""

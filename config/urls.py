@@ -37,6 +37,7 @@ urlpatterns = [
     path("dashboard/", account_views.dashboard, name="dashboard"),
     path("dashboard/clients/", include("apps.clients.urls")),
     path("dashboard/integrations/", include("apps.integrations.urls")),
+    path("dashboard/teams/", include("apps.teams.urls")),
     path("", include("apps.analytics.urls")),
     path("onboarding/", account_views.onboarding, name="onboarding"),
     path("onboarding/check-slug/", account_views.check_slug, name="check_slug"),

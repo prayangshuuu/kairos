@@ -75,21 +75,26 @@ def decrypt_payload(token_str: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def get_available_balance(host) -> int:
+def _get_owner_q(owner):
+    if hasattr(owner, 'slug') and hasattr(owner, 'name') and hasattr(owner, 'avatar'): # Team
+        return models.Q(team=owner)
+    return models.Q(host=owner)
+
+def get_available_balance(owner) -> int:
     """
-    Returns settled available balance in integer cents that a host can withdraw.
+    Returns settled available balance in integer cents that a host or team can withdraw.
     CUSTODIAL ENTRIES ONLY (is_custodial=True).
     Settled = entry has no associated payment OR payment.is_settled=True.
     """
     total = (
-        HostLedger.objects.filter(host=host, is_custodial=True)
+        HostLedger.objects.filter(_get_owner_q(owner), is_custodial=True)
         .filter(models.Q(payment__isnull=True) | models.Q(payment__is_settled=True))
         .aggregate(sum=models.Sum("amount_cents"))["sum"]
     )
     return total or 0
 
 
-def get_pending_balance(host) -> int:
+def get_pending_balance(owner) -> int:
     """
     Returns pending balance in integer cents from custodial bookings whose meeting has not
     yet occurred or is within the refund/cancellation window.
@@ -97,36 +102,36 @@ def get_pending_balance(host) -> int:
     """
     total = (
         HostLedger.objects.filter(
-            host=host, is_custodial=True, payment__isnull=False, payment__is_settled=False
+            _get_owner_q(owner), is_custodial=True, payment__isnull=False, payment__is_settled=False
         )
         .aggregate(sum=models.Sum("amount_cents"))["sum"]
     )
     return total or 0
 
 
-def get_total_balance(host) -> int:
+def get_total_balance(owner) -> int:
     """
     Returns total net wallet balance (available + pending) for custodial entries only.
     Do NOT call this for Stripe-only hosts — it will correctly return 0 because there are
     no custodial entries. That is the correct answer: Kairos holds ৳0 of their money.
     """
     total = (
-        HostLedger.objects.filter(host=host, is_custodial=True)
+        HostLedger.objects.filter(_get_owner_q(owner), is_custodial=True)
         .aggregate(sum=models.Sum("amount_cents"))["sum"]
     )
     return total or 0
 
 
-def get_host_wallet_mode(host) -> str:
+def get_host_wallet_mode(owner) -> str:
     """
-    Returns the wallet mode for a host:
-      "custodial"     — host has PayStation entries only
-      "non_custodial" — host has Stripe entries only
-      "mixed"         — host has both
-      "empty"         — host has no ledger entries
+    Returns the wallet mode for a host or team:
+      "custodial"     — has PayStation entries only
+      "non_custodial" — has Stripe entries only
+      "mixed"         — has both
+      "empty"         — has no ledger entries
     """
-    has_custodial = HostLedger.objects.filter(host=host, is_custodial=True).exists()
-    has_non_custodial = HostLedger.objects.filter(host=host, is_custodial=False).exists()
+    has_custodial = HostLedger.objects.filter(_get_owner_q(owner), is_custodial=True).exists()
+    has_non_custodial = HostLedger.objects.filter(_get_owner_q(owner), is_custodial=False).exists()
 
     if has_custodial and has_non_custodial:
         return "mixed"
@@ -139,11 +144,18 @@ def get_host_wallet_mode(host) -> str:
     from apps.payments.models import HostPaymentTerms, PaymentAccount
     from django.conf import settings
     
-    has_stripe_config = PaymentAccount.objects.filter(
-        user=host, provider="stripe_connect", charges_enabled=True, is_active=True
-    ).exists()
-    paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
-    has_paystation_config = paystation_enabled and HostPaymentTerms.objects.filter(user=host).exists()
+    if hasattr(owner, 'name'):
+        has_stripe_config = PaymentAccount.objects.filter(
+            team=owner, provider="stripe_connect", charges_enabled=True, is_active=True
+        ).exists()
+        paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
+        has_paystation_config = paystation_enabled and HostPaymentTerms.objects.filter(team=owner).exists()
+    else:
+        has_stripe_config = PaymentAccount.objects.filter(
+            user=owner, provider="stripe_connect", charges_enabled=True, is_active=True
+        ).exists()
+        paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
+        has_paystation_config = paystation_enabled and HostPaymentTerms.objects.filter(user=owner).exists()
     
     if has_stripe_config and has_paystation_config:
         return "mixed"
@@ -155,24 +167,32 @@ def get_host_wallet_mode(host) -> str:
     return "empty"
 
 
-def has_payment_route(host) -> bool:
+def has_payment_route(owner) -> bool:
     """
-    Returns True if the host has any payment route configured:
-    - A Stripe Connect account with charges_enabled, OR
-    - Accepted PayStation terms (and PayStation is enabled).
-    This is used to decide whether to show the wallet nav item / card.
+    Returns True if the host/team has any payment route configured:
     """
     from apps.payments.models import HostPaymentTerms, PaymentAccount
 
-    has_stripe = PaymentAccount.objects.filter(
-        user=host, provider="stripe_connect", charges_enabled=True, is_active=True
-    ).exists()
-    if has_stripe:
-        return True
+    if hasattr(owner, 'name'):
+        has_stripe = PaymentAccount.objects.filter(
+            team=owner, provider="stripe_connect", charges_enabled=True, is_active=True
+        ).exists()
+        if has_stripe:
+            return True
 
-    paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
-    if paystation_enabled and HostPaymentTerms.objects.filter(user=host).exists():
-        return True
+        paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
+        if paystation_enabled and HostPaymentTerms.objects.filter(team=owner).exists():
+            return True
+    else:
+        has_stripe = PaymentAccount.objects.filter(
+            user=owner, provider="stripe_connect", charges_enabled=True, is_active=True
+        ).exists()
+        if has_stripe:
+            return True
+
+        paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
+        if paystation_enabled and HostPaymentTerms.objects.filter(user=owner).exists():
+            return True
 
     return False
 

@@ -4,7 +4,10 @@ from django.db import models
 
 class BookingFunnelEvent(models.Model):
     host = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="funnel_events"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="funnel_events", null=True, blank=True
+    )
+    team = models.ForeignKey(
+        "teams.Team", on_delete=models.CASCADE, related_name="funnel_events", null=True, blank=True
     )
     event_type = models.ForeignKey(
         "scheduling.EventType",
@@ -25,18 +28,32 @@ class BookingFunnelEvent(models.Model):
 
     class Meta:
         ordering = ["-timestamp"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(host__isnull=False, team__isnull=True)
+                    | models.Q(host__isnull=True, team__isnull=False)
+                ),
+                name="funnel_event_host_or_team",
+            )
+        ]
         indexes = [
             models.Index(fields=["host", "timestamp"]),
+            models.Index(fields=["team", "timestamp"]),
             models.Index(fields=["session_id", "step"]),
         ]
 
     def __str__(self):
-        return f"{self.step} for {self.host.email} at {self.timestamp}"
+        owner_name = self.host.email if self.host else self.team.name
+        return f"{self.step} for {owner_name} at {self.timestamp}"
 
 
 class DailyMetric(models.Model):
     host = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="daily_metrics"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="daily_metrics", null=True, blank=True
+    )
+    team = models.ForeignKey(
+        "teams.Team", on_delete=models.CASCADE, related_name="daily_metrics", null=True, blank=True
     )
     event_type = models.ForeignKey(
         "scheduling.EventType",
@@ -66,8 +83,19 @@ class DailyMetric(models.Model):
     booking_abandoned_count = models.PositiveIntegerField(default=0)
 
     class Meta:
-        unique_together = (("host", "event_type", "date", "currency"),)
+        constraints = [
+            models.UniqueConstraint(fields=["host", "event_type", "date", "currency"], condition=models.Q(team__isnull=True), name="unique_daily_metric_host"),
+            models.UniqueConstraint(fields=["team", "event_type", "date", "currency"], condition=models.Q(host__isnull=True), name="unique_daily_metric_team"),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(host__isnull=False, team__isnull=True)
+                    | models.Q(host__isnull=True, team__isnull=False)
+                ),
+                name="daily_metric_host_or_team",
+            )
+        ]
         ordering = ["-date"]
 
     def __str__(self):
-        return f"Metrics for {self.host.email} on {self.date}"
+        owner_name = self.host.email if self.host else self.team.name
+        return f"Metrics for {owner_name} on {self.date}"

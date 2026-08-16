@@ -263,6 +263,8 @@ class EventType(models.Model):
 
     @property
     def public_url(self):
+        if self.team:
+            return f"/{self.team.slug}/{self.slug}"
         if self.owner.slug:
             return f"/{self.owner.slug}/{self.slug}"
         return f"/u/{self.owner.id}/{self.slug}"
@@ -302,9 +304,30 @@ class EventType(models.Model):
                         )
                     }
                 )
+                
+        if self.team and self.pk:
+            active_hosts = self.hosts.filter(is_active=True).count()
+            if active_hosts == 0:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("A team event type must have at least one active host.")
 
     def __str__(self):
         return f"{self.title} ({self.duration_minutes} min)"
+
+class EventTypeHost(models.Model):
+    event_type = models.ForeignKey(EventType, on_delete=models.CASCADE, related_name="hosts")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="hosted_event_types")
+    priority = models.IntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["event_type", "user"], name="unique_event_type_host")
+        ]
+
+    def __str__(self):
+        return f"{self.user} hosting {self.event_type}"
 
 
 class BookingQuestion(models.Model):

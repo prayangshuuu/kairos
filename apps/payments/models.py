@@ -8,7 +8,10 @@ from apps.integrations.models import DedicatedKeyEncryptedTextField
 
 class PaymentAccount(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payment_accounts"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payment_accounts", null=True, blank=True
+    )
+    team = models.ForeignKey(
+        "teams.Team", on_delete=models.CASCADE, related_name="payment_accounts", null=True, blank=True
     )
     provider = models.CharField(max_length=30, default="stripe_connect")
     external_account_id = models.CharField(max_length=255, unique=True, db_index=True)
@@ -26,12 +29,23 @@ class PaymentAccount(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "provider"], name="unique_payment_account_per_user_provider"
+                fields=["user", "provider"], condition=models.Q(team__isnull=True), name="unique_payment_account_per_user_provider"
+            ),
+            models.UniqueConstraint(
+                fields=["team", "provider"], condition=models.Q(user__isnull=True), name="unique_payment_account_per_team_provider"
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(user__isnull=False, team__isnull=True)
+                    | models.Q(user__isnull=True, team__isnull=False)
+                ),
+                name="payment_account_user_or_team",
             )
         ]
 
     def __str__(self):
-        return f"{self.user.email} ({self.provider}:{self.external_account_id})"
+        owner = self.user.email if self.user else self.team.name
+        return f"{owner} ({self.provider}:{self.external_account_id})"
 
 
 class Payment(models.Model):
@@ -136,7 +150,10 @@ class ReconciliationFlag(models.Model):
 
 class HostPaymentTerms(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payment_terms_accepted"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payment_terms_accepted", null=True, blank=True
+    )
+    team = models.ForeignKey(
+        "teams.Team", on_delete=models.CASCADE, related_name="payment_terms_accepted", null=True, blank=True
     )
     terms_version = models.CharField(max_length=20, default="1.0")
     ip_address = models.GenericIPAddressField(null=True, blank=True)
@@ -145,12 +162,23 @@ class HostPaymentTerms(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "terms_version"], name="unique_host_terms_version"
+                fields=["user", "terms_version"], condition=models.Q(team__isnull=True), name="unique_host_terms_version"
+            ),
+            models.UniqueConstraint(
+                fields=["team", "terms_version"], condition=models.Q(user__isnull=True), name="unique_team_terms_version"
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(user__isnull=False, team__isnull=True)
+                    | models.Q(user__isnull=True, team__isnull=False)
+                ),
+                name="payment_terms_host_or_team",
             )
         ]
 
     def __str__(self):
-        return f"{self.user.email} accepted terms v{self.terms_version} on {self.accepted_at}"
+        owner = self.user.email if self.user else self.team.name
+        return f"{owner} accepted terms v{self.terms_version} on {self.accepted_at}"
 
 
 class Payout(models.Model):
@@ -161,7 +189,10 @@ class Payout(models.Model):
     ]
 
     host = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payouts"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payouts", null=True, blank=True
+    )
+    team = models.ForeignKey(
+        "teams.Team", on_delete=models.CASCADE, related_name="payouts", null=True, blank=True
     )
     period_start = models.DateTimeField()
     period_end = models.DateTimeField()
@@ -173,9 +204,21 @@ class Payout(models.Model):
     initiated_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
+    
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(host__isnull=False, team__isnull=True)
+                    | models.Q(host__isnull=True, team__isnull=False)
+                ),
+                name="payout_host_or_team",
+            )
+        ]
 
     def __str__(self):
-        return f"Payout {self.id} for {self.host.email} ({self.status})"
+        owner = self.host.email if self.host else self.team.name
+        return f"Payout {self.id} for {owner} ({self.status})"
 
 
 class PayoutMethod(models.Model):
@@ -190,7 +233,10 @@ class PayoutMethod(models.Model):
     ]
 
     host = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payout_methods"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payout_methods", null=True, blank=True
+    )
+    team = models.ForeignKey(
+        "teams.Team", on_delete=models.CASCADE, related_name="payout_methods", null=True, blank=True
     )
     method_type = models.CharField(max_length=30, choices=METHOD_CHOICES)
     account_name = models.CharField(max_length=100)
@@ -202,6 +248,15 @@ class PayoutMethod(models.Model):
 
     class Meta:
         ordering = ["-is_default", "-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(host__isnull=False, team__isnull=True)
+                    | models.Q(host__isnull=True, team__isnull=False)
+                ),
+                name="payout_method_host_or_team",
+            )
+        ]
 
     def set_details(self, details_dict: dict):
         from apps.payments.wallet import encrypt_payload
@@ -231,7 +286,8 @@ class PayoutMethod(models.Model):
             return f"{bank} ({acc})"
 
     def __str__(self):
-        return f"{self.get_method_type_display()} - {self.account_name} ({self.masked_account_info})"
+        owner = self.host.email if self.host else self.team.name
+        return f"{self.get_method_type_display()} for {owner} - {self.account_name} ({self.masked_account_info})"
 
 
 class PayoutRequest(models.Model):
@@ -252,7 +308,10 @@ class PayoutRequest(models.Model):
     ]
 
     host = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="payout_requests"
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="payout_requests", null=True, blank=True
+    )
+    team = models.ForeignKey(
+        "teams.Team", on_delete=models.PROTECT, related_name="payout_requests", null=True, blank=True
     )
     amount_cents = models.PositiveIntegerField()
     currency = models.CharField(max_length=3, default="BDT")
@@ -277,9 +336,19 @@ class PayoutRequest(models.Model):
 
     class Meta:
         ordering = ["-requested_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(host__isnull=False, team__isnull=True)
+                    | models.Q(host__isnull=True, team__isnull=False)
+                ),
+                name="payout_request_host_or_team",
+            )
+        ]
 
     def __str__(self):
-        return f"PayoutRequest #{self.id} - {self.host.email} - ৳{self.amount_cents / 100:.2f} ({self.status})"
+        owner = self.host.email if self.host else self.team.name
+        return f"PayoutRequest #{self.id} - {owner} - ৳{self.amount_cents / 100:.2f} ({self.status})"
 
 
 class HostLedger(models.Model):
@@ -303,7 +372,10 @@ class HostLedger(models.Model):
     ]
 
     host = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="ledger_entries"
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="ledger_entries", null=True, blank=True
+    )
+    team = models.ForeignKey(
+        "teams.Team", on_delete=models.PROTECT, related_name="ledger_entries", null=True, blank=True
     )
     payment = models.ForeignKey(
         Payment, on_delete=models.PROTECT, null=True, blank=True, related_name="ledger_entries"
@@ -340,6 +412,17 @@ class HostLedger(models.Model):
         related_name="created_ledger_entries",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(host__isnull=False, team__isnull=True)
+                    | models.Q(host__isnull=True, team__isnull=False)
+                ),
+                name="host_ledger_host_or_team",
+            )
+        ]
 
     def save(self, *args, **kwargs):
         if self.pk is not None:
@@ -352,7 +435,8 @@ class HostLedger(models.Model):
         raise ValueError("HostLedger is append-only. Existing entries cannot be deleted.")
 
     def __str__(self):
-        return f"{self.entry_type} {self.amount_cents} {self.currency} [{self.provider}] (Host: {self.host.email})"
+        owner = self.host.email if self.host else self.team.name
+        return f"{self.entry_type} {self.amount_cents} {self.currency} [{self.provider}] (Owner: {owner})"
 
 
 class WalletReconciliationLog(models.Model):

@@ -36,9 +36,16 @@ REQUIRED_SCOPES = [
 def dashboard(request):
     from apps.integrations.models import ConferenceConnection, SelectedCalendar
     from apps.payments.models import HostPaymentTerms, PaymentAccount
+    from apps.core.permissions import get_active_team
 
+    team = get_active_team(request)
+    
     # ── Calendar ─────────────────────────────────────────────────────────────
-    cal_connections = list(request.user.calendar_connections.prefetch_related("calendars").all())
+    if team:
+        cal_connections = list(CalendarConnection.objects.filter(team=team).prefetch_related("calendars").all())
+    else:
+        cal_connections = list(CalendarConnection.objects.filter(user=request.user, team__isnull=True).prefetch_related("calendars").all())
+        
     connected_cal = {conn.provider: conn for conn in cal_connections}
 
     google_conn = connected_cal.get("google")
@@ -47,22 +54,37 @@ def dashboard(request):
     google_healthy = google_conn and google_conn.is_active and not google_conn.last_error
 
     # Write-target warning: no calendar has is_write_target=True
-    has_write_target = google_conn and SelectedCalendar.objects.filter(
-        connection__user=request.user, is_write_target=True
-    ).exists() if google_healthy else False
+    if team:
+        has_write_target = google_conn and SelectedCalendar.objects.filter(
+            connection__team=team, is_write_target=True
+        ).exists() if google_healthy else False
+    else:
+        has_write_target = google_conn and SelectedCalendar.objects.filter(
+            connection__user=request.user, connection__team__isnull=True, is_write_target=True
+        ).exists() if google_healthy else False
 
     # ── Conferencing ─────────────────────────────────────────────────────────
     # Google Meet is provided via the Google Calendar OAuth — no separate auth
     google_meet_available = bool(google_healthy)
 
     # ── Payments ─────────────────────────────────────────────────────────────
-    stripe_account = PaymentAccount.objects.filter(
-        user=request.user, provider="stripe_connect"
-    ).first()
-    paystation_account = PaymentAccount.objects.filter(
-        user=request.user, provider="paystation", is_active=True
-    ).first()
-    terms_accepted = HostPaymentTerms.objects.filter(user=request.user).exists()
+    if team:
+        stripe_account = PaymentAccount.objects.filter(
+            team=team, provider="stripe_connect"
+        ).first()
+        paystation_account = PaymentAccount.objects.filter(
+            team=team, provider="paystation", is_active=True
+        ).first()
+        terms_accepted = HostPaymentTerms.objects.filter(team=team).exists()
+    else:
+        stripe_account = PaymentAccount.objects.filter(
+            user=request.user, team__isnull=True, provider="stripe_connect"
+        ).first()
+        paystation_account = PaymentAccount.objects.filter(
+            user=request.user, team__isnull=True, provider="paystation", is_active=True
+        ).first()
+        terms_accepted = HostPaymentTerms.objects.filter(user=request.user, team__isnull=True).exists()
+        
     paystation_enabled = getattr(settings, "KAIROS_ENABLE_PAYSTATION_ROUTE", True)
 
     stripe_platform_configured = True
@@ -109,7 +131,14 @@ def google_connect(request):
 
     # Signed state to prevent CSRF, expires in 10 minutes
     # It carries the user ID so we can verify the callback is for the same user
-    state = signer.sign(str(request.user.id))
+    import json
+    from apps.core.permissions import get_active_team
+    team = get_active_team(request)
+    state_data = {
+        "user_id": request.user.id,
+        "team_id": team.id if team else None
+    }
+    state = signer.sign(json.dumps(state_data))
 
     redirect_uri = request.build_absolute_uri(reverse("integrations:google_callback"))
 
@@ -142,9 +171,23 @@ def google_callback(request):
         return redirect("integrations:dashboard")
 
     try:
+        import json
         # Verify the state signature and ensure it belongs to the current user
         # Max age: 10 minutes (600 seconds)
-        original_user_id = signer.unsign(state, max_age=600)
+        original_state_json = signer.unsign(state, max_age=600)
+        try:
+            state_data = json.loads(original_state_json)
+            if isinstance(state_data, dict):
+                original_user_id = str(state_data.get("user_id"))
+                team_id = state_data.get("team_id")
+            else:
+                original_user_id = str(state_data)
+                team_id = None
+        except json.JSONDecodeError:
+            # Fallback for old state format
+            original_user_id = original_state_json
+            team_id = None
+            
         if str(request.user.id) != original_user_id:
             raise BadSignature("User mismatch")
     except (BadSignature, SignatureExpired):
@@ -206,14 +249,28 @@ def google_callback(request):
         return redirect("integrations:dashboard")
 
     # Store or update connection
-    connection, created = CalendarConnection.objects.get_or_create(
-        user=request.user,
-        provider="google",
-        external_account_id=external_account_id,
-        defaults={
-            "external_account_email": external_account_email,
-        },
-    )
+    if team_id:
+        from apps.teams.models import Team
+        team = Team.objects.get(id=team_id)
+        connection, created = CalendarConnection.objects.get_or_create(
+            team=team,
+            provider="google",
+            external_account_id=external_account_id,
+            defaults={
+                "user": request.user,
+                "external_account_email": external_account_email,
+            },
+        )
+    else:
+        connection, created = CalendarConnection.objects.get_or_create(
+            user=request.user,
+            team__isnull=True,
+            provider="google",
+            external_account_id=external_account_id,
+            defaults={
+                "external_account_email": external_account_email,
+            },
+        )
 
     # If it existed, the email might have changed, but id is stable
     connection.external_account_email = external_account_email
@@ -263,7 +320,13 @@ def google_callback(request):
 @login_required
 def google_disconnect(request):
     if request.method == "POST":
-        connections = request.user.calendar_connections.filter(provider="google", is_active=True)
+        from apps.core.permissions import get_active_team
+        team = get_active_team(request)
+        if team:
+            connections = CalendarConnection.objects.filter(team=team, provider="google", is_active=True)
+        else:
+            connections = CalendarConnection.objects.filter(user=request.user, team__isnull=True, provider="google", is_active=True)
+            
         for connection in connections:
             if connection.access_token or connection.refresh_token:
                 revoke_token = connection.refresh_token or connection.access_token

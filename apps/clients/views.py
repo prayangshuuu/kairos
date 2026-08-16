@@ -3,15 +3,16 @@ from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from .models import Client
+from apps.core.permissions import TeamContextMixin, ViewPermissionMixin
 
-class ClientListView(LoginRequiredMixin, ListView):
+class ClientListView(TeamContextMixin, ViewPermissionMixin, ListView):
     model = Client
     template_name = "clients/client_list.html"
     context_object_name = "clients"
     paginate_by = 50
 
     def get_queryset(self):
-        qs = Client.objects.with_computed_fields().filter(host=self.request.user)
+        qs = super().get_queryset().with_computed_fields()
         
         # Search
         q = self.request.GET.get('q')
@@ -33,20 +34,22 @@ class ClientListView(LoginRequiredMixin, ListView):
             
         return qs
 
-class ClientDetailView(LoginRequiredMixin, DetailView):
+class ClientDetailView(TeamContextMixin, ViewPermissionMixin, DetailView):
     model = Client
     template_name = "clients/client_detail.html"
     context_object_name = "client"
 
     def get_queryset(self):
-        return Client.objects.with_computed_fields().filter(host=self.request.user)
+        return super().get_queryset().with_computed_fields()
 
 import csv
 from django.http import HttpResponse
 
 from django.views.generic import View
 
-class ClientExportView(LoginRequiredMixin, View):
+class ClientExportView(TeamContextMixin, ViewPermissionMixin, View):
+    model = Client
+    
     def get(self, request, *args, **kwargs):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="clients.csv"'
@@ -54,34 +57,50 @@ class ClientExportView(LoginRequiredMixin, View):
         writer = csv.writer(response)
         writer.writerow(['Name', 'Email', 'Phone', 'Timezone', 'Status'])
         
-        for client in Client.objects.filter(host=request.user):
+        for client in self.get_queryset():
             writer.writerow([client.name, client.email, client.phone, client.timezone, client.status])
             
         return response
 
-class ClientImportView(LoginRequiredMixin, View):
+class ClientImportView(TeamContextMixin, ViewPermissionMixin, View):
+    model = Client
+
     def post(self, request, *args, **kwargs):
         if 'csv_file' in request.FILES:
             csv_file = request.FILES['csv_file']
             decoded_file = csv_file.read().decode('utf-8').splitlines()
             reader = csv.DictReader(decoded_file)
+            from apps.core.permissions import get_active_team
+            team = get_active_team(request)
             for row in reader:
-                Client.objects.update_or_create(
-                    host=request.user,
-                    email=row.get('Email', '').strip().lower(),
-                    defaults={
-                        'name': row.get('Name', ''),
-                        'phone': row.get('Phone', ''),
-                        'timezone': row.get('Timezone', ''),
-                    }
-                )
+                if team:
+                    Client.objects.update_or_create(
+                        team=team,
+                        email=row.get('Email', '').strip().lower(),
+                        defaults={
+                            'name': row.get('Name', ''),
+                            'phone': row.get('Phone', ''),
+                            'timezone': row.get('Timezone', ''),
+                        }
+                    )
+                else:
+                    Client.objects.update_or_create(
+                        host=request.user,
+                        team__isnull=True,
+                        email=row.get('Email', '').strip().lower(),
+                        defaults={
+                            'name': row.get('Name', ''),
+                            'phone': row.get('Phone', ''),
+                            'timezone': row.get('Timezone', ''),
+                        }
+                    )
         return redirect('clients:list')
 
 from apps.bookings.services import create_booking
 from apps.scheduling.models import EventType
 from django.utils import timezone
 
-class ClientBookOnBehalfView(LoginRequiredMixin, DetailView):
+class ClientBookOnBehalfView(TeamContextMixin, ViewPermissionMixin, DetailView):
     model = Client
     def post(self, request, *args, **kwargs):
         client = self.get_object()
@@ -89,7 +108,12 @@ class ClientBookOnBehalfView(LoginRequiredMixin, DetailView):
         start_at = request.POST.get('start_at') # Expect ISO string
         
         if event_type_id and start_at:
-            event_type = get_object_or_404(EventType, id=event_type_id, owner=request.user)
+            from apps.core.permissions import get_active_team
+            team = get_active_team(request)
+            if team:
+                event_type = get_object_or_404(EventType, id=event_type_id, team=team)
+            else:
+                event_type = get_object_or_404(EventType, id=event_type_id, owner=request.user, team__isnull=True)
             import datetime
             dt_start = datetime.datetime.fromisoformat(start_at)
             
