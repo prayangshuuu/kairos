@@ -289,106 +289,120 @@ def create_calendar_event(self, booking_id: int):
     if BookingReference.objects.filter(booking=booking, kind="calendar_event").exists():
         return booking_id
 
-    write_target = (
+    hosts_to_sync = []
+    if booking.event_type.assignment_strategy == "collective":
+        # All active, required hosts
+        hosts_to_sync = [h.user for h in booking.event_type.hosts.filter(is_active=True, is_required=True).select_related("user")]
+        if not hosts_to_sync:
+            hosts_to_sync = [booking.host]
+    else:
+        # Single or round robin (booking.host is the assigned host)
+        hosts_to_sync = [booking.host]
+
+    write_targets = list(
         SelectedCalendar.objects.filter(
-            connection__user=booking.host,
+            connection__user__in=hosts_to_sync,
             connection__is_active=True,
             connection__provider="google",
             is_write_target=True,
-        )
-        .select_related("connection")
-        .first()
+        ).select_related("connection")
     )
 
-    if not write_target:
+    if not write_targets:
         booking.sync_status = Booking.SyncStatusChoices.NOT_APPLICABLE
         booking.save(update_fields=["sync_status"])
         return booking_id
 
     try:
-        client = GoogleCalendarClient(write_target.connection)
+        for write_target in write_targets:
+            client = GoogleCalendarClient(write_target.connection)
 
-        # Generate idempotent deterministic ID based on booking UUID
-        # Google accepts base32hex for IDs, we can just remove hyphens from UUID
-        event_id = "kairos" + booking.uid.hex
+            # Generate idempotent deterministic ID based on booking UUID
+            # Google accepts base32hex for IDs, we can just remove hyphens from UUID
+            # Add host ID to prevent collisions across multiple targets for the same booking
+            event_id = f"kairos{booking.uid.hex}{write_target.connection.user_id}"
 
-        description = ""
-        if booking.invitee_notes:
-            description += f"Notes:\n{booking.invitee_notes}\n\n"
-        if booking.answers:
-            description += "Questions:\n"
-            for q, a in booking.answers.items():
-                description += f"- {q}: {a}\n"
+            description = ""
+            if booking.invitee_notes:
+                description += f"Notes:\n{booking.invitee_notes}\n\n"
+            if booking.answers:
+                description += "Questions:\n"
+                for q, a in booking.answers.items():
+                    description += f"- {q}: {a}\n"
 
-        attendees = [
-            {"email": booking.host.email, "responseStatus": "accepted"},
-            {"email": booking.invitee_email, "responseStatus": "needsAction"},
-        ]
+            attendees = [
+                {"email": write_target.connection.user.email, "responseStatus": "accepted"},
+                {"email": booking.invitee_email, "responseStatus": "needsAction"},
+            ]
+            
+            # Also add the other hosts as attendees? The prompt says "on ALL required hosts' calendars".
+            # By creating it on each host's calendar, they each own their copy.
+            # No need to add them as attendees to each other's copies.
 
-        for attendee in booking.attendees.filter(is_organizer=False).exclude(
-            email=booking.invitee_email
-        ):
-            attendees.append({"email": attendee.email, "responseStatus": "needsAction"})
+            for attendee in booking.attendees.filter(is_organizer=False).exclude(
+                email=booking.invitee_email
+            ):
+                attendees.append({"email": attendee.email, "responseStatus": "needsAction"})
 
-        event_body = {
-            "id": event_id,
-            "summary": f"{booking.event_type.title} with {booking.invitee_name}",
-            "description": description,
-            "start": {
-                "dateTime": booking.start_at.isoformat(),
-                "timeZone": booking.invitee_timezone,
-            },
-            "end": {
-                "dateTime": booking.end_at.isoformat(),
-                "timeZone": booking.invitee_timezone,
-            },
-            "attendees": attendees,
-            "extendedProperties": {"private": {"kairos_booking_uid": str(booking.uid)}},
-            "source": {
-                "title": "Kairos Booking",
-                "url": f"https://joinkairos.tech/booking/{booking.uid}/",  # Example URL
-            },
-        }
+            event_body = {
+                "id": event_id,
+                "summary": f"{booking.event_type.title} with {booking.invitee_name}",
+                "description": description,
+                "start": {
+                    "dateTime": booking.start_at.isoformat(),
+                    "timeZone": booking.invitee_timezone,
+                },
+                "end": {
+                    "dateTime": booking.end_at.isoformat(),
+                    "timeZone": booking.invitee_timezone,
+                },
+                "attendees": attendees,
+                "extendedProperties": {"private": {"kairos_booking_uid": str(booking.uid)}},
+                "source": {
+                    "title": "Kairos Booking",
+                    "url": f"https://joinkairos.tech/booking/{booking.uid}/",  # Example URL
+                },
+            }
 
-        if booking.location_value:
-            event_body["location"] = booking.location_value
+            if booking.location_value:
+                event_body["location"] = booking.location_value
 
-        try:
-            client.service.events().get(
-                calendarId=write_target.external_calendar_id, eventId=event_id
-            ).execute()
-        except HttpError as e:
-            if e.resp.status == 404:
-                try:
-                    client.service.events().insert(
-                        calendarId=write_target.external_calendar_id,
-                        body=event_body,
-                        sendUpdates="all",
-                    ).execute()
-                except HttpError as insert_e:
-                    if insert_e.resp.status == 409:
-                        client.service.events().get(
-                            calendarId=write_target.external_calendar_id, eventId=event_id
-                        ).execute()
-                    else:
-                        raise insert_e
-            elif e.resp.status == 409:
+            try:
                 client.service.events().get(
                     calendarId=write_target.external_calendar_id, eventId=event_id
                 ).execute()
-            else:
-                raise
+            except HttpError as e:
+                if e.resp.status == 404:
+                    try:
+                        client.service.events().insert(
+                            calendarId=write_target.external_calendar_id,
+                            body=event_body,
+                            sendUpdates="all",
+                        ).execute()
+                    except HttpError as insert_e:
+                        if insert_e.resp.status == 409:
+                            client.service.events().get(
+                                calendarId=write_target.external_calendar_id, eventId=event_id
+                            ).execute()
+                        else:
+                            raise insert_e
+                elif e.resp.status == 409:
+                    client.service.events().get(
+                        calendarId=write_target.external_calendar_id, eventId=event_id
+                    ).execute()
+                else:
+                    raise
 
-        try:
-            BookingReference.objects.create(
-                booking=booking,
-                connection=write_target.connection,
-                external_event_id=event_id,
-                external_calendar_id=write_target.external_calendar_id,
-                kind="calendar_event",
-            )
-        except IntegrityError:
-            pass  # Someone else beat us to it
+            try:
+                BookingReference.objects.create(
+                    booking=booking,
+                    connection=write_target.connection,
+                    external_event_id=event_id,
+                    external_calendar_id=write_target.external_calendar_id,
+                    kind="calendar_event",
+                )
+            except IntegrityError:
+                pass  # Someone else beat us to it
 
         booking.sync_status = Booking.SyncStatusChoices.SYNCED
         booking.save(update_fields=["sync_status"])

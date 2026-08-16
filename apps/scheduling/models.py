@@ -319,6 +319,12 @@ class EventTypeHost(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="hosted_event_types")
     priority = models.IntegerField(default=1)
     is_active = models.BooleanField(default=True)
+    is_required = models.BooleanField(default=True)
+    last_assigned_at = models.DateTimeField(null=True, blank=True)
+    assignment_count = models.IntegerField(default=0)
+    outside_working_hours_count = models.IntegerField(default=0)
+    buffer_before_minutes = models.PositiveIntegerField(default=0)
+    buffer_after_minutes = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

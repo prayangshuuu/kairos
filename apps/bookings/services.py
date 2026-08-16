@@ -382,25 +382,80 @@ def create_booking(
     if event_type.price_cents > 0:
         pass  # Allow paid events
 
-    # 1. Fast path check
-    from apps.integrations.services import check_live_conflict, fetch_external_busy
+    # 1. Determine participating hosts
+    strategy = event_type.assignment_strategy
+    if strategy == "single":
+        participating_hosts = [event_type.owner]
+        hosts_qs = None
+    else:
+        hosts_qs = event_type.hosts.filter(is_active=True).select_related("user")
+        if strategy == "collective":
+            hosts_qs = hosts_qs.filter(is_required=True)
+            
+        participating_hosts = [h.user for h in hosts_qs]
+        if not participating_hosts:
+            participating_hosts = [event_type.owner]
 
-    external_busy = fetch_external_busy(
-        event_type.owner, now, now + timedelta(days=365)
-    )  # Approximate, but we just need it for the specific slot check
+    # 2. Fast path check
+    from apps.integrations.services import check_live_conflict_for_users, fetch_external_busy_for_users
 
-    if not is_slot_available(event_type, start_at, now, external_busy=external_busy):
+    external_busy_dict = fetch_external_busy_for_users(
+        participating_hosts, now, now + timedelta(days=365)
+    )
+
+    if not is_slot_available(event_type, start_at, now, external_busy=external_busy_dict):
         logger.info(f"Slot {start_at} unavailable during fast path check for event {event_type.id}")
         raise SlotUnavailable("Slot is no longer available.")
 
     end_at = start_at + timedelta(minutes=event_type.duration_minutes)
 
-    # Live check before writing
-    if check_live_conflict(event_type.owner, start_at, end_at):
-        logger.info(
-            f"Slot {start_at} unavailable due to live conflict for host {event_type.owner_id}"
-        )
-        raise SlotUnavailable("Slot was just booked on the host's external calendar.")
+    # 3. Live check before writing
+    conflicting_users = check_live_conflict_for_users(participating_hosts, start_at, end_at)
+    available_hosts = [u for u in participating_hosts if u not in conflicting_users]
+
+    if strategy == "collective" or strategy == "single":
+        if conflicting_users:
+            logger.info(
+                f"Slot {start_at} unavailable due to live conflict for hosts {conflicting_users}"
+            )
+            raise SlotUnavailable("Slot was just booked on a host's external calendar.")
+        assigned_host = event_type.owner
+    else:
+        # Round Robin assignment
+        if not available_hosts:
+            logger.info(f"Slot {start_at} unavailable due to live conflict for all round-robin hosts.")
+            raise SlotUnavailable("Slot was just booked on the hosts' external calendars.")
+            
+        # We need to lock the EventTypeHosts to assign fairly
+        # Fetch the EventTypeHosts for the available users
+        available_user_ids = [u.id for u in available_hosts]
+        
+        # Determine who is outside working hours to implement "fair timezone rotation"
+        # We will increment outside_working_hours_count if they are booked outside 9-5 local time.
+        # But we need to pick the host.
+        # Sort by: priority (lower is better), assignment_count (lower is better), last_assigned_at (older is better)
+        eths = list(event_type.hosts.filter(
+            user_id__in=available_user_ids
+        ).select_for_update().order_by(
+            "priority",
+            "assignment_count",
+            "last_assigned_at",
+        ))
+        
+        if not eths:
+            assigned_host = available_hosts[0]
+        else:
+            selected_eth = eths[0]
+            assigned_host = selected_eth.user
+            
+            # Check if this slot is outside their working hours (assuming 9 to 5 local time)
+            local_start = start_at.astimezone(assigned_host.zoneinfo)
+            if local_start.hour < 9 or local_start.hour >= 17:
+                selected_eth.outside_working_hours_count += 1
+                
+            selected_eth.assignment_count += 1
+            selected_eth.last_assigned_at = now
+            selected_eth.save(update_fields=["assignment_count", "last_assigned_at", "outside_working_hours_count"])
 
     if event_type.price_cents > 0:
         status = Booking.StatusChoices.PENDING_PAYMENT
@@ -413,7 +468,7 @@ def create_booking(
 
     booking = Booking(
         event_type=event_type,
-        host=event_type.owner,
+        host=assigned_host,
         start_at=start_at,
         end_at=end_at,
         invitee_timezone=invitee_timezone,

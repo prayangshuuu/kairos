@@ -951,7 +951,7 @@ class Echo:
         return value
 
 
-class DashboardBookingsView(TeamContextMixin, ViewPermissionMixin, View):
+class DashboardBookingsView(LoginRequiredMixin, TeamContextMixin, ViewPermissionMixin, View):
     def get(self, request):
         now = django_timezone.now()
 

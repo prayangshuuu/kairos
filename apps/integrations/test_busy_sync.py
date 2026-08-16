@@ -173,12 +173,12 @@ def test_busy_source_false_ignores_blocks(user, connection, event_type):
 
 
 @pytest.mark.django_db
-@patch("apps.integrations.services.check_live_conflict")
+@patch("apps.integrations.services.check_live_conflict_for_users")
 def test_live_check_raises_slot_unavailable(
     mock_live_check, user, connection, selected_calendar, event_type
 ):
-    # Setup live check to return True (conflict exists)
-    mock_live_check.return_value = True
+    # Setup live check to return conflict for the user
+    mock_live_check.return_value = [user]
 
     now = timezone.now()
     next_monday = now.date() + timedelta(days=(0 - now.weekday()) % 7)

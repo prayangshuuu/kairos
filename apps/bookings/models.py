@@ -206,7 +206,7 @@ class BookingReference(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["booking", "kind"], name="unique_booking_reference_kind"
+                fields=["booking", "kind", "connection"], name="unique_booking_reference_kind"
             )
         ]
 
